@@ -4,19 +4,34 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const multer = require('multer');
+const pdfParse = require('pdf-parse');
+const mammoth = require('mammoth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret-in-production-please';
 const DATA_DIR = path.join(__dirname, 'data');
 
-// Ensure data directory exists
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const JOBS_DIR = path.join(DATA_DIR, 'jobs');
 if (!fs.existsSync(JOBS_DIR)) fs.mkdirSync(JOBS_DIR);
 
+// Multer: memory storage, 10MB max, PDF/Word/txt only
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExts = ['.pdf', '.doc', '.docx', '.txt'];
+    if (allowedExts.includes(ext)) cb(null, true);
+    else cb(new Error('Only PDF, Word (.doc/.docx), and .txt files are supported'));
+  }
+});
+
+app.use(cors());
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '../frontend/public')));
@@ -100,6 +115,36 @@ app.put('/api/jobs', authMiddleware, (req, res) => {
   saveUserJobs(req.user.id, jobs);
   res.json({ ok: true });
 });
+
+// ── File text extraction ──
+app.post('/api/parse-file', authMiddleware, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const ext = path.extname(req.file.originalname).toLowerCase();
+  const buf = req.file.buffer;
+  try {
+    let text = '';
+    if (ext === '.txt') {
+      text = buf.toString('utf8');
+    } else if (ext === '.pdf') {
+      const data = await pdfParse(buf);
+      text = data.text;
+    } else if (ext === '.docx' || ext === '.doc') {
+      try {
+        const result = await mammoth.extractRawText({ buffer: buf });
+        text = result.value;
+      } catch(e) {
+        return res.status(422).json({ error: 'Could not parse this Word file. Try saving as .docx or .txt.' });
+      }
+    }
+    text = text.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+    if (!text) return res.status(422).json({ error: 'No text could be extracted. The file may be scanned or image-based.' });
+    res.json({ name: req.file.originalname, size: req.file.size, text });
+  } catch(e) {
+    console.error('File parse error:', e.message);
+    res.status(500).json({ error: 'Failed to parse file: ' + e.message });
+  }
+});
+
 
 // ── Job URL parsing proxy ──
 // Tries to extract job data intelligently based on ATS platform
