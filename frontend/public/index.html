@@ -511,79 +511,63 @@ async function parseJobUrl() {
   const btn = document.getElementById('parse-btn');
   const statusEl = document.getElementById('parse-status');
   btn.disabled = true;
-  btn.textContent = 'Fetching...';
+  btn.textContent = 'Parsing...';
   statusEl.style.display = 'flex';
   statusEl.innerHTML = spinner() + ' Fetching job posting...';
 
   pendingHtml = null;
   pendingText = null;
-  let pageText = '';
-
-  // Try multiple CORS proxies in order
-  const proxies = [
-    u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-  ];
-
-  for (const proxyFn of proxies) {
-    try {
-      const pr = await fetch(proxyFn(url), {signal: AbortSignal.timeout(8000)});
-      if (!pr.ok) continue;
-      const pd = await pr.json();
-      // allorigins returns {contents:...}, corsproxy returns raw text
-      const raw = pd.contents || (typeof pd === 'string' ? pd : null);
-      if (raw && raw.length > 200) {
-        pendingHtml = raw;
-        pageText = raw
-          .replace(/<script[\s\S]*?<\/script>/gi, '')
-          .replace(/<style[\s\S]*?<\/style>/gi, '')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim()
-          .slice(0, 6000);
-        pendingText = pageText;
-        break;
-      }
-    } catch(e) { continue; }
-  }
-
-  statusEl.innerHTML = spinner() + ' Extracting details with AI...';
 
   try {
-    const sysPrompt = 'You extract job details from text. Always respond with ONLY a valid JSON object, no markdown, no explanation. If a field is not found, use null.';
-    const userPrompt = pageText
-      ? `Extract job details from this job posting. Return JSON with: title (string), company (string), location (string), salary (string), remote (boolean).\n\nURL: ${url}\n\nPage content:\n${pageText}`
-      : `Extract what you can from this job URL. Return JSON with: title, company, location, salary, remote.\n\nURL: ${url}`;
-
-    const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+    // Call our backend which handles ATS-specific APIs + fallback scraping
+    const res = await fetch(API + '/api/parse-job', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 400,
-        system: sysPrompt,
-        messages: [{role:'user', content: userPrompt}]
-      })
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ url })
     });
 
-    const aiData = await aiRes.json();
-    const raw = aiData.content?.[0]?.text || '';
-    // Strip any accidental markdown fences
-    const cleaned = raw.replace(/```json|```/g, '').trim();
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('No JSON found in response');
-    const parsed = JSON.parse(match[0]);
+    if (!res.ok) throw new Error('Server error');
+    const data = await res.json();
 
+    const { fields, html, text } = data;
+    pendingHtml = html;
+    pendingText = text;
+
+    // If we got html/text but no structured fields, ask Claude to extract them
+    let finalFields = fields;
+    const hasFields = fields && Object.values(fields).some(v => v !== null);
+
+    if (!hasFields && text) {
+      statusEl.innerHTML = spinner() + ' Extracting details with AI...';
+      try {
+        const aiRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 300,
+            system: 'Extract job details. Respond ONLY with valid JSON, no markdown. Fields: title, company, location, salary, remote (boolean). Use null if not found.',
+            messages: [{ role: 'user', content: `URL: ${url}\n\nPage text:\n${text.slice(0, 5000)}` }]
+          })
+        });
+        const aiData = await aiRes.json();
+        const raw = (aiData.content?.[0]?.text || '').replace(/```json|```/g, '').trim();
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (match) finalFields = { ...finalFields, ...JSON.parse(match[0]) };
+      } catch(e) {}
+    }
+
+    // Populate form fields
     let filled = 0;
     const fieldMap = {
-      title:    {inputId:'job-title',    fieldId:'f-title'},
-      company:  {inputId:'job-company',  fieldId:'f-company'},
-      location: {inputId:'job-location', fieldId:'f-location'},
-      salary:   {inputId:'job-salary',   fieldId:'f-salary'},
+      title:    { inputId: 'job-title',    fieldId: 'f-title' },
+      company:  { inputId: 'job-company',  fieldId: 'f-company' },
+      location: { inputId: 'job-location', fieldId: 'f-location' },
+      salary:   { inputId: 'job-salary',   fieldId: 'f-salary' },
     };
 
-    for (const [key, {inputId, fieldId}] of Object.entries(fieldMap)) {
-      const val = parsed[key];
+    for (const [key, { inputId, fieldId }] of Object.entries(fieldMap)) {
+      const val = finalFields?.[key];
       if (val && typeof val === 'string' && val.trim()) {
         const input = document.getElementById(inputId);
         const field = document.getElementById(fieldId);
@@ -592,8 +576,7 @@ async function parseJobUrl() {
       }
     }
 
-    // Append Remote to location if needed
-    if (parsed.remote === true) {
+    if (finalFields?.remote === true) {
       const loc = document.getElementById('job-location');
       if (loc) {
         if (loc.value && !loc.value.toLowerCase().includes('remote')) loc.value += ' (Remote)';
@@ -602,14 +585,14 @@ async function parseJobUrl() {
     }
 
     if (filled > 0) {
-      statusEl.innerHTML = `<span style="color:var(--accent);font-weight:600">✓</span> Filled ${filled} field${filled!==1?'s':''} — review and correct below`;
+      statusEl.innerHTML = `<span style="color:var(--accent);font-weight:600">✓</span> Filled ${filled} field${filled !== 1 ? 's' : ''} — review and correct below`;
     } else {
-      statusEl.innerHTML = `<span style="color:var(--amber)">⚠</span> No fields found — please fill in manually`;
+      statusEl.innerHTML = `<span style="color:var(--amber)">⚠</span> Could not auto-fill — this site may block scraping. Please fill in manually.`;
     }
 
   } catch(e) {
     console.error('Parse error:', e);
-    statusEl.innerHTML = `<span style="color:var(--amber)">⚠</span> Couldn't auto-fill — please enter details manually`;
+    statusEl.innerHTML = `<span style="color:var(--amber)">⚠</span> Could not reach server — please fill in manually`;
   }
 
   btn.disabled = false;
@@ -846,36 +829,27 @@ async function refetchPosting(jobId) {
   const area = document.getElementById('posting-content-area');
   if (area) area.innerHTML = `<div class="fetch-loading">${spinner()} Fetching job posting...</div>`;
 
-  const proxies = [
-    u => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-    u => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-  ];
+  try {
+    const res = await fetch(API + '/api/parse-job', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ url: j.url })
+    });
+    if (!res.ok) throw new Error('Server error');
+    const data = await res.json();
 
-  let fetched = false;
-  for (const proxyFn of proxies) {
-    try {
-      const res = await fetch(proxyFn(j.url), {signal: AbortSignal.timeout(10000)});
-      if (!res.ok) continue;
-      const data = await res.json();
-      const raw = data.contents || (typeof data === 'string' ? data : null);
-      if (raw && raw.length > 200) {
-        j.postingHtml = raw;
-        j.postingText = raw.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0, 8000);
-        fetched = true;
-        break;
-      }
-    } catch(e) { continue; }
-  }
-
-  scheduleSave();
-  if (area) {
-    if (fetched) {
-      area.innerHTML = buildPostingHtml(j);
+    if (data.html || data.text) {
+      j.postingHtml = data.html;
+      j.postingText = data.text;
+      scheduleSave();
+      if (area) area.innerHTML = buildPostingHtml(j);
     } else {
-      area.innerHTML = `<div class="posting-empty">
-        <p style="color:var(--red)">Could not fetch the posting — the site may block automated requests.<br>Try the "↗ open original" link instead.</p>
-      </div>`;
+      throw new Error('No content returned');
     }
+  } catch(e) {
+    if (area) area.innerHTML = `<div class="posting-empty">
+      <p style="color:var(--red)">Could not fetch the posting — the site may require a browser to render content.<br>Try the "↗ open original" link instead.</p>
+    </div>`;
   }
 }
 

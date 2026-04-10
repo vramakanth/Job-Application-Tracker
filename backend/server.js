@@ -101,6 +101,242 @@ app.put('/api/jobs', authMiddleware, (req, res) => {
   res.json({ ok: true });
 });
 
+// ── Job URL parsing proxy ──
+// Tries to extract job data intelligently based on ATS platform
+app.post('/api/parse-job', authMiddleware, async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ error: 'URL required' });
+
+  try {
+    const result = await parseJobFromUrl(url);
+    res.json(result);
+  } catch(e) {
+    res.status(500).json({ error: e.message, fields: {}, html: null, text: null });
+  }
+});
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const r = await fetch(url, { ...options, signal: controller.signal });
+    return r;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function parseJobFromUrl(url) {
+  const parsed = new URL(url);
+  const hostname = parsed.hostname;
+
+  // ── Eightfold / Dexcom-style ATS ──
+  // careers.example.com/careers/job/12345 -> job id in path
+  if (hostname.includes('eightfold') || /\/careers\/job\/(\d+)/.test(parsed.pathname)) {
+    const match = parsed.pathname.match(/\/careers\/job\/(\d+)/);
+    if (match) {
+      const jobId = match[1];
+      // Extract the base domain to build the API URL
+      const apiBase = `${parsed.protocol}//${parsed.hostname}`;
+      try {
+        const apiUrl = `${apiBase}/api/apply/v2/jobs/${jobId}?domain=${parsed.hostname.replace(/^careers\./,'')}`;
+        const apiRes = await fetchWithTimeout(apiUrl, {
+          headers: { 'Accept': 'application/json', 'User-Agent': 'Mozilla/5.0' }
+        });
+        if (apiRes.ok) {
+          const data = await apiRes.json();
+          const job = data.job || data;
+          return {
+            fields: {
+              title: job.name || job.title || null,
+              company: job.company_name || job.company || extractCompanyFromHost(hostname),
+              location: formatLocation(job.location || job.city, job.state, job.country),
+              salary: job.salary_range || job.compensation || null,
+              remote: job.is_remote || job.work_location_option === 'remote' || false,
+            },
+            html: null,
+            text: job.job_description || job.description || null,
+          };
+        }
+      } catch(e) {}
+    }
+  }
+
+  // ── Greenhouse ──
+  if (hostname.includes('greenhouse.io') || hostname.includes('boards.greenhouse')) {
+    const match = url.match(/jobs\/(\d+)/);
+    if (match) {
+      try {
+        const company = parsed.pathname.split('/')[1];
+        const apiUrl = `https://boards-api.greenhouse.io/v1/boards/${company}/jobs/${match[1]}`;
+        const apiRes = await fetchWithTimeout(apiUrl);
+        if (apiRes.ok) {
+          const data = await apiRes.json();
+          return {
+            fields: {
+              title: data.title || null,
+              company: extractCompanyFromHost(hostname) || company,
+              location: data.location?.name || null,
+              salary: null, remote: null,
+            },
+            html: data.content || null,
+            text: data.content ? stripHtml(data.content) : null,
+          };
+        }
+      } catch(e) {}
+    }
+  }
+
+  // ── Lever ──
+  if (hostname.includes('jobs.lever.co')) {
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    if (parts.length >= 2) {
+      try {
+        const company = parts[0], jobId = parts[1];
+        const apiUrl = `https://api.lever.co/v0/postings/${company}/${jobId}`;
+        const apiRes = await fetchWithTimeout(apiUrl);
+        if (apiRes.ok) {
+          const data = await apiRes.json();
+          return {
+            fields: {
+              title: data.text || null,
+              company: data.company || extractCompanyFromHost(hostname) || company,
+              location: data.categories?.location || data.workplaceType || null,
+              salary: data.salaryRange ? `${data.salaryRange.min}–${data.salaryRange.max}` : null,
+              remote: data.workplaceType === 'remote',
+            },
+            html: data.descriptionBody || data.description || null,
+            text: data.descriptionBody ? stripHtml(data.descriptionBody) : null,
+          };
+        }
+      } catch(e) {}
+    }
+  }
+
+  // ── Workday ──
+  if (hostname.includes('myworkdayjobs.com') || hostname.includes('wd1.myworkday') || hostname.includes('wd3.myworkday')) {
+    // Workday uses path like /company/job/Location/Title_JR123456
+    const titleMatch = parsed.pathname.match(/\/([^/]+)\/job\/[^/]+\/([^/]+)/);
+    if (titleMatch) {
+      const rawTitle = titleMatch[2].replace(/_[A-Z0-9]+$/, '').replace(/-/g,' ').replace(/_/g,' ');
+      return {
+        fields: {
+          title: toTitleCase(rawTitle),
+          company: extractCompanyFromHost(hostname),
+          location: null, salary: null, remote: null,
+        },
+        html: null, text: null,
+      };
+    }
+  }
+
+  // ── Indeed ──
+  if (hostname.includes('indeed.com')) {
+    const jk = parsed.searchParams.get('jk');
+    if (jk) {
+      try {
+        const apiRes = await fetchWithTimeout(`https://www.indeed.com/viewjob?jk=${jk}&api=1`);
+        if (apiRes.ok) {
+          const text = await apiRes.text();
+          const titleMatch = text.match(/"jobTitle":"([^"]+)"/);
+          const compMatch  = text.match(/"companyName":"([^"]+)"/);
+          const locMatch   = text.match(/"jobLocationCity":"([^"]+)"/);
+          const stateMatch = text.match(/"jobLocationState":"([^"]+)"/);
+          return {
+            fields: {
+              title: titleMatch?.[1] || null,
+              company: compMatch?.[1] || null,
+              location: locMatch ? `${locMatch[1]}${stateMatch ? ', '+stateMatch[1] : ''}` : null,
+              salary: null, remote: null,
+            },
+            html: null, text: null,
+          };
+        }
+      } catch(e) {}
+    }
+  }
+
+  // ── Generic fallback: CORS proxy + heuristic scrape ──
+  let html = null, text = null;
+  const proxies = [
+    `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+    `https://corsproxy.io/?${encodeURIComponent(url)}`,
+  ];
+
+  for (const proxyUrl of proxies) {
+    try {
+      const pr = await fetchWithTimeout(proxyUrl, { headers: { 'User-Agent': 'Mozilla/5.0' } });
+      if (!pr.ok) continue;
+      const pd = await pr.json();
+      const raw = pd.contents || (typeof pd === 'string' ? pd : null);
+      if (raw && raw.length > 500) {
+        html = raw;
+        text = stripHtml(raw).slice(0, 8000);
+        break;
+      }
+    } catch(e) { continue; }
+  }
+
+  // Extract fields from JSON-LD structured data if present
+  const fields = extractStructuredData(html) || { title: null, company: null, location: null, salary: null, remote: null };
+
+  // Fill in company from hostname if missing
+  if (!fields.company) fields.company = extractCompanyFromHost(hostname);
+
+  return { fields, html, text };
+}
+
+function extractStructuredData(html) {
+  if (!html) return null;
+  const matches = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+  if (!matches) return null;
+  for (const block of matches) {
+    try {
+      const json = block.replace(/<[^>]+>/g, '').trim();
+      const data = JSON.parse(json);
+      const job = data['@type'] === 'JobPosting' ? data : null;
+      if (job) {
+        return {
+          title: job.title || null,
+          company: job.hiringOrganization?.name || null,
+          location: job.jobLocation?.address?.addressLocality
+            ? `${job.jobLocation.address.addressLocality}${job.jobLocation.address.addressRegion ? ', '+job.jobLocation.address.addressRegion : ''}`
+            : null,
+          salary: job.baseSalary?.value?.value
+            ? `$${job.baseSalary.value.value}`
+            : null,
+          remote: job.jobLocationType === 'TELECOMMUTE' || false,
+        };
+      }
+    } catch(e) {}
+  }
+  return null;
+}
+
+function stripHtml(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function formatLocation(city, state, country) {
+  if (!city && !state && !country) return null;
+  const parts = [city, state, country].filter(Boolean);
+  return parts.join(', ');
+}
+
+function extractCompanyFromHost(hostname) {
+  const clean = hostname.replace(/^(careers|jobs|www)\./, '').split('.')[0];
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
+
+function toTitleCase(str) {
+  return str.replace(/\w\S*/g, t => t.charAt(0).toUpperCase() + t.slice(1).toLowerCase());
+}
+
 // Catch-all: serve frontend
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/public/index.html'));
