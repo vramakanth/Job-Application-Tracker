@@ -477,6 +477,125 @@ function toTitleCase(str) {
 }
 
 
+// ── Change password ──
+app.post('/api/change-password', authMiddleware, async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both passwords required' });
+  if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
+
+  const users = loadUsers();
+  const userEntry = Object.values(users).find(u => u.id === req.user.id);
+  if (!userEntry) return res.status(404).json({ error: 'User not found' });
+
+  const valid = await bcrypt.compare(currentPassword, userEntry.password);
+  if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
+
+  userEntry.password = await bcrypt.hash(newPassword, 12);
+  saveUsers(users);
+  res.json({ ok: true });
+});
+
+// ── Export all user data as zip ──
+app.get('/api/export-data', authMiddleware, async (req, res) => {
+  try {
+    const userJobs = loadUserJobs(req.user.id);
+    const archiver = require('archiver');
+    const archive = archiver('zip', { zlib: { level: 6 } });
+
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="applied-export-${Date.now()}.zip"`);
+    archive.pipe(res);
+
+    for (const job of Object.values(userJobs)) {
+      const safeName = `${job.company}_${job.title}`.replace(/[^a-zA-Z0-9_\- ]/g, '_').slice(0, 60);
+      const folder = `${safeName}/`;
+
+      // Job metadata as JSON
+      const meta = {
+        id: job.id, title: job.title, company: job.company,
+        location: job.location, salary: job.salary, status: job.status,
+        url: job.url, createdAt: new Date(job.createdAt).toISOString(),
+        notes: (job.notes || []).map(n => ({
+          date: new Date(n.ts).toISOString(),
+          text: n.text
+        }))
+      };
+      archive.append(JSON.stringify(meta, null, 2), { name: folder + 'job.json' });
+
+      // Resume
+      if (job.resume?.content) {
+        const ext = job.resume.name?.split('.').pop() || 'txt';
+        archive.append(job.resume.content, { name: folder + `resume.${ext}` });
+      }
+
+      // Cover letter
+      if (job.cover?.content) {
+        const ext = job.cover.name?.split('.').pop() || 'txt';
+        archive.append(job.cover.content, { name: folder + `cover_letter.${ext}` });
+      }
+
+      // Tailored resume
+      if (job.tailoredResume) {
+        archive.append(job.tailoredResume, { name: folder + 'resume_tailored.txt' });
+      }
+
+      // Tailored cover letter
+      if (job.tailoredCover) {
+        archive.append(job.tailoredCover, { name: folder + 'cover_letter_tailored.txt' });
+      }
+
+      // Insights summary
+      if (job.insights) {
+        const insightsSummary = {
+          generatedAt: job.insights.generatedAt ? new Date(job.insights.generatedAt).toISOString() : null,
+          overview: job.insights.overview,
+          companyOverview: job.insights.companyOverview,
+          roleIntel: job.insights.roleIntel,
+          flags: job.insights.flags,
+          interviewTips: job.insights.interviewTips,
+          culture: job.insights.culture ? {
+            overallRating: job.insights.culture.overallRating,
+            summary: job.insights.culture.summary
+          } : null
+        };
+        archive.append(JSON.stringify(insightsSummary, null, 2), { name: folder + 'insights.json' });
+      }
+
+      // Notes as plain text
+      if (job.notes?.length) {
+        const notesText = job.notes.map(n =>
+          `[${new Date(n.ts).toISOString()}]\n${n.text}\n`
+        ).join('\n---\n\n');
+        archive.append(notesText, { name: folder + 'notes.txt' });
+      }
+    }
+
+    archive.finalize();
+  } catch(e) {
+    console.error('Export error:', e);
+    if (!res.headersSent) res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Delete account and all data ──
+app.delete('/api/delete-account', authMiddleware, (req, res) => {
+  try {
+    const users = loadUsers();
+    // Find and remove user
+    const userKey = Object.keys(users).find(k => users[k].id === req.user.id);
+    if (userKey) delete users[userKey];
+    saveUsers(users);
+
+    // Delete user's jobs file
+    const jobsFile = path.join(JOBS_DIR, `${req.user.id}.json`);
+    if (fs.existsSync(jobsFile)) fs.unlinkSync(jobsFile);
+
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── Insights research endpoint ──
 // Calls Anthropic API server-side with web_search tool, handles multi-turn tool loop
 app.post('/api/insights', authMiddleware, async (req, res) => {
@@ -595,22 +714,36 @@ Return ONLY a valid JSON object with these exact fields (no markdown, no backtic
       iterations++;
       console.log(`Insights iteration ${iterations}...`);
 
-      const apiRes = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': ANTHROPIC_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-beta': 'web-search-2025-03-05',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 5000,
-          system: systemPrompt,
-          tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-          messages,
-        }),
-      }, 90000); // 90s timeout — web searches take time
+      // Retry on rate limit with exponential backoff
+      let apiRes, attempt = 0;
+      while (true) {
+        apiRes = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': ANTHROPIC_KEY,
+            'anthropic-version': '2023-06-01',
+            'anthropic-beta': 'web-search-2025-03-05',
+          },
+          body: JSON.stringify({
+            model: 'claude-sonnet-4-20250514',
+            max_tokens: 5000,
+            system: systemPrompt,
+            tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+            messages,
+          }),
+        }, 90000);
+
+        if (apiRes.status === 429 && attempt < 3) {
+          attempt++;
+          const retryAfter = parseInt(apiRes.headers.get('retry-after') || '60', 10);
+          const wait = Math.min(retryAfter, 60) * 1000;
+          console.log(`Rate limited, retrying in ${wait/1000}s (attempt ${attempt})...`);
+          await new Promise(r => setTimeout(r, wait));
+          continue;
+        }
+        break;
+      }
 
       if (!apiRes.ok) {
         const errText = await apiRes.text();

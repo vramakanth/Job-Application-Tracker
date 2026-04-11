@@ -208,10 +208,10 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .fetch-loading { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 60px; color: var(--text2); font-size: 13px; }
 
 /* ── INSIGHTS TAB ── */
-.insights-wrap { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 20px; }
+.insights-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 24px 28px; display: block; min-height: 0; }
 .insights-wrap::-webkit-scrollbar { width: 4px; }
 .insights-wrap::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
-.insights-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.insights-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
 .insights-header-left { display: flex; flex-direction: column; gap: 4px; }
 .insights-title { font-size: 15px; font-weight: 600; color: var(--text); }
 .insights-subtitle { font-size: 12px; color: var(--text2); }
@@ -225,7 +225,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .insights-key-input::placeholder { color: var(--text3); }
 .insights-key-save { padding: 6px 12px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 11px; color: var(--text2); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
 .insights-key-save:hover { background: var(--bg3); color: var(--text); }
-.insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
 .insight-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
 .insight-card-label { font-size: 10px; font-family: var(--mono); color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
 .insight-card-value { font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; line-height: 1.2; }
@@ -233,7 +233,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .insight-card-positive { color: var(--green); }
 .insight-card-negative { color: var(--red); }
 .insight-card-neutral { color: var(--text2); }
-.insight-section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.insight-section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
 .insight-section-header { padding: 14px 16px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
 .insight-section-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
 .insight-section-title { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
@@ -326,6 +326,40 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .ai-text { font-size: 13px; line-height: 1.7; color: var(--text); white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
 .typing-cursor { display: inline-block; width: 2px; height: 14px; background: var(--accent-bg); animation: blink 1s infinite; vertical-align: middle; }
 @keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
+/* ── SETTINGS ── */
+.settings-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 600; display: flex; align-items: flex-start; justify-content: flex-end; }
+@media (prefers-color-scheme: dark) { .settings-overlay { background: rgba(0,0,0,0.65); } }
+.settings-panel { width: min(480px, 100vw); height: 100vh; background: var(--bg2); border-left: 1px solid var(--border2); display: flex; flex-direction: column; overflow: hidden; animation: slideInRight 0.2s ease; }
+@keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.settings-header { display: flex; align-items: center; gap: 12px; padding: 20px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.settings-title { font-size: 16px; font-weight: 600; color: var(--text); flex: 1; }
+.settings-close { width: 32px; height: 32px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text2); transition: all 0.15s; }
+.settings-close:hover { background: var(--bg4); color: var(--text); }
+.settings-body { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 24px; }
+.settings-body::-webkit-scrollbar { width: 4px; }
+.settings-body::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+.settings-section { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.settings-section-title { font-size: 11px; font-family: var(--mono); color: var(--text2); font-weight: 600; letter-spacing: 0.5px; padding: 14px 16px 10px; border-bottom: 1px solid var(--border); background: var(--bg2); }
+.settings-section-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.settings-field label { display: block; font-size: 11px; font-family: var(--mono); color: var(--text2); margin-bottom: 6px; letter-spacing: 0.4px; }
+.settings-field input { width: 100%; padding: 9px 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; color: var(--text); outline: none; transition: border-color 0.15s; }
+.settings-field input:focus { border-color: var(--border2); }
+.settings-field input::placeholder { color: var(--text3); }
+.settings-hint { font-size: 11px; color: var(--text3); line-height: 1.5; margin-top: 2px; }
+.settings-btn { padding: 8px 16px; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); width: 100%; text-align: left; display: flex; align-items: center; gap: 8px; }
+.settings-btn:hover { background: var(--bg3); color: var(--text); }
+.settings-btn.primary { background: var(--accent-bg); color: #1a1917; border-color: transparent; font-weight: 600; }
+.settings-btn.primary:hover { background: var(--accent-bg2); }
+.settings-btn.danger { border-color: rgba(192,57,43,0.3); color: var(--red); }
+.settings-btn.danger:hover { background: rgba(192,57,43,0.08); }
+.settings-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.settings-status { font-size: 12px; padding: 8px 12px; border-radius: var(--radius-sm); display: none; }
+.settings-status.success { display: block; background: rgba(20,83,45,0.1); color: var(--green); border: 1px solid rgba(20,83,45,0.2); }
+.settings-status.error { display: block; background: rgba(192,57,43,0.08); color: var(--red); border: 1px solid rgba(192,57,43,0.2); }
+.settings-user-info { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); }
+.settings-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-bg); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #1a1917; font-family: var(--mono); flex-shrink: 0; }
+.settings-user-name { font-size: 14px; font-weight: 600; color: var(--text); }
+.settings-user-meta { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: var(--mono); }
 /* ── FILE EDITOR DRAWER ── */
 .file-editor-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 500; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 .file-editor-overlay.open { opacity: 1; pointer-events: all; }
@@ -451,6 +485,9 @@ input[type="file"] { display: none; }
     <div class="user-bar">
       <div class="user-avatar" id="user-avatar">?</div>
       <div class="user-name" id="user-name-display"></div>
+      <button class="logout-btn" onclick="openSettings()" title="Settings" style="margin-right:2px">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 10a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" stroke-width="1.3"/><path d="M13.3 6.6l-.8-.4a5.1 5.1 0 000-1.2l.8-.5a.6.6 0 00.2-.8l-.8-1.3a.6.6 0 00-.8-.2l-.8.5a5 5 0 00-1-.6V1.5a.6.6 0 00-.6-.5H8.5a.6.6 0 00-.6.5v.9a5 5 0 00-1 .6l-.8-.5a.6.6 0 00-.8.2L4.5 4.5a.6.6 0 00.2.8l.8.5a5.1 5.1 0 000 1.2l-.8.5a.6.6 0 00-.2.8l.8 1.3c.2.3.5.4.8.2l.8-.5a5 5 0 001 .6v.9c0 .3.3.6.6.6h1.6c.3 0 .6-.3.6-.6v-.9a5 5 0 001-.6l.8.5c.3.2.6.1.8-.2l.8-1.3a.6.6 0 00-.2-.8z" stroke="currentColor" stroke-width="1.3"/></svg>
+      </button>
       <button class="logout-btn" onclick="doLogout()" title="Sign out">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 14H3a1 1 0 01-1-1V3a1 1 0 011-1h3M11 11l3-3-3-3M14 8H6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
@@ -835,7 +872,6 @@ function renderJobList() {
 }
 
 function selectJob(id) {
-  stopInsightsAutoRefresh();
   currentJobId = id;
   activeDetailTab = 'notes';
   tailorFor = {resume:false, cover:false};
@@ -883,7 +919,7 @@ function renderDetail() {
     ${activeDetailTab === 'posting'
       ? renderPostingTab(j)
       : activeDetailTab === 'insights'
-        ? renderInsightsTab(j)
+        ? `<div style="flex:1;overflow-y:auto;overflow-x:hidden;min-height:0">${renderInsightsTab(j)}</div>`
         : `<div class="tab-pane">${activeDetailTab==='notes' ? renderNotesTab(j) : renderFilesTab(j)}</div>`
     }
   `;
@@ -892,29 +928,13 @@ function renderDetail() {
 function switchTab(t) {
   activeDetailTab = t;
   renderDetail();
+  // Auto-fetch insights on first load only (no auto-refresh)
   if (t === 'insights') {
-    startInsightsAutoRefresh();
-  } else {
-    stopInsightsAutoRefresh();
-  }
-}
-
-function startInsightsAutoRefresh() {
-  const j = jobs[currentJobId]; if (!j) return;
-  // Fetch immediately if no data or data is stale
-  const isStale = !j.insights || (Date.now() - (j.insights.generatedAt || 0)) > INSIGHTS_STALE_MS;
-  if (isStale && !insightsLoading) runInsights(currentJobId);
-  // Clear any existing interval then set a new one
-  stopInsightsAutoRefresh();
-  insightsInterval = setInterval(() => {
-    if (activeDetailTab === 'insights' && currentJobId && !insightsLoading) {
+    const j = jobs[currentJobId];
+    if (j && !j.insights && !insightsLoading) {
       runInsights(currentJobId);
     }
-  }, INSIGHTS_STALE_MS);
-}
-
-function stopInsightsAutoRefresh() {
-  if (insightsInterval) { clearInterval(insightsInterval); insightsInterval = null; }
+  }
 }
 
 // ── POSTING TAB ──
@@ -1348,8 +1368,6 @@ function esc(s) {
 
 // ── INSIGHTS TAB ──
 let insightsLoading = false;
-let insightsInterval = null;
-const INSIGHTS_STALE_MS = 5 * 60 * 1000; // 5 minutes
 
 function renderInsightsTab(j) {
   const ins = j.insights;
@@ -1394,7 +1412,7 @@ function renderInsightsTab(j) {
       <div class="insight-section-header">
         <div class="insight-section-icon" style="background:rgba(37,99,235,0.1)">🏢</div>
         <div class="insight-section-title">Company overview</div>
-        ${ins.generatedAt ? `<span class="insight-section-badge">${timeSince(ins.generatedAt)}</span><span class="insight-section-badge" style="border-color:var(--accent);color:var(--accent)">↻ auto 5min</span>` : ''}
+        ${ins.generatedAt ? `<span class="insight-section-badge">${timeSince(ins.generatedAt)}</span>` : ''}
       </div>
       <div class="insight-section-body">
         <div class="insight-ai-text">${formatAiText(ins.companyOverview || '')}</div>
@@ -1599,9 +1617,18 @@ function renderNews(newsItems) {
 
 function formatAiText(text) {
   if (!text) return '';
-  const html = esc(text)
+  // Strip citation tags and any other HTML the AI response might contain
+  // before we do our own safe HTML rendering
+  const stripped = text
+    .replace(/<cite[^>]*>([\s\S]*?)<\/cite>/gi, '$1')  // unwrap <cite> → keep inner text
+    .replace(/<parameter[^>]*\/?>/gi, '')                  // strip <parameter> tags
+    .replace(/<\/[a-z]+>/gi, '')                        // strip any other closing tags
+    .replace(/<[a-z][^>]*>/gi, '');                     // strip any other opening tags
+
+  // Now safely escape and convert to HTML
+  const html = esc(stripped)
     .replace(/\*\*([^*<]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/^(\s*)[•\-] /gm, '$1· ')
+    .replace(/^(\s*)[•\-\*] /gm, '$1· ')
     .replace(/\n\n+/g, '</p><p>')
     .replace(/\n/g, '<br>');
   return '<p>' + html + '</p>';
@@ -1646,6 +1673,27 @@ function copyTemplate() {
   });
 }
 
+function stripCitations(text) {
+  if (typeof text !== 'string') return text;
+  return text
+    .replace(/<cite[^>]*>([\s\S]*?)<\/cite>/gi, '$1')
+    .replace(/<parameter[^>]*\/?>/gi, '')
+    .replace(/<\/[a-z]+>/gi, '')
+    .replace(/<[a-z][^>]*>/gi, '')
+    .trim();
+}
+
+function deepStripCitations(obj) {
+  if (typeof obj === 'string') return stripCitations(obj);
+  if (Array.isArray(obj)) return obj.map(deepStripCitations);
+  if (obj && typeof obj === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(obj)) out[k] = deepStripCitations(v);
+    return out;
+  }
+  return obj;
+}
+
 async function runInsights(jobId) {
   const j = jobs[jobId]; if (!j) return;
   insightsLoading = true;
@@ -1671,8 +1719,9 @@ async function runInsights(jobId) {
       throw new Error(err.error || 'Server error');
     }
 
-    const insights = await res.json();
-    j.insights = insights;
+    const raw = await res.json();
+    // Strip citation tags from all string fields recursively
+    j.insights = deepStripCitations(raw);
     scheduleSave();
   } catch(e) {
     console.error('Insights error:', e);
@@ -1792,11 +1841,210 @@ document.addEventListener('keydown', e => {
   }
 });
 
+// ── SETTINGS ──
+function openSettings() {
+  const overlay = document.getElementById('settings-overlay');
+  overlay.style.display = 'flex';
+  // Populate
+  document.getElementById('s-avatar').textContent = (currentUser||'?').slice(0,2).toUpperCase();
+  document.getElementById('s-username').textContent = currentUser;
+  document.getElementById('s-job-count').textContent = Object.keys(jobs).length + ' applications';
+  document.getElementById('s-finnhub-key').value = localStorage.getItem('finnhub_key') || '';
+  // Clear fields
+  ['s-pw-current','s-pw-new','s-pw-confirm','s-delete-confirm'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+  ['pw-status','finnhub-status','export-status','delete-status'].forEach(id => {
+    const el = document.getElementById(id); if (el) { el.className = 'settings-status'; el.textContent = ''; }
+  });
+}
+
+function closeSettings() {
+  document.getElementById('settings-overlay').style.display = 'none';
+}
+
+function setSettingsStatus(id, type, msg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'settings-status ' + type;
+  el.textContent = msg;
+}
+
+async function changePassword() {
+  const current = document.getElementById('s-pw-current').value;
+  const newPw = document.getElementById('s-pw-new').value;
+  const confirm = document.getElementById('s-pw-confirm').value;
+  if (!current || !newPw) { setSettingsStatus('pw-status','error','Please fill in all password fields.'); return; }
+  if (newPw !== confirm) { setSettingsStatus('pw-status','error','New passwords do not match.'); return; }
+  if (newPw.length < 6) { setSettingsStatus('pw-status','error','Password must be at least 6 characters.'); return; }
+  try {
+    const res = await fetch(API + '/api/change-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ currentPassword: current, newPassword: newPw })
+    });
+    const data = await res.json();
+    if (!res.ok) { setSettingsStatus('pw-status','error', data.error || 'Failed to change password'); return; }
+    setSettingsStatus('pw-status','success','Password updated successfully.');
+    document.getElementById('s-pw-current').value = '';
+    document.getElementById('s-pw-new').value = '';
+    document.getElementById('s-pw-confirm').value = '';
+  } catch(e) { setSettingsStatus('pw-status','error','Server error: ' + e.message); }
+}
+
+function saveFinnhubKeySetting() {
+  const key = document.getElementById('s-finnhub-key').value.trim();
+  if (key) {
+    localStorage.setItem('finnhub_key', key);
+    setSettingsStatus('finnhub-status','success','Finnhub API key saved.');
+  } else {
+    setSettingsStatus('finnhub-status','error','Please enter a key, or use "Clear key" to remove it.');
+  }
+}
+
+function clearFinnhubKey() {
+  localStorage.removeItem('finnhub_key');
+  document.getElementById('s-finnhub-key').value = '';
+  setSettingsStatus('finnhub-status','success','Finnhub key removed.');
+}
+
+async function exportAllData() {
+  const btn = document.getElementById('export-btn');
+  btn.disabled = true;
+  btn.textContent = 'Preparing zip...';
+  setSettingsStatus('export-status','','');
+  try {
+    const res = await fetch(API + '/api/export-data', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Export failed'); }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'applied-tracker-export-' + new Date().toISOString().split('T')[0] + '.zip';
+    a.click();
+    URL.revokeObjectURL(url);
+    setSettingsStatus('export-status','success','Download started.');
+  } catch(e) {
+    setSettingsStatus('export-status','error', e.message);
+  }
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M1 10v1a2 2 0 002 2h8a2 2 0 002-2v-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg> Download all data as zip';
+}
+
+async function deleteAccount() {
+  const confirm = document.getElementById('s-delete-confirm').value.trim();
+  if (confirm !== currentUser) {
+    setSettingsStatus('delete-status','error','Username does not match. Type exactly: ' + currentUser);
+    return;
+  }
+  if (!window.confirm('This will permanently delete your account and ALL job data. This cannot be undone. Are you absolutely sure?')) return;
+  try {
+    const res = await fetch(API + '/api/delete-account', {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Failed'); }
+    // Log out and show login
+    doLogout();
+    alert('Your account and all data have been deleted.');
+  } catch(e) {
+    setSettingsStatus('delete-status','error','Error: ' + e.message);
+  }
+}
+
+// Close settings on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const settingsEl = document.getElementById('settings-overlay');
+    if (settingsEl && settingsEl.style.display !== 'none') { closeSettings(); return; }
+    const drawerEl = document.getElementById('file-editor-drawer');
+    if (drawerEl?.classList.contains('open')) { closeFileEditor(); }
+  }
+});
+
 setInterval(() => {
   const el = document.getElementById('note-ts-preview');
   if (el) el.textContent = new Date().toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
 }, 1000);
 </script>
+<!-- SETTINGS PANEL -->
+<div class="settings-overlay" id="settings-overlay" style="display:none" onclick="if(event.target===this)closeSettings()">
+  <div class="settings-panel">
+    <div class="settings-header">
+      <div class="settings-title">Settings</div>
+      <button class="settings-close" onclick="closeSettings()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="settings-body">
+
+      <!-- Account info -->
+      <div class="settings-section">
+        <div class="settings-section-title">ACCOUNT</div>
+        <div class="settings-user-info">
+          <div class="settings-avatar" id="s-avatar">?</div>
+          <div>
+            <div class="settings-user-name" id="s-username"></div>
+            <div class="settings-user-meta" id="s-job-count"></div>
+          </div>
+        </div>
+        <div class="settings-section-body">
+          <div class="settings-status" id="pw-status"></div>
+          <div class="settings-field"><label>CURRENT PASSWORD</label><input type="password" id="s-pw-current" placeholder="Enter current password" autocomplete="current-password"></div>
+          <div class="settings-field"><label>NEW PASSWORD</label><input type="password" id="s-pw-new" placeholder="At least 6 characters" autocomplete="new-password"></div>
+          <div class="settings-field"><label>CONFIRM NEW PASSWORD</label><input type="password" id="s-pw-confirm" placeholder="Repeat new password" autocomplete="new-password"></div>
+          <button class="settings-btn primary" onclick="changePassword()">Update password</button>
+        </div>
+      </div>
+
+      <!-- Finnhub API key -->
+      <div class="settings-section">
+        <div class="settings-section-title">FINANCIAL DATA (FINNHUB)</div>
+        <div class="settings-section-body">
+          <div class="settings-status" id="finnhub-status"></div>
+          <div class="settings-field">
+            <label>API KEY</label>
+            <input type="password" id="s-finnhub-key" placeholder="Paste your Finnhub API key">
+            <div class="settings-hint">Get a free key at <a href="https://finnhub.io/register" target="_blank" style="color:var(--blue)">finnhub.io/register</a>. Used to fetch live stock price, market cap and analyst ratings in the Insights tab.</div>
+          </div>
+          <button class="settings-btn primary" onclick="saveFinnhubKeySetting()">Save API key</button>
+          <button class="settings-btn" onclick="clearFinnhubKey()" style="margin-top:-4px">Clear key</button>
+        </div>
+      </div>
+
+      <!-- Data export -->
+      <div class="settings-section">
+        <div class="settings-section-title">DATA EXPORT</div>
+        <div class="settings-section-body">
+          <div class="settings-status" id="export-status"></div>
+          <div class="settings-hint" style="display:block;margin-bottom:4px">Download all your job applications as a zip file. Each job gets its own folder with metadata, notes, resume, cover letter, and tailored documents.</div>
+          <button class="settings-btn primary" id="export-btn" onclick="exportAllData()">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M1 10v1a2 2 0 002 2h8a2 2 0 002-2v-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Download all data as zip
+          </button>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="settings-section" style="border-color:rgba(192,57,43,0.25)">
+        <div class="settings-section-title" style="color:var(--red);background:rgba(192,57,43,0.05)">DANGER ZONE</div>
+        <div class="settings-section-body">
+          <div class="settings-status" id="delete-status"></div>
+          <div class="settings-hint" style="display:block;margin-bottom:4px">Permanently delete your account and all job data. This cannot be undone.</div>
+          <div class="settings-field"><label>TYPE YOUR USERNAME TO CONFIRM</label><input type="text" id="s-delete-confirm" placeholder="Type username to confirm"></div>
+          <button class="settings-btn danger" onclick="deleteAccount()">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3.5h10M5.5 3.5V2h3v1.5M5 11V5M9 11V5M3 3.5l.5 8a1 1 0 001 .5h5a1 1 0 001-.5l.5-8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Delete account &amp; all data
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
