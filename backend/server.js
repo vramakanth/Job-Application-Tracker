@@ -1,4 +1,5 @@
 const express = require('express');
+const archiver = require('archiver');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
@@ -499,7 +500,6 @@ app.post('/api/change-password', authMiddleware, async (req, res) => {
 app.get('/api/export-data', authMiddleware, async (req, res) => {
   try {
     const userJobs = loadUserJobs(req.user.id);
-    const archiver = require('archiver');
     const archive = archiver('zip', { zlib: { level: 6 } });
 
     res.setHeader('Content-Type', 'application/zip');
