@@ -582,14 +582,19 @@ Return ONLY a valid JSON object with these exact fields (no markdown, no backtic
 }`;
 
   try {
-    // Multi-turn loop to handle web_search tool calls
+    // The Anthropic web_search tool is fully server-executed:
+    // Claude emits tool_use blocks → Anthropic runs the search → results come back
+    // as tool_result blocks in the NEXT response. We just keep passing the full
+    // message history back until we get stop_reason === 'end_turn'.
     const messages = [{ role: 'user', content: userPrompt }];
     let finalText = '';
     let iterations = 0;
-    const MAX_ITERATIONS = 8;
+    const MAX_ITERATIONS = 10;
 
     while (iterations < MAX_ITERATIONS) {
       iterations++;
+      console.log(`Insights iteration ${iterations}...`);
+
       const apiRes = await fetchWithTimeout('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -605,61 +610,71 @@ Return ONLY a valid JSON object with these exact fields (no markdown, no backtic
           tools: [{ type: 'web_search_20250305', name: 'web_search' }],
           messages,
         }),
-      }, 60000);
+      }, 90000); // 90s timeout — web searches take time
 
       if (!apiRes.ok) {
-        const err = await apiRes.text();
-        throw new Error(`Anthropic API error ${apiRes.status}: ${err.slice(0, 200)}`);
+        const errText = await apiRes.text();
+        console.error('Anthropic error:', apiRes.status, errText.slice(0, 400));
+        throw new Error(`Anthropic API error ${apiRes.status}: ${errText.slice(0, 200)}`);
       }
 
       const apiData = await apiRes.json();
-      const { content, stop_reason } = apiData;
+      const { content: responseContent, stop_reason } = apiData;
 
-      // Add assistant turn to messages
-      messages.push({ role: 'assistant', content });
+      console.log(`Stop reason: ${stop_reason}, blocks: ${responseContent.map(b => b.type).join(', ')}`);
+
+      // Always add the full assistant response to message history
+      messages.push({ role: 'assistant', content: responseContent });
 
       if (stop_reason === 'end_turn') {
-        // Extract all text blocks
-        finalText = content
+        // Collect all text blocks from this final response
+        finalText = responseContent
           .filter(b => b.type === 'text')
           .map(b => b.text)
           .join('');
+        console.log(`Final text length: ${finalText.length}`);
         break;
       }
 
       if (stop_reason === 'tool_use') {
-        // Process all tool_use blocks and build tool_result content
-        const toolResults = [];
-        for (const block of content) {
-          if (block.type === 'tool_use' && block.name === 'web_search') {
-            // The web_search tool executes on Anthropic's side — we just need to
-            // acknowledge it. The results come back automatically in the next turn.
-            toolResults.push({
-              type: 'tool_result',
-              tool_use_id: block.id,
-              content: 'Search executed.',
-            });
-          }
-        }
-        if (toolResults.length > 0) {
-          messages.push({ role: 'user', content: toolResults });
+        // web_search is server-executed — Anthropic handles it automatically.
+        // We don't send back tool_result — instead we send an empty user turn
+        // to signal "continue", which prompts Anthropic to process the search
+        // results and continue generating.
+        // NOTE: Some versions of the API need a tool_result per tool_use block.
+        // Build tool_result blocks acknowledging each tool_use.
+        const toolResultBlocks = responseContent
+          .filter(b => b.type === 'tool_use')
+          .map(b => ({
+            type: 'tool_result',
+            tool_use_id: b.id,
+            // Leave content empty — the actual search results are handled server-side
+            // by Anthropic and will appear in the next response automatically.
+            content: '',
+          }));
+
+        if (toolResultBlocks.length > 0) {
+          messages.push({ role: 'user', content: toolResultBlocks });
         } else {
-          break;
+          // No tool_use blocks found despite tool_use stop_reason — just continue
+          messages.push({ role: 'user', content: 'Please continue.' });
         }
       } else {
-        // Unexpected stop reason
-        finalText = content.filter(b => b.type === 'text').map(b => b.text).join('');
+        // max_tokens or other stop — grab whatever text we have
+        finalText = responseContent.filter(b => b.type === 'text').map(b => b.text).join('');
+        console.log(`Non-end_turn stop (${stop_reason}), text length: ${finalText.length}`);
         break;
       }
     }
 
     // Parse JSON from the final response
-    if (!finalText) throw new Error('Empty response from AI');
+    if (!finalText) throw new Error('Empty response from AI after ' + iterations + ' iterations');
+    console.log('Raw finalText (first 500):', finalText.slice(0, 500));
     const cleaned = finalText.replace(/```json|```/g, '').trim();
     // Find the outermost JSON object
     const start = cleaned.indexOf('{');
     const end = cleaned.lastIndexOf('}');
-    if (start === -1 || end === -1) throw new Error('No JSON found in response');
+    if (start === -1 || end === -1) throw new Error('No JSON found in response. Got: ' + finalText.slice(0, 200));
     const jsonStr = cleaned.slice(start, end + 1);
     const insights = JSON.parse(jsonStr);
     insights.generatedAt = Date.now();

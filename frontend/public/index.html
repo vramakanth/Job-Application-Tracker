@@ -1676,16 +1676,19 @@ async function runInsights(jobId) {
     scheduleSave();
   } catch(e) {
     console.error('Insights error:', e);
+    // Show the actual error prominently so it's debuggable
+    const errMsg = e.message || String(e);
     j.insights = {
       generatedAt: Date.now(),
       stock: null,
-      companyOverview: 'Research failed: ' + e.message + '. Make sure ANTHROPIC_API_KEY is set on the server and try again.',
+      _error: errMsg,
+      companyOverview: '⚠️ Research failed\n\nError: ' + errMsg + '\n\nCheck that:\n• ANTHROPIC_API_KEY is set in Render environment variables\n• Your Render service has redeployed after adding the key\n• Check Render logs for details',
       culture: null,
-      roleIntel: 'Could not load role intelligence. Please try again.',
+      roleIntel: '',
       flags: { green: [], red: [] },
       linkedin: { suggestedContacts: [], outreachTip: '', messageTemplate: '' },
       news: [],
-      interviewTips: 'Could not load interview tips. Please try again.',
+      interviewTips: '',
     };
     scheduleSave();
   }
