@@ -642,6 +642,12 @@ function fmtDate(ts) {
 function statusColor(s) {
   return {applied:'#3b82f6',screening:'#8b5cf6',interviewing:'#f59e0b',offer:'#10b981',rejected:'#ef4444',ghosted:'#6b7280',withdrawn:'#9ca3af'}[s] || '#6b7280';
 }
+function formatBytes(n) {
+  if (!n) return '0b';
+  if (n < 1024) return n + 'b';
+  if (n < 1048576) return (n/1024).toFixed(1) + 'kb';
+  return (n/1048576).toFixed(1) + 'mb';
+}
 
 
 // ── INIT ──
