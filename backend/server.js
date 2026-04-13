@@ -237,7 +237,7 @@ app.post('/api/parse-file', authMiddleware, upload.single('file'), async (req, r
   const ext = path.extname(req.file.originalname).toLowerCase();
   const buf = req.file.buffer;
   try {
-    let text = '';
+    let text = '', docHtml = '';
     if (ext === '.txt') {
       text = buf.toString('utf8');
     } else if (ext === '.pdf') {
@@ -245,15 +245,20 @@ app.post('/api/parse-file', authMiddleware, upload.single('file'), async (req, r
       text = data.text;
     } else if (ext === '.docx' || ext === '.doc') {
       try {
-        const result = await mammoth.extractRawText({ buffer: buf });
-        text = result.value;
+        // Extract both HTML (for formatting) and plain text
+        const [htmlResult, textResult] = await Promise.all([
+          mammoth.convertToHtml({ buffer: buf }),
+          mammoth.extractRawText({ buffer: buf }),
+        ]);
+        docHtml = htmlResult.value;
+        text = textResult.value;
       } catch(e) {
         return res.status(422).json({ error: 'Could not parse this Word file. Try saving as .docx or .txt.' });
       }
     }
     text = text.replace(/\r\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
     if (!text) return res.status(422).json({ error: 'No text could be extracted. The file may be scanned or image-based.' });
-    res.json({ name: req.file.originalname, size: req.file.size, text });
+    res.json({ html: docHtml || null, name: req.file.originalname, size: req.file.size, text });
   } catch(e) {
     console.error('File parse error:', e.message);
     res.status(500).json({ error: 'Failed to parse file: ' + e.message });
@@ -708,7 +713,7 @@ app.post('/api/extract-fields', authMiddleware, async (req, res) => {
   try {
     const result = await callAI(
       ['openrouter', 'groq', 'google'],
-      'Extract job details. Respond ONLY with valid JSON, no markdown. Fields: title, company, location, salary, remote (boolean). Use null if not found.',
+      'Extract job details from this job posting. Respond ONLY with valid JSON, no markdown. Fields: title (string), company (string), location (physical city/state/country only, no work type), workType (one of: Remote, Hybrid, On-site, or null), salary (string), remote (boolean). Use null if not found.',
       `URL: ${url}\n\nPage text:\n${text}`,
       300
     );
@@ -731,8 +736,8 @@ app.post('/api/tailor', authMiddleware, async (req, res) => {
   const docLabel = docType === 'resume' ? 'RESUME' : 'COVER LETTER';
   const outputLabel = docType === 'resume' ? 'TAILORED RESUME' : 'TAILORED COVER LETTER';
 
-  const systemPrompt = 'You are a professional career coach and resume writer. Return ONLY the tailored document text, no preamble, no labels, no explanation.';
-  const userPrompt = `Tailor this ${docLabel} for the following role. Return ONLY the tailored ${docLabel} text with no labels or explanation.
+  const systemPrompt = 'You are a professional career coach and resume writer. Return ONLY the tailored document as clean HTML. Use <h1>, <h2>, <h3> for headings, <p> for paragraphs, <strong> for bold, <em> for italic, <ul>/<li> for bullet lists. Preserve all section structure and formatting from the original. No preamble, no labels, no explanation, no markdown, no backticks — just valid HTML starting with the first element.';
+  const userPrompt = `Tailor this ${docLabel} for the following role. Return ONLY valid HTML with formatting preserved. Use proper heading tags, bold, lists etc.
 
 Company: ${company}
 Role: ${title}
@@ -741,7 +746,7 @@ ${salary ? 'Target salary: ' + salary : ''}
 ${context ? 'Additional context: ' + context : ''}
 ${jobCtx}
 
-${docLabel} TO TAILOR:
+${docLabel} TO TAILOR (may be HTML or plain text — preserve all structure and formatting):
 ${docContent}`;
 
   try {
@@ -967,6 +972,57 @@ app.post('/api/docs/upload', authMiddleware, upload.single('file'), async (req, 
   docs.push(doc);
   saveUserDocs(req.user.id, docs);
   res.json(doc);
+});
+
+// ── Download tailored doc as DOCX ──
+app.post('/api/download-docx', authMiddleware, async (req, res) => {
+  const { html, text, filename } = req.body;
+  if (!html && !text) return res.status(400).json({ error: 'No content provided' });
+  try {
+    const HTMLtoDOCX = require('html-to-docx');
+    const htmlContent = html || `<html><body>${(text||'').split('\n').map(l => `<p>${l}</p>`).join('')}</body></html>`;
+    const docxBuffer = await HTMLtoDOCX(htmlContent, null, {
+      table: { row: { cantSplit: true } },
+      footer: false,
+      pageNumber: false,
+    });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${(filename || 'document').replace(/[^a-z0-9_-]/gi, '_')}.docx"`);
+    res.send(docxBuffer);
+  } catch(e) {
+    console.error('DOCX generation error:', e);
+    res.status(500).json({ error: 'Failed to generate DOCX: ' + e.message });
+  }
+});
+
+// ── Download tailored doc as DOCX ──
+app.post('/api/download-docx', authMiddleware, async (req, res) => {
+  const { content: htmlContent, filename = 'tailored-document' } = req.body;
+  if (!htmlContent) return res.status(400).json({ error: 'No content provided' });
+
+  try {
+    const HTMLtoDOCX = require('html-to-docx');
+    // Wrap in a full HTML structure if not already
+    const fullHtml = htmlContent.trim().startsWith('<!DOCTYPE') ? htmlContent :
+      `<!DOCTYPE html><html><body>${htmlContent}</body></html>`;
+
+    const docxBuffer = await HTMLtoDOCX(fullHtml, null, {
+      table: { row: { cantSplit: true } },
+      footer: false,
+      pageNumber: false,
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}.docx"`);
+    res.send(Buffer.from(docxBuffer));
+  } catch(e) {
+    console.error('Download DOCX error:', e.message);
+    // Fallback: send as plain text
+    const text = htmlContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    res.setHeader('Content-Type', 'text/plain');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}.txt"`);
+    res.send(text);
+  }
 });
 
 app.get('*', (req, res) => {

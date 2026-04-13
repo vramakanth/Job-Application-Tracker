@@ -349,6 +349,14 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .file-action-btn:hover { background: var(--bg4); }
 .file-action-btn.danger:hover { color: var(--red); }
 .wysiwyg-editor { font-family: var(--font); }
+.wysiwyg-editor h1 { font-size: 18px; font-weight: 700; margin: 0 0 8px; color: var(--text); }
+.wysiwyg-editor h2 { font-size: 15px; font-weight: 600; margin: 14px 0 6px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 4px; }
+.wysiwyg-editor h3 { font-size: 13px; font-weight: 600; margin: 10px 0 4px; color: var(--text); }
+.wysiwyg-editor p { margin: 0 0 8px; }
+.wysiwyg-editor ul, .wysiwyg-editor ol { margin: 0 0 8px; padding-left: 20px; }
+.wysiwyg-editor li { margin-bottom: 3px; }
+.wysiwyg-editor strong { font-weight: 600; color: var(--text); }
+.wysiwyg-editor em { font-style: italic; }
 .tailor-heading { font-size: 13px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; color: var(--text); }
 .tailor-sub { font-size: 12px; color: var(--text2); margin-bottom: 16px; line-height: 1.6; }
 .tailor-options { display: flex; gap: 8px; margin-bottom: 14px; }
@@ -575,7 +583,18 @@ input[type="file"] { display: none; }
 
     <div class="field" id="f-title"><label>JOB TITLE</label><input type="text" id="job-title" placeholder="e.g. Senior Product Designer"></div>
     <div class="field" id="f-company"><label>COMPANY</label><input type="text" id="job-company" placeholder="e.g. Acme Corp"></div>
-    <div class="field" id="f-location"><label>LOCATION</label><input type="text" id="job-location" placeholder="e.g. San Francisco, CA / Remote"></div>
+    <div class="field" id="f-location">
+      <label>LOCATION</label>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center">
+        <input type="text" id="job-location" placeholder="e.g. San Francisco, CA">
+        <select id="job-worktype" style="padding:9px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text);outline:none;cursor:pointer;white-space:nowrap">
+          <option value="">Work type</option>
+          <option value="Remote">Remote</option>
+          <option value="Hybrid">Hybrid</option>
+          <option value="On-site">On-site</option>
+        </select>
+      </div>
+    </div>
     <div class="field" id="f-salary"><label>SALARY / COMP</label><input type="text" id="job-salary" placeholder="e.g. $120k–$160k"></div>
     <div class="field">
       <label>STATUS</label>
@@ -730,6 +749,20 @@ async function loadJobs() {
     const res = await fetch(API+'/api/jobs', {headers:{Authorization:'Bearer '+token}});
     if (res.status===401) { doLogout(); return; }
     jobs = await res.json();
+    // Migrate legacy: split combined "Remote - Location" into workType + location
+    Object.values(jobs).forEach(j => {
+      if (j.location && !j.workType) {
+        const m = j.location.match(/^(Remote|Hybrid|On-?site)\s*[-–]\s*(.+)$/i);
+        if (m) {
+          j.workType = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
+          if (j.workType.toLowerCase() === 'onsite') j.workType = 'On-site';
+          j.location = m[2].trim();
+        } else if (/^(Remote|Hybrid|On-?site)$/i.test(j.location.trim())) {
+          j.workType = j.location.trim();
+          j.location = '';
+        }
+      }
+    });
   } catch(e) { jobs={}; }
   renderJobList();
 }
@@ -815,11 +848,21 @@ async function parseJobUrl() {
       }
     }
 
-    if (finalFields?.remote === true) {
-      const loc = document.getElementById('job-location');
-      if (loc) {
-        if (loc.value && !loc.value.toLowerCase().includes('remote')) loc.value += ' (Remote)';
-        else if (!loc.value) loc.value = 'Remote';
+    // Handle workType separately from location
+    const wtEl = document.getElementById('job-worktype');
+    if (wtEl) {
+      const locVal = (document.getElementById('job-location')?.value || '').toLowerCase();
+      if (finalFields?.remote === true || /^remote$/i.test(locVal.trim())) {
+        wtEl.value = 'Remote';
+        // Clean "Remote" out of location field if it's just that
+        const locEl = document.getElementById('job-location');
+        if (locEl && /^remote$/i.test(locEl.value.trim())) locEl.value = '';
+      } else if (/hybrid/i.test(locVal)) {
+        wtEl.value = 'Hybrid';
+        const locEl = document.getElementById('job-location');
+        if (locEl) locEl.value = locEl.value.replace(/[,\s]*hybrid[,\s]*/i,'').trim();
+      } else if (/on.?site|in.?person/i.test(locVal)) {
+        wtEl.value = 'On-site';
       }
     }
 
@@ -848,6 +891,7 @@ function openAddModal() {
   ['job-url','job-title','job-company','job-location','job-salary'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
   });
+  const wt = document.getElementById('job-worktype'); if (wt) wt.value = '';
   ['f-title','f-company','f-location','f-salary'].forEach(id => {
     document.getElementById(id)?.classList.remove('filled');
   });
@@ -864,10 +908,12 @@ function addJob() {
   const company = document.getElementById('job-company').value.trim();
   if (!title || !company) { alert('Please enter at least a job title and company.'); return; }
   const id = genId();
+  const workType = document.getElementById('job-worktype')?.value || '';
   jobs[id] = {
     id, title, company,
     url:      document.getElementById('job-url').value.trim(),
     location: document.getElementById('job-location').value.trim(),
+    workType,
     salary:   document.getElementById('job-salary').value.trim(),
     status:   document.getElementById('job-status').value,
     createdAt: Date.now(),
@@ -957,6 +1003,7 @@ function renderDetail() {
         <div class="detail-company">
           ${esc(j.company)}
           ${j.location ? `<span style="color:var(--text3)">·</span><span style="font-size:11px">${esc(j.location)}</span>` : ''}
+          ${j.workType ? `<span style="font-size:10px;padding:2px 7px;border-radius:100px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-family:var(--mono);font-weight:500">${esc(j.workType)}</span>` : ''}
           ${j.salary ? `<span style="color:var(--text3)">·</span><span style="font-size:11px;color:var(--accent);font-weight:500">${esc(j.salary)}</span>` : ''}
           ${j.url ? `<a href="${esc(j.url)}" target="_blank">↗ original posting</a>` : ''}
         </div>
@@ -1217,7 +1264,7 @@ function renderFilesTab(j) {
         <div id="ai-stream-output" style="margin-top:14px"></div>
       </div>
 
-      ${(j.tailoredResume || j.tailoredCover) ? `
+      ${(j.tailoredResume || j.tailoredCover || j.tailoredResumeHtml || j.tailoredCoverHtml) ? `
       <div class="tailor-section">
         <div class="tailor-heading">Tailored Documents</div>
         ${j.tailoredResume ? renderTailoredDoc('resume', j.tailoredResume, j.id) : ''}
@@ -1229,16 +1276,20 @@ function renderFilesTab(j) {
 function renderTailoredDoc(type, text, jobId) {
   const label = type === 'resume' ? 'Tailored Resume' : 'Tailored Cover Letter';
   const editorId = `wysiwyg-${type}`;
+  const j = jobs[jobId];
+  const htmlContent = type === 'resume' ? j?.tailoredResumeHtml : j?.tailoredCoverHtml;
+  const displayContent = htmlContent || esc(text); // HTML if available, escaped text otherwise
   return `
     <div style="margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
         <div style="font-size:12px;font-weight:600;color:var(--text)">${label}</div>
         <div style="display:flex;gap:6px">
-          <button onclick="downloadTailored('${type}','${jobId}')" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);color:var(--text2);cursor:pointer">↓ Download .docx</button>
+          <button onclick="downloadTailoredDocx('${type}','${jobId}')" style="padding:5px 12px;background:var(--accent-bg);border:none;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);color:#1a1917;cursor:pointer;font-weight:600">↓ Download .docx</button>
+          <button onclick="downloadTailoredTxt('${type}','${jobId}')" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);color:var(--text2);cursor:pointer">↓ .txt</button>
           <button onclick="retailor('${type}','${jobId}')" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);color:var(--text2);cursor:pointer">↺ Re-tailor</button>
         </div>
       </div>
-      <div id="${editorId}" class="wysiwyg-editor" style="min-height:200px;max-height:400px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;background:var(--bg2);font-size:13px;line-height:1.7;color:var(--text);white-space:pre-wrap;outline:none" contenteditable="true" oninput="saveTailoredEdit('${type}','${jobId}',this)">${esc(text)}</div>
+      <div id="${editorId}" class="wysiwyg-editor" style="min-height:200px;max-height:500px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm);padding:20px;background:var(--bg2);font-size:13px;line-height:1.7;color:var(--text);outline:none" contenteditable="true" oninput="saveTailoredEdit('${type}','${jobId}',this)">${displayContent}</div>
     </div>`;
 }
 
@@ -1252,8 +1303,13 @@ function removeFile(type, jobId) {
 
 function saveTailoredEdit(type, jobId, el) {
   const j = jobs[jobId]; if (!j) return;
-  if (type === 'resume') j.tailoredResume = el.innerText;
-  else j.tailoredCover = el.innerText;
+  if (type === 'resume') {
+    j.tailoredResumeHtml = el.innerHTML;
+    j.tailoredResume = el.innerText;
+  } else {
+    j.tailoredCoverHtml = el.innerHTML;
+    j.tailoredCover = el.innerText;
+  }
   scheduleSave();
 }
 
@@ -1264,7 +1320,31 @@ function retailor(type, jobId) {
   scheduleSave(); renderDetail();
 }
 
-function downloadTailored(type, jobId) {
+async function downloadTailoredDocx(type, jobId) {
+  const j = jobs[jobId]; if (!j) return;
+  const html = type === 'resume' ? j.tailoredResumeHtml : j.tailoredCoverHtml;
+  const text = type === 'resume' ? j.tailoredResume : j.tailoredCover;
+  if (!html && !text) return;
+  const label = type === 'resume' ? 'resume' : 'cover-letter';
+  const filename = `${(j.company||'tailored').replace(/[^a-z0-9]/gi,'_')}_${label}_tailored`;
+  try {
+    const res = await fetch(API + '/api/download-docx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ html, text, filename })
+    });
+    if (!res.ok) throw new Error('Download failed');
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename + '.docx';
+    a.click(); URL.revokeObjectURL(a.href);
+  } catch(e) {
+    alert('DOCX download failed: ' + e.message + '. Try .txt instead.');
+  }
+}
+
+function downloadTailoredTxt(type, jobId) {
   const j = jobs[jobId]; if (!j) return;
   const text = type === 'resume' ? j.tailoredResume : j.tailoredCover;
   if (!text) return;
@@ -1296,7 +1376,8 @@ async function runTailoring(docType) {
         company: j.company, title: j.title,
         location: j.location || '', salary: j.salary || '',
         postingText: j.postingText || '',
-        content: doc.content || doc.name,
+        // Send HTML if available (DOCX files), otherwise plain text
+        content: doc.html || doc.content || doc.name,
         docType, context: ctx,
       })
     });
@@ -1306,8 +1387,18 @@ async function runTailoring(docType) {
     if (streamEl) streamEl.innerHTML = '';
     if (out) out.innerHTML = '';
 
-    if (docType === 'resume') j.tailoredResume = result;
-    else j.tailoredCover = result;
+    // result is HTML — store as html, also store plain text version
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = result;
+    const plainText = tempDiv.innerText;
+
+    if (docType === 'resume') {
+      j.tailoredResumeHtml = result;
+      j.tailoredResume = plainText;
+    } else {
+      j.tailoredCoverHtml = result;
+      j.tailoredCover = plainText;
+    }
     scheduleSave();
     renderDetail();
   } catch(e) {
@@ -2043,7 +2134,7 @@ async function handleFileUpload(event, type) {
     });
     if (!res.ok) throw new Error('Upload failed');
     const data = await res.json();
-    j[type] = { name: file.name, content: data.text || '' };
+    j[type] = { name: file.name, content: data.text || '', html: data.html || null };
     scheduleSave(); renderDetail();
   } catch(e) { alert('Upload failed: ' + e.message); }
 }
