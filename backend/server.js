@@ -1025,6 +1025,141 @@ app.post('/api/download-docx', authMiddleware, async (req, res) => {
   }
 });
 
+// ── Check if job posting is still active ──
+app.post('/api/check-posting', authMiddleware, async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ error: 'URL required' });
+
+  try {
+    // Fetch the page with a realistic user agent
+    const pageRes = await fetchWithTimeout(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      }
+    }, 15000);
+
+    if (!pageRes.ok) {
+      // 404 = definitely gone
+      if (pageRes.status === 404) return res.json({ expired: true, reason: '404 Not Found' });
+      // 403/429 = blocked but likely still exists
+      return res.json({ expired: false, reason: `HTTP ${pageRes.status}` });
+    }
+
+    const html = await pageRes.text();
+    const lowerHtml = html.toLowerCase();
+
+    // Common signals that a job is closed/expired
+    const expiredSignals = [
+      'this job is no longer available',
+      'this job has expired',
+      'job no longer available',
+      'position has been filled',
+      'posting has expired',
+      'this position is no longer',
+      'no longer accepting applications',
+      'job listing has been removed',
+      'this listing is expired',
+      'requisition is closed',
+      'position is closed',
+      'job is closed',
+    ];
+
+    const expired = expiredSignals.some(s => lowerHtml.includes(s));
+    res.json({ expired, reason: expired ? 'Expired signals found' : 'Active' });
+  } catch(e) {
+    // Network error - can't determine
+    res.json({ expired: false, reason: 'Could not reach URL: ' + e.message });
+  }
+});
+
+// ── Template injection: tailor DOCX preserving all formatting ──
+// Receives original DOCX as base64, replaces text content via XML patching
+app.post('/api/tailor-docx', authMiddleware, async (req, res) => {
+  const { docxBase64, company, title, location, salary, postingText, docType, context } = req.body;
+  if (!docxBase64) return res.status(400).json({ error: 'DOCX data required' });
+
+  try {
+    const AdmZip = require('adm-zip');
+    const docxBuffer = Buffer.from(docxBase64, 'base64');
+    const zip = new AdmZip(docxBuffer);
+
+    // Extract text from document.xml for AI to work with
+    const docXmlEntry = zip.getEntry('word/document.xml');
+    if (!docXmlEntry) return res.status(422).json({ error: 'Invalid DOCX file' });
+    const docXml = docXmlEntry.getData().toString('utf8');
+
+    // Extract readable text from XML (strip tags)
+    const rawText = docXml
+      .replace(/<w:br[^/]*/g, '\n')
+      .replace(/<w:p[ >]/g, '\n')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+      .replace(/\n\n+/g, '\n').trim();
+
+    const jobCtx = postingText ? '\nJob posting:\n' + postingText.slice(0, 2000) : '';
+    const docLabel = docType === 'resume' ? 'resume' : 'cover letter';
+    const systemPrompt = 'You are a professional career coach. You will receive a document as plain text with section markers. Rewrite it to be tailored for the job, keeping the exact same structure and sections. Return ONLY the rewritten plain text - same sections, same order, nothing added or removed.';
+    const userPrompt = `Tailor this ${docLabel} for:\nCompany: ${company}\nRole: ${title}\n${location?'Location: '+location:''}\n${salary?'Salary: '+salary:''}\n${context?'Notes: '+context:''}${jobCtx}\n\nDOCUMENT TO TAILOR:\n${rawText}`;
+
+    const tailoredText = await callAI(['openrouter', 'groq', 'google'], systemPrompt, userPrompt, 3000);
+
+    // Now do a paragraph-level replacement in the XML
+    // Split both texts into lines for mapping
+    const origLines = rawText.split('\n').filter(l => l.trim());
+    const newLines = tailoredText.split('\n').filter(l => l.trim());
+
+    // Simple approach: replace all text runs with tailored content
+    // Find all <w:t> elements and rebuild with new content proportionally
+    let modifiedXml = docXml;
+
+    // Extract all text runs
+    const runRegex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+    const runs = [];
+    let m;
+    while ((m = runRegex.exec(docXml)) !== null) {
+      runs.push({ match: m[0], text: m[1], index: m.index });
+    }
+
+    // Get all non-empty text from original
+    const origWords = rawText.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+    const newWords = tailoredText.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
+
+    // Map proportionally: each run gets its proportional share of new words
+    const totalChars = origWords.join(' ').length || 1;
+    let usedNewChars = 0;
+    let runIndex = 0;
+
+    for (const run of runs) {
+      if (!run.text.trim()) continue;
+      const proportion = run.text.length / totalChars;
+      const newWordsCount = Math.max(1, Math.round(proportion * newWords.length));
+      const start = Math.round((run.index / totalChars) * newWords.length);
+      const slice = newWords.slice(
+        Math.min(start, newWords.length - 1),
+        Math.min(start + newWordsCount, newWords.length)
+      ).join(' ');
+      if (slice) {
+        const escapedSlice = slice.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const newRun = run.match.replace(/>([^<]*)<\/w:t>/, '>' + escapedSlice + '</w:t>');
+        modifiedXml = modifiedXml.replace(run.match, newRun);
+      }
+      runIndex++;
+    }
+
+    // Update the zip with modified XML
+    zip.updateFile('word/document.xml', Buffer.from(modifiedXml, 'utf8'));
+    const outputBuffer = zip.toBuffer();
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.setHeader('Content-Disposition', `attachment; filename="tailored-${docType}.docx"`);
+    res.send(outputBuffer);
+  } catch(e) {
+    console.error('DOCX template injection error:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/public/index.html'));
 });

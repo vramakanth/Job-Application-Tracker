@@ -531,10 +531,18 @@ input[type="file"] { display: none; }
       <div class="filter-tab" onclick="setFilter('rejected',this)">rejected</div>
     </div>
     <div class="job-list" id="job-list"></div>
-    <div style="padding:8px 12px;border-top:1px solid var(--border)">
+    <div style="padding:8px 12px 4px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px">
       <button onclick="showDocumentsPage()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 2h6l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v4h4" stroke="currentColor" stroke-width="1.3"/></svg>
         Document Library
+      </button>
+      <button onclick="showAnalytics()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1" y="8" width="3" height="5" rx="1" fill="currentColor" opacity=".6"/><rect x="5.5" y="5" width="3" height="8" rx="1" fill="currentColor" opacity=".8"/><rect x="10" y="2" width="3" height="11" rx="1" fill="currentColor"/></svg>
+        Analytics
+      </button>
+      <button id="check-postings-btn" onclick="checkAllPostings()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 4v3l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        Check postings
       </button>
     </div>
     <div class="user-bar">
@@ -648,7 +656,7 @@ let currentUser = localStorage.getItem('applied_user');
 let jobs = {}, currentJobId = null, currentFilter = 'all', activeDetailTab = 'notes';
 let tailorFor = {resume:false, cover:false}, isGenerating = false, saveTimer = null;
 let pendingHtml = null, pendingText = null;
-const STATUSES = ['applied','screening','interviewing','offer','rejected','ghosted','withdrawn'];
+const STATUSES = ['applied','screening','interviewing','offer','rejected','ghosted','withdrawn','expired'];
 
 // ── UTILITIES ──
 function esc(s) {
@@ -660,7 +668,7 @@ function fmtDate(ts) {
   return new Date(ts).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
 }
 function statusColor(s) {
-  return {applied:'#3b82f6',screening:'#8b5cf6',interviewing:'#f59e0b',offer:'#10b981',rejected:'#ef4444',ghosted:'#6b7280',withdrawn:'#9ca3af'}[s] || '#6b7280';
+  return {applied:'#3b82f6',screening:'#8b5cf6',interviewing:'#f59e0b',offer:'#10b981',rejected:'#ef4444',ghosted:'#6b7280',withdrawn:'#9ca3af',expired:'#f97316'}[s] || '#6b7280';
 }
 function formatBytes(n) {
   if (!n) return '0b';
@@ -762,6 +770,11 @@ async function loadJobs() {
           j.workType = j.location.trim();
           j.location = '';
         }
+      }
+      // Remove workType prefix from location if still present (prevents double "Remote")
+      if (j.location && j.workType) {
+        const wt = j.workType.replace(/[-]/g, '[-]');
+        j.location = j.location.replace(new RegExp('^' + wt + '\\s*[-\u2013]?\\s*', 'i'), '').trim();
       }
     });
   } catch(e) { jobs={}; }
@@ -1241,22 +1254,28 @@ function renderFilesTab(j) {
           <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
             <div style="font-size:11px;font-family:var(--mono);color:var(--text2);margin-bottom:8px;font-weight:500">RESUME</div>
             ${j.resume
-              ? `<button class="tailor-btn" id="tailor-resume-btn" onclick="runTailoring('resume')" ${isGenerating?'disabled':''} style="width:100%;justify-content:center">
-                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1l1.3 3 3 .5-2.2 2.1.5 3L6.5 8.3l-2.8 1.3.5-3L2 4.5l3-.5L6.5 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
-                  Tailor Resume
-                </button>
-                ${j.tailoredResume ? `<div style="margin-top:8px;font-size:11px;color:var(--green)">✓ Tailored version available</div>` : ''}`
+              ? `<div style="display:flex;flex-direction:column;gap:6px">
+                  <button class="tailor-btn" id="tailor-resume-btn" onclick="runTailoring('resume')" ${isGenerating?'disabled':''} style="width:100%;justify-content:center">
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1l1.3 3 3 .5-2.2 2.1.5 3L6.5 8.3l-2.8 1.3.5-3L2 4.5l3-.5L6.5 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
+                    Tailor Resume
+                  </button>
+                  ${j.resume?.originalBase64 ? `<button id="tailor-docx-resume-btn" onclick="runTailoringDocx('resume')" style="width:100%;padding:7px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px"><span style="color:var(--accent)">✦</span> Tailor with formatting (DOCX)</button>` : ''}
+                  ${j.tailoredResume ? `<div style="font-size:11px;color:var(--green)">✓ Tailored version available</div>` : ''}
+                </div>`
               : `<div style="font-size:12px;color:var(--text3)">Upload a resume first</div>`
             }
           </div>
           <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px">
             <div style="font-size:11px;font-family:var(--mono);color:var(--text2);margin-bottom:8px;font-weight:500">COVER LETTER</div>
             ${j.cover
-              ? `<button class="tailor-btn" id="tailor-cover-btn" onclick="runTailoring('cover')" ${isGenerating?'disabled':''} style="width:100%;justify-content:center">
-                  <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1l1.3 3 3 .5-2.2 2.1.5 3L6.5 8.3l-2.8 1.3.5-3L2 4.5l3-.5L6.5 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
-                  Tailor Cover Letter
-                </button>
-                ${j.tailoredCover ? `<div style="margin-top:8px;font-size:11px;color:var(--green)">✓ Tailored version available</div>` : ''}`
+              ? `<div style="display:flex;flex-direction:column;gap:6px">
+                  <button class="tailor-btn" id="tailor-cover-btn" onclick="runTailoring('cover')" ${isGenerating?'disabled':''} style="width:100%;justify-content:center">
+                    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1l1.3 3 3 .5-2.2 2.1.5 3L6.5 8.3l-2.8 1.3.5-3L2 4.5l3-.5L6.5 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
+                    Tailor Cover Letter
+                  </button>
+                  ${j.cover?.originalBase64 ? `<button id="tailor-docx-cover-btn" onclick="runTailoringDocx('cover')" style="width:100%;padding:7px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px"><span style="color:var(--accent)">✦</span> Tailor with formatting (DOCX)</button>` : ''}
+                  ${j.tailoredCover ? `<div style="font-size:11px;color:var(--green)">✓ Tailored version available</div>` : ''}
+                </div>`
               : `<div style="font-size:12px;color:var(--text3)">Upload a cover letter first</div>`
             }
           </div>
@@ -1356,6 +1375,51 @@ function downloadTailoredTxt(type, jobId) {
   a.download = filename; a.click(); URL.revokeObjectURL(a.href);
 }
 
+// ── TEMPLATE INJECTION TAILORING (preserves formatting) ──
+async function runTailoringDocx(docType) {
+  const j = jobs[currentJobId]; if (!j) return;
+  const doc = docType === 'resume' ? j.resume : j.cover;
+  if (!doc) { alert(`Upload a ${docType} first.`); return; }
+  if (!doc.originalBase64) {
+    alert('Template injection requires the original DOCX binary. Please re-upload the file to use this feature.');
+    return;
+  }
+
+  const btn = document.getElementById(`tailor-docx-${docType}-btn`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Tailoring with formatting...'; }
+  const out = document.getElementById('ai-stream-output');
+  if (out) out.innerHTML = '<div class="ai-result"><div class="ai-text">Applying AI changes to your document while preserving all formatting...</div></div>';
+
+  try {
+    const ctx = document.getElementById('tailor-context')?.value || '';
+    const res = await fetch(API + '/api/tailor-docx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        docxBase64: doc.originalBase64,
+        company: j.company, title: j.title,
+        location: j.location || '', salary: j.salary || '',
+        postingText: j.postingText || '',
+        docType, context: ctx,
+      }),
+    });
+
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Server error'); }
+    const blob = await res.blob();
+    const label = docType === 'resume' ? 'resume' : 'cover-letter';
+    const filename = `${(j.company||'tailored').replace(/[^a-z0-9]/gi,'_')}_${label}_tailored.docx`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    if (out) out.innerHTML = '<div class="ai-result"><div class="ai-text" style="color:var(--green)">✓ Tailored DOCX downloaded with original formatting preserved.</div></div>';
+  } catch(e) {
+    if (out) out.innerHTML = `<div class="ai-result" style="border-color:rgba(192,57,43,0.3)"><div style="color:var(--red);font-size:13px">Error: ${esc(e.message)}</div></div>`;
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '✦ Tailor with formatting'; }
+}
+
 async function runTailoring(docType) {
   const j = jobs[currentJobId]; if (!j) return;
   const doc = docType === 'resume' ? j.resume : j.cover;
@@ -1402,6 +1466,8 @@ async function runTailoring(docType) {
     }
     scheduleSave();
     renderDetail();
+    // Auto-save tailored doc to Document Library
+    autoSaveToLibrary(j, docType, result, plainText);
   } catch(e) {
     if (out) out.innerHTML = `<div class="ai-result" style="border-color:rgba(192,57,43,0.3)"><div style="color:var(--red);font-size:13px">Error: ${esc(e.message)}</div></div>`;
   }
@@ -2135,9 +2201,234 @@ async function handleFileUpload(event, type) {
     });
     if (!res.ok) throw new Error('Upload failed');
     const data = await res.json();
-    j[type] = { name: file.name, content: data.text || '', html: data.html || null };
+    // Read file as base64 for template injection (DOCX only)
+    let originalBase64 = null;
+    if (file.name.toLowerCase().endsWith('.docx')) {
+      originalBase64 = await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result.split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+    }
+    j[type] = { name: file.name, content: data.text || '', html: data.html || null, originalBase64 };
     scheduleSave(); renderDetail();
   } catch(e) { alert('Upload failed: ' + e.message); }
+}
+
+// ── AUTO-SAVE TAILORED DOC TO LIBRARY ──
+async function autoSaveToLibrary(j, docType, html, text) {
+  try {
+    const name = `${j.company} - ${j.title} (Tailored ${docType === 'resume' ? 'Resume' : 'Cover Letter'})`;
+    await fetch(API + '/api/docs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ name, type: docType, content: text, html }),
+    });
+    console.log('Auto-saved tailored doc to library:', name);
+  } catch(e) { console.warn('Auto-save to library failed:', e.message); }
+}
+
+// ── ANALYTICS DASHBOARD ──
+function showAnalytics() {
+  const overlay = document.createElement('div');
+  overlay.id = 'analytics-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;overflow:hidden';
+  document.body.appendChild(overlay);
+  renderAnalytics(overlay);
+}
+
+function closeAnalytics() {
+  document.getElementById('analytics-overlay')?.remove();
+}
+
+function renderAnalytics(overlay) {
+  const all = Object.values(jobs);
+  const total = all.length;
+  if (!overlay) overlay = document.getElementById('analytics-overlay');
+  if (!overlay) return;
+
+  // Compute stats
+  const bySt = {};
+  STATUSES.forEach(s => bySt[s] = 0);
+  all.forEach(j => { bySt[j.status] = (bySt[j.status] || 0) + 1; });
+
+  const byWorkType = {};
+  all.forEach(j => { const k = j.workType || 'Not specified'; byWorkType[k] = (byWorkType[k] || 0) + 1; });
+
+  const byMonth = {};
+  all.forEach(j => {
+    const d = new Date(j.createdAt);
+    const key = d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+    byMonth[key] = (byMonth[key] || 0) + 1;
+  });
+
+  const responseRate = total ? Math.round((((bySt.screening||0) + (bySt.interviewing||0) + (bySt.offer||0)) / total) * 100) : 0;
+  const offerRate = total ? Math.round(((bySt.offer||0) / total) * 100) : 0;
+  const activeCount = all.filter(j => !['rejected','ghosted','withdrawn','expired'].includes(j.status)).length;
+
+  const statusColors = {
+    applied:'#3b82f6', screening:'#8b5cf6', interviewing:'#f59e0b',
+    offer:'#10b981', rejected:'#ef4444', ghosted:'#6b7280',
+    withdrawn:'#9ca3af', expired:'#f97316'
+  };
+
+  const maxBar = Math.max(...Object.values(bySt), 1);
+
+  overlay.innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;padding:18px 24px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="10" width="4" height="7" rx="1" fill="currentColor" opacity=".6"/><rect x="7" y="6" width="4" height="11" rx="1" fill="currentColor" opacity=".8"/><rect x="13" y="2" width="4" height="15" rx="1" fill="currentColor"/></svg>
+      <div style="font-size:16px;font-weight:600;color:var(--text);flex:1">Analytics Dashboard</div>
+      <button onclick="closeAnalytics()" style="width:32px;height:32px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:18px;color:var(--text2);display:flex;align-items:center;justify-content:center">×</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:20px">
+
+      <!-- KPI cards -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px">
+        ${[
+          {label:'Total applications', value:total, color:'var(--blue)'},
+          {label:'Active pipeline', value:activeCount, color:'var(--accent)'},
+          {label:'Response rate', value:responseRate+'%', color:'var(--purple)'},
+          {label:'Offer rate', value:offerRate+'%', color:'var(--green)'},
+          {label:'Interviews', value:bySt.interviewing||0, color:'#f59e0b'},
+          {label:'Offers received', value:bySt.offer||0, color:'var(--green)'},
+        ].map(k => `
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
+            <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;margin-bottom:8px">${k.label.toUpperCase()}</div>
+            <div style="font-size:28px;font-weight:700;color:${k.color};letter-spacing:-1px">${k.value}</div>
+          </div>`).join('')}
+      </div>
+
+      <!-- Status breakdown bar chart -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px">Applications by status</div>
+        ${Object.entries(bySt).filter(([,v]) => v > 0).map(([s, v]) => `
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer" onclick="filterAndClose('${s}')">
+            <div style="width:90px;font-size:12px;font-family:var(--mono);color:var(--text2);flex-shrink:0">${s}</div>
+            <div style="flex:1;height:22px;background:var(--bg3);border-radius:4px;overflow:hidden">
+              <div style="width:${Math.round((v/maxBar)*100)}%;height:100%;background:${statusColors[s]||'var(--blue)'};border-radius:4px;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;transition:width .4s ease">
+                <span style="font-size:11px;font-weight:600;color:#fff">${v}</span>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--text3);font-family:var(--mono);width:30px;text-align:right">${Math.round((v/total)*100)}%</div>
+          </div>`).join('')}
+        <div style="font-size:11px;color:var(--text3);margin-top:8px">Click a bar to filter the job list to that status</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <!-- Work type breakdown -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px">Work type distribution</div>
+          ${Object.entries(byWorkType).map(([k,v]) => `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+              <div style="font-size:12px;color:var(--text2)">${esc(k)}</div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="width:80px;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden">
+                  <div style="width:${Math.round((v/total)*100)}%;height:100%;background:var(--accent-bg);border-radius:4px"></div>
+                </div>
+                <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">${v}</div>
+              </div>
+            </div>`).join('')}
+        </div>
+
+        <!-- Applications over time -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px">Applications over time</div>
+          ${Object.keys(byMonth).length === 0
+            ? '<div style="font-size:13px;color:var(--text3)">No data yet</div>'
+            : (() => {
+                const maxM = Math.max(...Object.values(byMonth), 1);
+                return Object.entries(byMonth).map(([m, v]) => `
+                  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                    <div style="width:55px;font-size:11px;font-family:var(--mono);color:var(--text3);flex-shrink:0">${m}</div>
+                    <div style="flex:1;height:18px;background:var(--bg3);border-radius:3px;overflow:hidden">
+                      <div style="width:${Math.round((v/maxM)*100)}%;height:100%;background:var(--blue);border-radius:3px"></div>
+                    </div>
+                    <div style="font-size:11px;font-family:var(--mono);color:var(--text3);width:20px">${v}</div>
+                  </div>`).join('');
+              })()}
+        </div>
+      </div>
+
+      <!-- Pipeline funnel -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px">Hiring pipeline funnel</div>
+        <div style="display:flex;align-items:flex-end;justify-content:center;gap:8px;height:120px">
+          ${[
+            {label:'Applied', key:'applied', color:'#3b82f6'},
+            {label:'Screening', key:'screening', color:'#8b5cf6'},
+            {label:'Interview', key:'interviewing', color:'#f59e0b'},
+            {label:'Offer', key:'offer', color:'#10b981'},
+          ].map(({label, key, color}) => {
+            const v = bySt[key] || 0;
+            const pct = total ? Math.round((v/total)*100) : 0;
+            const h = Math.max(20, Math.round((v / Math.max(total, 1)) * 100));
+            return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;cursor:pointer" onclick="filterAndClose('${key}')">
+              <div style="font-size:12px;font-weight:600;color:var(--text)">${v}</div>
+              <div style="width:100%;border-radius:4px 4px 0 0;background:${color}" style="height:${h}px" data-h="${h}"></div>
+              <div style="font-size:10px;font-family:var(--mono);color:var(--text3);text-align:center">${label}<br>${pct}%</div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+
+    </div>`;
+
+  // Fix funnel bar heights after render
+  setTimeout(() => {
+    overlay.querySelectorAll('[data-h]').forEach(el => {
+      el.style.height = el.getAttribute('data-h') + 'px';
+    });
+  }, 50);
+}
+
+function filterAndClose(status) {
+  closeAnalytics();
+  // Set the filter
+  currentFilter = status;
+  document.querySelectorAll('.filter-tab').forEach(t => {
+    t.classList.toggle('active', t.textContent.trim() === status);
+  });
+  renderJobList();
+}
+
+// ── JOB POSTING ACTIVE CHECK ──
+let checkingPostings = false;
+
+async function checkAllPostings() {
+  if (checkingPostings) return;
+  const toCheck = Object.values(jobs).filter(j => j.url && !['rejected','withdrawn','expired'].includes(j.status));
+  if (!toCheck.length) { alert('No active jobs with URLs to check.'); return; }
+
+  checkingPostings = true;
+  const btn = document.getElementById('check-postings-btn');
+  if (btn) { btn.disabled = true; btn.textContent = `Checking ${toCheck.length} postings...`; }
+
+  let expired = 0, active = 0, failed = 0;
+  for (const j of toCheck) {
+    try {
+      const res = await fetch(API + '/api/check-posting', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ url: j.url, jobId: j.id }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.expired) {
+          j.status = 'expired';
+          j.postingExpiredAt = Date.now();
+          expired++;
+        } else {
+          active++;
+        }
+      } else { failed++; }
+    } catch { failed++; }
+  }
+
+  scheduleSave();
+  renderJobList();
+  checkingPostings = false;
+  if (btn) { btn.disabled = false; btn.textContent = '⟳ Check postings'; }
+  alert(`Done: ${active} active, ${expired} expired/closed, ${failed} couldn't check`);
 }
 
 async function checkAIProviders() {
