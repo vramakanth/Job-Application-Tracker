@@ -584,16 +584,17 @@ input[type="file"] { display: none; }
     <div class="field" id="f-title"><label>JOB TITLE</label><input type="text" id="job-title" placeholder="e.g. Senior Product Designer"></div>
     <div class="field" id="f-company"><label>COMPANY</label><input type="text" id="job-company" placeholder="e.g. Acme Corp"></div>
     <div class="field" id="f-location">
+      <label>WORK TYPE</label>
+      <select id="job-worktype" style="width:100%;padding:9px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;cursor:pointer">
+        <option value="">Select work type</option>
+        <option value="Remote">Remote</option>
+        <option value="Hybrid">Hybrid</option>
+        <option value="On-site">On-site</option>
+      </select>
+    </div>
+    <div class="form-field">
       <label>LOCATION</label>
-      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center">
-        <input type="text" id="job-location" placeholder="e.g. San Francisco, CA">
-        <select id="job-worktype" style="padding:9px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text);outline:none;cursor:pointer;white-space:nowrap">
-          <option value="">Work type</option>
-          <option value="Remote">Remote</option>
-          <option value="Hybrid">Hybrid</option>
-          <option value="On-site">On-site</option>
-        </select>
-      </div>
+      <input type="text" id="job-location" placeholder="e.g. San Francisco, CA or United States">
     </div>
     <div class="field" id="f-salary"><label>SALARY / COMP</label><input type="text" id="job-salary" placeholder="e.g. $120k–$160k"></div>
     <div class="field">
@@ -615,8 +616,8 @@ input[type="file"] { display: none; }
   </div>
 </div>
 
-<input type="file" id="resume-upload" accept=".txt,.pdf,.doc,.docx" onchange="handleFileUpload('resume',event)">
-<input type="file" id="cover-upload" accept=".txt,.pdf,.doc,.docx" onchange="handleFileUpload('cover',event)">
+<input type="file" id="resume-upload" accept=".txt,.pdf,.doc,.docx" onchange="handleFileUpload(event,'resume')">
+<input type="file" id="cover-upload" accept=".txt,.pdf,.doc,.docx" onchange="handleFileUpload(event,'cover')">
 
 <!-- FILE EDITOR DRAWER -->
 <div class="file-editor-overlay" id="file-editor-overlay" onclick="closeFileEditor()"></div>
@@ -1002,8 +1003,8 @@ function renderDetail() {
       <div class="detail-header-info">
         <div class="detail-company">
           ${esc(j.company)}
-          ${j.location ? `<span style="color:var(--text3)">·</span><span style="font-size:11px">${esc(j.location)}</span>` : ''}
-          ${j.workType ? `<span style="font-size:10px;padding:2px 7px;border-radius:100px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-family:var(--mono);font-weight:500">${esc(j.workType)}</span>` : ''}
+          ${j.workType ? `<span style="font-size:10px;padding:2px 8px;border-radius:100px;background:var(--bg3);border:1px solid var(--border);color:var(--text2);font-family:var(--mono);font-weight:600">${esc(j.workType)}</span>` : ''}
+          ${j.location ? `<span style="color:var(--text3)">·</span><span style="font-size:11px;color:var(--text2)">${esc(j.location)}</span>` : ''}
           ${j.salary ? `<span style="color:var(--text3)">·</span><span style="font-size:11px;color:var(--accent);font-weight:500">${esc(j.salary)}</span>` : ''}
           ${j.url ? `<a href="${esc(j.url)}" target="_blank">↗ original posting</a>` : ''}
         </div>
