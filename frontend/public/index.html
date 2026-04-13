@@ -529,6 +529,7 @@ input[type="file"] { display: none; }
       <div class="filter-tab" onclick="setFilter('interviewing',this)">interview</div>
       <div class="filter-tab" onclick="setFilter('offer',this)">offer</div>
       <div class="filter-tab" onclick="setFilter('rejected',this)">rejected</div>
+      <div class="filter-tab" onclick="setFilter('expired',this)" style="color:#f97316">expired</div>
     </div>
     <div class="job-list" id="job-list"></div>
     <div style="padding:8px 12px 4px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px">
@@ -540,10 +541,7 @@ input[type="file"] { display: none; }
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1" y="8" width="3" height="5" rx="1" fill="currentColor" opacity=".6"/><rect x="5.5" y="5" width="3" height="8" rx="1" fill="currentColor" opacity=".8"/><rect x="10" y="2" width="3" height="11" rx="1" fill="currentColor"/></svg>
         Analytics
       </button>
-      <button id="check-postings-btn" onclick="checkAllPostings()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
-        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 4v3l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-        Check postings
-      </button>
+
     </div>
     <div class="user-bar">
       <div class="user-avatar" id="user-avatar">?</div>
@@ -2306,7 +2304,20 @@ function renderAnalytics(overlay) {
     <div style="display:flex;align-items:center;gap:14px;padding:18px 24px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="10" width="4" height="7" rx="1" fill="currentColor" opacity=".6"/><rect x="7" y="6" width="4" height="11" rx="1" fill="currentColor" opacity=".8"/><rect x="13" y="2" width="4" height="15" rx="1" fill="currentColor"/></svg>
       <div style="font-size:16px;font-weight:600;color:var(--text);flex:1">Analytics Dashboard</div>
+      <button id="analytics-check-btn" onclick="checkAllPostings()" ${checkingPostings?'disabled':''} style="padding:7px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 4v3l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        ${checkingPostings ? 'Checking...' : '⟳ Check postings'}
+      </button>
       <button onclick="closeAnalytics()" style="width:32px;height:32px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:18px;color:var(--text2);display:flex;align-items:center;justify-content:center">×</button>
+    </div>
+    <!-- Check postings progress bar — shown during checking -->
+    <div id="check-postings-progress" style="display:${checkingPostings?'block':'none'};padding:8px 24px;background:var(--bg3);border-bottom:1px solid var(--border);flex-shrink:0">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div id="check-postings-status" style="font-size:12px;color:var(--text2);font-family:var(--mono)">Ready to check</div>
+      </div>
+      <div style="height:4px;background:var(--bg4);border-radius:2px;overflow:hidden">
+        <div id="check-postings-bar" style="height:100%;background:#f97316;border-radius:2px;width:0%;transition:width 0.3s ease"></div>
+      </div>
     </div>
     <div style="flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:20px">
 
@@ -2319,6 +2330,7 @@ function renderAnalytics(overlay) {
           {label:'Offer rate', value:offerRate+'%', color:'var(--green)'},
           {label:'Interviews', value:bySt.interviewing||0, color:'#f59e0b'},
           {label:'Offers received', value:bySt.offer||0, color:'var(--green)'},
+          {label:'Expired postings', value:bySt.expired||0, color:'#f97316'},
         ].map(k => `
           <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
             <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;margin-bottom:8px">${k.label.toUpperCase()}</div>
@@ -2454,14 +2466,27 @@ let checkingPostings = false;
 async function checkAllPostings() {
   if (checkingPostings) return;
   const toCheck = Object.values(jobs).filter(j => j.url && !['rejected','withdrawn','expired'].includes(j.status));
-  if (!toCheck.length) { alert('No active jobs with URLs to check.'); return; }
+  if (!toCheck.length) {
+    // Update UI to reflect no active postings to check
+    const statusEl = document.getElementById('check-postings-status');
+    if (statusEl) statusEl.textContent = 'No active jobs with URLs to check.';
+    return;
+  }
 
   checkingPostings = true;
-  const btn = document.getElementById('check-postings-btn');
-  if (btn) { btn.disabled = true; btn.textContent = `Checking ${toCheck.length} postings...`; }
+  const btn = document.getElementById('analytics-check-btn');
+  const statusEl = document.getElementById('check-postings-status');
+  const progressEl = document.getElementById('check-postings-progress');
+  const barEl = document.getElementById('check-postings-bar');
 
-  let expired = 0, active = 0, failed = 0;
+  if (btn) { btn.disabled = true; btn.textContent = 'Checking...'; }
+  if (progressEl) progressEl.style.display = 'block';
+
+  let expiredCount = 0, active = 0, failed = 0, done = 0;
+
   for (const j of toCheck) {
+    if (statusEl) statusEl.textContent = `Checking ${done + 1} of ${toCheck.length}: ${j.company}...`;
+    if (barEl) barEl.style.width = Math.round((done / toCheck.length) * 100) + '%';
     try {
       const res = await fetch(API + '/api/check-posting', {
         method: 'POST',
@@ -2473,19 +2498,23 @@ async function checkAllPostings() {
         if (data.expired) {
           j.status = 'expired';
           j.postingExpiredAt = Date.now();
-          expired++;
-        } else {
-          active++;
-        }
+          expiredCount++;
+        } else { active++; }
       } else { failed++; }
     } catch { failed++; }
+    done++;
+    // Live update analytics after each job
+    if (done % 3 === 0 || done === toCheck.length) renderAnalytics();
   }
 
   scheduleSave();
   renderJobList();
   checkingPostings = false;
+  // Final re-render of analytics with results
+  renderAnalytics();
   if (btn) { btn.disabled = false; btn.textContent = '⟳ Check postings'; }
-  alert(`Done: ${active} active, ${expired} expired/closed, ${failed} couldn't check`);
+  if (barEl) barEl.style.width = '100%';
+  if (statusEl) statusEl.innerHTML = `<span style="color:var(--green)">✓ Done:</span> ${active} active · <span style="color:#f97316">${expiredCount} expired</span> · ${failed} unreachable`;
 }
 
 async function checkAIProviders() {
