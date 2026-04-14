@@ -1614,6 +1614,43 @@ app.get('/api/admin/status', adminMiddleware, (req, res) => {
 });
 
 // Serve admin panel
+// ── Serve Chrome Extension as a clean zip ──
+app.get('/extension.zip', (req, res) => {
+  const AdmZip = require('adm-zip');
+  const extDir = path.join(__dirname, '../extension');
+
+  try {
+    const zip = new AdmZip();
+
+    // Add each extension file directly (no subfolder)
+    const files = ['manifest.json', 'popup.html', 'popup.js', 'content.js'];
+    for (const file of files) {
+      const filePath = path.join(extDir, file);
+      if (fs.existsSync(filePath)) {
+        zip.addLocalFile(filePath);
+      }
+    }
+
+    // Add placeholder icons if not present
+    const iconFiles = ['icon16.png', 'icon48.png', 'icon128.png'];
+    for (const icon of iconFiles) {
+      const iconPath = path.join(extDir, icon);
+      if (fs.existsSync(iconPath)) {
+        zip.addLocalFile(iconPath);
+      }
+    }
+
+    const zipBuffer = zip.toBuffer();
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="applied-extension.zip"');
+    res.setHeader('Content-Length', zipBuffer.length);
+    res.send(zipBuffer);
+  } catch(e) {
+    console.error('Extension zip error:', e);
+    res.status(500).json({ error: 'Could not build extension zip' });
+  }
+});
+
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/public/admin.html'));
 });
