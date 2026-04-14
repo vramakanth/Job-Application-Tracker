@@ -1,6 +1,6 @@
 {
-  "name": "Applied — Job Tracker",
-  "short_name": "Applied",
+  "name": "Pursuit — Job Tracker",
+  "short_name": "Pursuit",
   "description": "Track job applications, research companies, tailor your resume and cover letter.",
   "start_url": "/",
   "display": "standalone",
@@ -25,7 +25,7 @@
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Applied — Job Tracker"
+      "label": "Pursuit — Job Tracker"
     }
   ]
 }

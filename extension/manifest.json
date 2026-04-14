@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Applied — Job Tracker",
+  "name": "Pursuit — Job Tracker",
   "version": "1.0.0",
-  "description": "Add job postings to your Applied tracker in one click from any page.",
+  "description": "Add job postings to your Pursuit tracker in one click from any page.",
   "permissions": ["activeTab", "storage"],
   "action": {
     "default_popup": "popup.html",

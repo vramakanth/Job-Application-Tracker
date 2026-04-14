@@ -1,4 +1,4 @@
-// Applied Chrome Extension - popup.js
+// Pursuit Chrome Extension - popup.js
 const $ = id => document.getElementById(id);
 const setStatus = (el, type, msg) => { el.className = 'status ' + type; el.textContent = msg; };
 
@@ -120,11 +120,11 @@ async function addJob() {
 
     setStatus($('add-status'), 'success', `✓ "${title}" added!`);
     $('add-btn').textContent = '✓ Added!';
-    setTimeout(() => { $('add-btn').disabled = false; $('add-btn').textContent = '+ Add to Applied'; }, 2500);
+    setTimeout(() => { $('add-btn').disabled = false; $('add-btn').textContent = '+ Add to Pursuit'; }, 2500);
   } catch(e) {
     setStatus($('add-status'), 'error', 'Error: ' + e.message);
     $('add-btn').disabled = false;
-    $('add-btn').textContent = '+ Add to Applied';
+    $('add-btn').textContent = '+ Add to Pursuit';
   }
 }
 

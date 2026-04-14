@@ -34,7 +34,7 @@ const resetTokens   = {};
 async function sendMail(to, subject, html) {
   const mailer = getMailer();
   if (!mailer) throw new Error('Email not configured — set SMTP_HOST, SMTP_USER, SMTP_PASS');
-  await mailer.sendMail({ from: `"Applied Job Tracker" <${SMTP_FROM}>`, to, subject, html });
+  await mailer.sendMail({ from: `"Pursuit Job Tracker" <${SMTP_FROM}>`, to, subject, html });
 }
 
 // Admin middleware
@@ -58,7 +58,7 @@ const PROVIDERS = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${key}`,
       'HTTP-Referer': 'https://job-application-tracker-hf1f.onrender.com',
-      'X-Title': 'Applied Job Tracker',
+      'X-Title': 'Pursuit Job Tracker',
     }),
   },
 };
@@ -406,27 +406,37 @@ async function parseJobFromUrl(url) {
 
           let title = null, company = null, location = null;
 
-          // Pattern 1: "Company hiring Title in Location"
-          const hiringMatch = pageTitle.match(/^(.+?)\s+hiring\s+(.+?)\s+in\s+(.+)$/i);
-          if (hiringMatch) {
+          // Pattern 1: "Company hiring Title in Location"  e.g. "Roche hiring Director in Carlsbad, CA"
+          const hiringInMatch = pageTitle.match(/^(.+?)\s+hiring\s+(.+?)\s+in\s+(.+)$/i);
+          // Pattern 1b: "Company hiring Title" (remote — no location)
+          const hiringMatch   = !hiringInMatch && pageTitle.match(/^(.+?)\s+hiring\s+(.+)$/i);
+          // Pattern 2: "Title at Company"
+          const atMatch       = !hiringInMatch && !hiringMatch && pageTitle.match(/^(.+?)\s+at\s+(.+)$/i);
+
+          if (hiringInMatch) {
+            company  = hiringInMatch[1].trim();
+            title    = hiringInMatch[2].trim();
+            location = hiringInMatch[3].trim();
+          } else if (hiringMatch) {
             company  = hiringMatch[1].trim();
             title    = hiringMatch[2].trim();
-            location = hiringMatch[3].trim();
-          }
-          // Pattern 2: "Title at Company"
-          else {
-            const atMatch = pageTitle.match(/^(.+?)\s+at\s+(.+)$/i);
-            if (atMatch) {
-              title   = atMatch[1].trim();
-              company = atMatch[2].trim();
+          } else if (atMatch) {
+            title    = atMatch[1].trim();
+            company  = atMatch[2].trim();
+          } else {
+            // Pattern 3: "Title - Company" or "Title | Company" (generic dash/pipe)
+            const dashMatch = pageTitle.match(/^(.+?)\s*[-–|]\s*(.+)$/);
+            if (dashMatch && dashMatch[2].length < 40) {
+              title   = dashMatch[1].trim();
+              company = dashMatch[2].trim();
             } else {
-              // Fallback: use the whole thing as title
               title = pageTitle;
             }
           }
 
-          // Work type from location string
+          // Work type from location or hiring pattern
           let remote = null;
+          if (hiringMatch && !hiringInMatch) remote = true; // "Company hiring Title" = Remote
           if (location) {
             if (/remote/i.test(location)) { remote = true; location = location.replace(/[,\s]*remote[,\s]*/i, '').trim(); }
             else if (/hybrid/i.test(location)) { location = location; }
@@ -1620,7 +1630,7 @@ app.post('/api/admin/reset-password', adminMiddleware, async (req, res) => {
   if (email) {
     try {
       await sendMail(email, 'Your Applied password has been reset',
-        `<p>Hi ${username},</p><p>An administrator has reset your Applied Job Tracker password.</p><p>Please <a href="${APP_URL}">sign in</a> with the new password provided to you.</p><p>If you didn't expect this, contact your administrator.</p>`
+        `<p>Hi ${username},</p><p>An administrator has reset your Pursuit Job Tracker password.</p><p>Please <a href="${APP_URL}">sign in</a> with the new password provided to you.</p><p>If you didn't expect this, contact your administrator.</p>`
       );
     } catch(e) { console.warn('Email send failed:', e.message); }
   }
@@ -1644,7 +1654,7 @@ app.post('/api/admin/send-reset-link', adminMiddleware, async (req, res) => {
   const resetUrl = `${APP_URL}/reset-password?token=${token}`;
   try {
     await sendMail(user.email, 'Reset your Applied password',
-      `<p>Hi ${username},</p><p>A password reset was requested for your Applied Job Tracker account.</p><p><a href="${resetUrl}" style="padding:10px 20px;background:#a3e635;color:#1a1917;border-radius:6px;text-decoration:none;font-weight:600">Reset Password</a></p><p>This link expires in 1 hour. If you didn't request this, ignore this email.</p><p><small>Or paste this URL: ${resetUrl}</small></p>`
+      `<p>Hi ${username},</p><p>A password reset was requested for your Pursuit Job Tracker account.</p><p><a href="${resetUrl}" style="padding:10px 20px;background:#a3e635;color:#1a1917;border-radius:6px;text-decoration:none;font-weight:600">Reset Password</a></p><p>This link expires in 1 hour. If you didn't request this, ignore this email.</p><p><small>Or paste this URL: ${resetUrl}</small></p>`
     );
     res.json({ ok: true, resetUrl });
   } catch(e) {
@@ -1808,7 +1818,7 @@ app.post('/api/admin/deactivate', adminMiddleware, (req, res) => {
     sendEmail(
       users[key].email,
       'Your Applied account has been deactivated',
-      `<p>Hi ${users[key].username},</p><p>Your Applied Job Tracker account has been deactivated. Please contact the administrator if you believe this is an error.</p>`
+      `<p>Hi ${users[key].username},</p><p>Your Pursuit Job Tracker account has been deactivated. Please contact the administrator if you believe this is an error.</p>`
     );
   }
   res.json({ ok: true, isActive: !!active });
@@ -1828,7 +1838,7 @@ app.post('/api/admin/reset-password', adminMiddleware, async (req, res) => {
     await sendEmail(
       users[key].email,
       'Your Applied password has been reset',
-      `<p>Hi ${users[key].username},</p><p>Your Applied Job Tracker password has been reset by an administrator.</p><p>Your new temporary password is: <strong>${newPassword}</strong></p><p>Please log in and change your password immediately.</p><p><a href="${APP_URL}">Open Applied</a></p>`
+      `<p>Hi ${users[key].username},</p><p>Your Pursuit Job Tracker password has been reset by an administrator.</p><p>Your new temporary password is: <strong>${newPassword}</strong></p><p>Please log in and change your password immediately.</p><p><a href="${APP_URL}">Open Pursuit</a></p>`
     );
   }
   res.json({ ok: true });
@@ -1850,7 +1860,7 @@ app.post('/api/admin/send-reset-link', adminMiddleware, async (req, res) => {
   const result = await sendEmail(
     users[key].email,
     'Reset your Applied password',
-    `<p>Hi ${users[key].username},</p><p>Click the link below to reset your Applied Job Tracker password. This link expires in 1 hour.</p><p><a href="${resetUrl}" style="display:inline-block;padding:10px 20px;background:#a3e635;color:#1a1917;text-decoration:none;border-radius:6px;font-weight:600">Reset Password</a></p><p>Or copy this URL: ${resetUrl}</p><p>If you didn't request this, ignore this email.</p>`
+    `<p>Hi ${users[key].username},</p><p>Click the link below to reset your Pursuit Job Tracker password. This link expires in 1 hour.</p><p><a href="${resetUrl}" style="display:inline-block;padding:10px 20px;background:#a3e635;color:#1a1917;text-decoration:none;border-radius:6px;font-weight:600">Reset Password</a></p><p>Or copy this URL: ${resetUrl}</p><p>If you didn't request this, ignore this email.</p>`
   );
   res.json({ ok: result.ok, error: result.error });
 });

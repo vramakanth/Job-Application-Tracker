@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Applied — Job Tracker</title>
+<title>Pursuit — Job Tracker</title>
 
 <!-- PWA manifest -->
 <link rel="manifest" href="/manifest.json">
@@ -11,7 +11,7 @@
 <!-- iOS PWA meta tags -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Applied">
+<meta name="apple-mobile-web-app-title" content="Pursuit">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png">
@@ -135,6 +135,10 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
   .insights-wrap { padding: 16px !important; }
   .posting-scroll { padding: 16px !important; }
   .user-bar-settings { display: none !important; }
+  .sidebar-nav-btns { display: none !important; }
+  .sidebar-user-bar { display: none !important; }
+  #mobile-avatar-btn { display: flex !important; }
+  .logo { margin-bottom: 0 !important; }
   .mobile-bottom-bar { display: flex !important; }
   .sidebar { padding-bottom: 56px; }
 }
@@ -156,7 +160,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .add-btn { width: 100%; padding: 8px 12px; background: var(--accent-bg); color: #1a1917; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s; }
 .add-btn:hover { background: var(--accent-bg2); }
 .sidebar-search { padding: 8px 12px; }
-.search-input { width: 100%; padding: 7px 10px; background: var(--bg3); border: 1px solid transparent; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; color: var(--text); outline: none; transition: border-color 0.15s; }
+.search-input { width: 100%; padding: 7px 10px; background: var(--bg3); border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; color: var(--text); outline: none; transition: background 0.15s; }
 .search-input::placeholder { color: var(--text3); }
 .search-input:focus { border-color: var(--border2); }
 .filter-tabs { display: flex; gap: 4px; padding: 0 12px 10px; overflow-x: auto; scrollbar-width: none; flex-wrap: nowrap; }
@@ -196,22 +200,22 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .detail-company a:hover { text-decoration: underline; }
 .detail-title { font-size: 19px; font-weight: 600; letter-spacing: -0.3px; margin-bottom: 8px; color: var(--text); }
 .detail-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.status-select { padding: 5px 28px 5px 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: 100px; font-family: var(--mono); font-size: 11px; color: var(--text); cursor: pointer; outline: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239c9894' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; }
+.status-select { padding: 5px 28px 5px 10px; background: var(--bg3); border: none; border-radius: 100px; font-family: var(--mono); font-size: 11px; color: var(--text); cursor: pointer; outline: none; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239c9894' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; }
 .date-added { font-size: 11px; color: var(--text3); font-family: var(--mono); }
-.icon-btn { width: 32px; height: 32px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; color: var(--text2); flex-shrink: 0; }
+.icon-btn { width: 32px; height: 32px; background: transparent; border: none; border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; color: var(--text2); flex-shrink: 0; }
 .icon-btn:hover { background: var(--bg4); }
 .icon-btn.danger:hover { background: rgba(192,57,43,0.08); color: var(--red); border-color: rgba(192,57,43,0.25); }
 .detail-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 28px; flex-shrink: 0; background: var(--bg2); overflow-x: auto; scrollbar-width: none; }
 .detail-tab { padding: 11px 0; margin-right: 24px; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
 .detail-tab.active { color: var(--accent); border-bottom-color: var(--accent-bg); }
 .detail-tab:hover:not(.active) { color: var(--text); }
-.tab-pane { flex: 1; overflow-y: auto; padding: 24px 28px; background: var(--bg); }
+.tab-pane { flex: 1; overflow-y: auto; padding: 24px 28px; background: var(--bg2); }
 .tab-pane::-webkit-scrollbar { width: 4px; }
 .tab-pane::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
 
 /* ── POSTING TAB ── */
 .posting-wrap { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-.posting-toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 28px; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--bg2); }
+.posting-toolbar { display: flex; align-items: center; gap: 10px; padding: 10px 28px 12px; border-bottom: none; flex-shrink: 0; background: var(--bg2); }
 .posting-url { flex: 1; font-size: 11px; font-family: var(--mono); color: var(--text3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .posting-btn { padding: 5px 12px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 11px; color: var(--text2); cursor: pointer; white-space: nowrap; transition: all 0.15s; text-decoration: none; display: inline-block; }
 .posting-btn:hover { background: var(--bg3); color: var(--text); }
@@ -255,38 +259,38 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .insights-key-input::placeholder { color: var(--text3); }
 .insights-key-save { padding: 6px 12px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 11px; color: var(--text2); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
 .insights-key-save:hover { background: var(--bg3); color: var(--text); }
-.insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
-.insight-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0; margin-bottom: 28px; column-gap: 32px; }
+.insight-card { background: transparent; border: none; border-radius: 0; padding: 12px 0; }
 .insight-card-label { font-size: 10px; font-family: var(--mono); color: var(--text3); letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 8px; }
 .insight-card-value { font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; line-height: 1.2; }
 .insight-card-sub { font-size: 11px; color: var(--text2); margin-top: 4px; }
 .insight-card-positive { color: var(--green); }
 .insight-card-negative { color: var(--red); }
 .insight-card-neutral { color: var(--text2); }
-.insight-section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
-.insight-section-header { padding: 14px 16px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+.insight-section { background: transparent; border: none; border-radius: 0; overflow: visible; margin-bottom: 28px; }
+.insight-section-header { padding: 0 0 10px 0; border-bottom: none; display: flex; align-items: center; gap: 10px; }
 .insight-section-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
 .insight-section-title { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
 .insight-section-badge { font-size: 10px; font-family: var(--mono); padding: 2px 8px; border-radius: 100px; background: var(--bg3); color: var(--text2); border: 1px solid var(--border); }
-.insight-section-body { padding: 16px; }
+.insight-section-body { padding: 0; }
 .insight-section-body.no-pad { padding: 0; }
 .insight-ai-text { font-size: 13px; line-height: 1.8; color: var(--text2); }
 .insight-ai-text p { margin-bottom: 0.7em; }
 .insight-ai-text p:last-child { margin-bottom: 0; }
 .insight-ai-text strong { color: var(--text); font-weight: 600; }
-.insight-news-item { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; gap: 12px; align-items: flex-start; transition: background 0.12s; cursor: pointer; text-decoration: none; }
+.insight-news-item { padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; gap: 12px; align-items: flex-start; transition: background 0.12s; cursor: pointer; text-decoration: none; }
 .insight-news-item:last-child { border-bottom: none; }
 .insight-news-item:hover { background: var(--bg3); }
 .insight-news-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 6px; flex-shrink: 0; }
 .insight-news-content { flex: 1; min-width: 0; }
 .insight-news-headline { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; line-height: 1.4; }
 .insight-news-meta { font-size: 11px; color: var(--text3); font-family: var(--mono); }
-.insight-rating-bar { height: 6px; border-radius: 3px; background: var(--bg4); margin: 8px 0 4px; overflow: hidden; }
+.insight-rating-bar { height: 4px; border-radius: 3px; background: var(--bg4); margin: 6px 0 4px; overflow: hidden; }
 .insight-rating-fill { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
 .insight-rating-row { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
 .insight-rating-label { font-size: 11px; color: var(--text2); width: 130px; flex-shrink: 0; }
 .insight-rating-score { font-size: 11px; font-family: var(--mono); color: var(--text); width: 28px; text-align: right; flex-shrink: 0; }
-.insight-contact-item { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 12px; }
+.insight-contact-item { padding: 10px 0; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 12px; }
 .insight-contact-item:last-child { border-bottom: none; }
 .insight-contact-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: var(--text2); flex-shrink: 0; font-family: var(--mono); }
 .insight-contact-info { flex: 1; min-width: 0; }
@@ -299,7 +303,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .insight-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 24px; gap: 14px; text-align: center; }
 .insight-empty svg { opacity: 0.2; }
 .insight-empty p { font-size: 13px; color: var(--text2); line-height: 1.7; max-width: 300px; }
-.insight-tag { display: inline-block; font-size: 11px; font-family: var(--mono); padding: 3px 8px; border-radius: 4px; background: var(--bg3); color: var(--text2); border: 1px solid var(--border); margin: 2px; }
+.insight-tag { display: inline-block; font-size: 11px; font-family: var(--mono); padding: 3px 8px; border-radius: 4px; background: var(--bg3); color: var(--text2); border: none; margin: 2px; }
 .insight-tag.positive { background: rgba(22,163,74,0.08); color: var(--green); border-color: rgba(22,163,74,0.2); }
 .insight-tag.negative { background: rgba(220,38,38,0.08); color: var(--red); border-color: rgba(220,38,38,0.2); }
 .insight-tag.neutral { background: var(--bg3); color: var(--text2); }
@@ -338,14 +342,14 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .docs-upload-zone:hover { border-color:var(--border2);background:var(--bg3); }
 
 /* ── NOTES ── */
-.notes-compose { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 20px; }
+.notes-compose { background: transparent; border: none; border-bottom: 1px solid var(--border); border-radius: 0; padding: 0 0 14px 0; margin-bottom: 16px; }
 .notes-textarea { width: 100%; background: transparent; border: none; outline: none; font-family: var(--font); font-size: 13px; color: var(--text); resize: none; min-height: 70px; line-height: 1.6; }
 .notes-textarea::placeholder { color: var(--text3); }
 .notes-actions { display: flex; justify-content: flex-end; margin-top: 10px; gap: 8px; align-items: center; }
 .note-ts-preview { font-size: 11px; color: var(--text3); font-family: var(--mono); }
 .save-note-btn { padding: 6px 14px; background: var(--accent-bg); color: #1a1917; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s; }
 .save-note-btn:hover { background: var(--accent-bg2); }
-.note-entry { padding: 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; position: relative; background: var(--bg2); }
+.note-entry { padding: 14px 0; border-bottom: 1px solid var(--border); margin-bottom: 0; position: relative; background: transparent; }
 .note-ts { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-bottom: 6px; }
 .note-text { font-size: 13px; line-height: 1.6; white-space: pre-wrap; color: var(--text); }
 .note-delete { position: absolute; top: 10px; right: 10px; opacity: 0; background: none; border: none; cursor: pointer; color: var(--text3); transition: opacity 0.15s, color 0.15s; }
@@ -368,11 +372,11 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .file-action-btn:hover { background: var(--bg3); color: var(--text); }
 .file-action-btn.danger-btn { border-color: rgba(192,57,43,0.3); color: var(--red); }
 .file-action-btn.danger-btn:hover { background: rgba(192,57,43,0.07); }
-.tailor-section { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-top: 20px; }
+.tailor-section { background: transparent; border: none; border-top: 1px solid var(--border); border-radius: 0; padding: 20px 0 0 0; margin-top: 20px; }
 .tailor-wrap { padding: 20px; display: flex; flex-direction: column; gap: 0; }
 .files-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
-.file-slot { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.15s; min-height: 72px; }
-.file-slot:hover { border-color: var(--border2); background: var(--bg3); }
+.file-slot { background: var(--bg3); border: none; border-radius: var(--radius-sm); padding: 12px 14px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.15s; min-height: 64px; }
+.file-slot:hover { background: var(--bg4); }
 .file-slot.empty { cursor: default; }
 .file-slot-icon { width: 36px; height: 36px; flex-shrink: 0; color: var(--text3); }
 .file-slot-name { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; word-break: break-all; }
@@ -396,12 +400,12 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .tailor-toggle { padding: 6px 14px; background: transparent; border: 1px solid var(--border); border-radius: 100px; font-size: 12px; font-family: var(--mono); color: var(--text2); cursor: pointer; transition: all 0.15s; }
 .tailor-toggle:hover { background: var(--bg3); }
 .tailor-toggle.active { background: var(--bg3); border-color: var(--accent); color: var(--accent); font-weight: 500; }
-.tailor-context { width: 100%; padding: 10px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; color: var(--text); resize: none; min-height: 70px; outline: none; margin-bottom: 12px; line-height: 1.6; }
+.tailor-context { width: 100%; padding: 10px; background: var(--bg3); border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; color: var(--text); resize: none; min-height: 70px; outline: none; margin-bottom: 12px; line-height: 1.6; }
 .tailor-context::placeholder { color: var(--text3); }
 .tailor-btn { padding: 8px 18px; background: var(--accent-bg); color: #1a1917; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.15s; }
 .tailor-btn:hover { background: var(--accent-bg2); }
 .tailor-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.ai-result { margin-top: 16px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 16px; }
+.ai-result { margin-top: 16px; background: transparent; border: none; border-radius: 0; padding: 0; }
 .ai-result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
 .ai-result-label { font-size: 11px; font-family: var(--mono); color: var(--accent); font-weight: 500; }
 .ai-result-actions { display: flex; gap: 8px; }
@@ -466,7 +470,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 /* ── MODAL ── */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
 @media (prefers-color-scheme: dark) { .modal-overlay { background: rgba(0,0,0,0.65); } }
-.modal { background: var(--bg2); border: 1px solid var(--border2); border-radius: 14px; width: 100%; max-width: 540px; padding: 28px; max-height: 90vh; overflow-y: auto; }
+.modal { background: var(--bg2); border: none; border-radius: 14px; width: 100%; max-width: 540px; padding: 28px; max-height: 90vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,0.15), 0 0 0 1px var(--border); }
 .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 5px; letter-spacing: -0.3px; color: var(--text); }
 .modal-sub { font-size: 12px; color: var(--text2); margin-bottom: 20px; line-height: 1.6; }
 
@@ -518,7 +522,7 @@ input[type="file"] { display: none; }
   <div class="auth-card">
     <div class="auth-logo">
       <div class="auth-logo-mark"><svg viewBox="0 0 20 20" fill="none"><path d="M4 16V9l6-5 6 5v7H13v-5H7v5H4z" fill="#1a1917"/></svg></div>
-      <div><div class="auth-logo-text">Applied</div><div class="auth-logo-sub">job tracker</div></div>
+      <div><div class="auth-logo-text">Pursuit</div><div class="auth-logo-sub">job tracker</div></div>
     </div>
     <div class="auth-heading">Welcome back</div>
     <div class="auth-sub">Sign in to your account to track your applications.</div>
@@ -535,7 +539,7 @@ input[type="file"] { display: none; }
   <div class="auth-card">
     <div class="auth-logo">
       <div class="auth-logo-mark"><svg viewBox="0 0 20 20" fill="none"><path d="M4 16V9l6-5 6 5v7H13v-5H7v5H4z" fill="#1a1917"/></svg></div>
-      <div><div class="auth-logo-text">Applied</div><div class="auth-logo-sub">job tracker</div></div>
+      <div><div class="auth-logo-text">Pursuit</div><div class="auth-logo-sub">job tracker</div></div>
     </div>
     <div class="auth-heading">Create account</div>
     <div class="auth-sub">Start tracking your job applications for free.</div>
@@ -553,9 +557,15 @@ input[type="file"] { display: none; }
 <div id="screen-app" class="app" style="display:none">
   <div class="sidebar">
     <div class="sidebar-header">
-      <div class="logo">
-        <div class="logo-mark"><svg viewBox="0 0 16 16" fill="none"><path d="M3 13V7l5-4 5 4v6H10v-4H6v4H3z" fill="#1a1917"/></svg></div>
-        <div><div class="logo-text">Applied</div><div class="logo-sub">job tracker</div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+        <div class="logo" style="margin-bottom:0">
+          <div class="logo-mark"><svg viewBox="0 0 16 16" fill="none"><path d="M3 13L13 3M13 3H7M13 3v6" stroke="#1a1917" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div><div class="logo-text">Pursuit</div><div class="logo-sub">job tracker</div></div>
+        </div>
+        <button id="mobile-avatar-btn" onclick="openSettings('account')" title="Account & Settings" style="display:none;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:4px">
+          <span id="mobile-username" style="font-size:12px;font-weight:500;color:var(--text2);max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+          <div id="mobile-avatar" style="width:28px;height:28px;border-radius:50%;background:var(--accent-bg);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#1a1917;font-family:var(--mono);flex-shrink:0">?</div>
+        </button>
       </div>
       <button class="add-btn" onclick="openAddModal()">
         <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1v11M1 6.5h11" stroke="#1a1917" stroke-width="2" stroke-linecap="round"/></svg>
@@ -575,7 +585,11 @@ input[type="file"] { display: none; }
       <div class="filter-tab" onclick="setFilter('expired',this)" style="color:#f97316">expired</div>
     </div>
     <div class="job-list" id="job-list"></div>
-    <div style="padding:8px 12px 4px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px">
+    <div class="sidebar-nav-btns" style="padding:8px 12px 4px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px">
+      <button onclick="openEmailTemplates()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="9" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M1 5l6 4 6-4" stroke="currentColor" stroke-width="1.3"/></svg>
+        Email Templates
+      </button>
       <button onclick="showDocumentsPage()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 2h6l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v4h4" stroke="currentColor" stroke-width="1.3"/></svg>
         Document Library
@@ -586,7 +600,7 @@ input[type="file"] { display: none; }
       </button>
 
     </div>
-    <div class="user-bar">
+    <div class="user-bar sidebar-user-bar">
       <div class="user-avatar" id="user-avatar">?</div>
       <div class="user-name" id="user-name-display"></div>
       <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:0.02em;flex-shrink:0" id="version-label"></div>
@@ -642,16 +656,41 @@ input[type="file"] { display: none; }
         <option value="On-site">On-site</option>
       </select>
     </div>
-    <div class="form-field">
+    <div class="field" id="f-location-input">
       <label>LOCATION</label>
       <input type="text" id="job-location" placeholder="e.g. San Francisco, CA or United States">
     </div>
     <div class="field" id="f-salary"><label>SALARY / COMP</label><input type="text" id="job-salary" placeholder="e.g. $120k–$160k"></div>
     <div class="field">
+      <label>SOURCE</label>
+      <select id="job-source" style="width:100%;padding:9px 10px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;cursor:pointer">
+        <option value="">—</option>
+        <option value="LinkedIn">LinkedIn</option>
+        <option value="Indeed">Indeed</option>
+        <option value="Company Website">Company Website</option>
+        <option value="Referral">Referral</option>
+        <option value="Recruiter">Recruiter Outreach</option>
+        <option value="Job Board">Other Job Board</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="field" id="referral-field" style="display:none">
+      <label>REFERRED BY</label>
+      <input type="text" id="job-referred-by" placeholder="Name of person who referred you">
+    </div>
+    <div class="field">
+      <label>APPLICATION DEADLINE <span style="font-weight:400;color:var(--text3)">(optional)</span></label>
+      <input type="date" id="job-deadline">
+    </div>
+    <div class="field">
+      <label>FOLLOW-UP DATE <span style="font-weight:400;color:var(--text3)">(optional)</span></label>
+      <input type="date" id="job-followup">
+    </div>
+    <div class="field">
       <label>STATUS</label>
       <select id="job-status">
         <option value="to apply" selected>To Apply</option>
-        <option value="applied">Applied</option>
+        <option value="applied">Pursuit</option>
         <option value="screening">Screening</option>
         <option value="interviewing">Interviewing</option>
         <option value="offer">Offer</option>
@@ -699,6 +738,8 @@ let token = localStorage.getItem('applied_token');
 let currentUser = localStorage.getItem('applied_user');
 let jobs = {}, currentJobId = null, currentFilter = 'all', activeDetailTab = 'notes';
 let tailorFor = {resume:false, cover:false}, isGenerating = false, saveTimer = null;
+let sessionTailoredResume = null, sessionTailoredCover = null;
+let sessionTailoredResumeHtml = null, sessionTailoredCoverHtml = null;
 let activeTailorDoc = 'resume'; // which doc type is selected in tailoring UI
 let pendingHtml = null, pendingText = null;
 const STATUSES = ['to apply','applied','screening','interviewing','offer','rejected','ghosted','withdrawn','expired'];
@@ -751,6 +792,13 @@ function showApp() {
   document.getElementById('user-name-display').textContent = currentUser;
   const vl = document.getElementById('version-label');
   if (vl) vl.textContent = 'v' + APP_VERSION;
+  // Mobile avatar
+  const mav = document.getElementById('mobile-avatar');
+  const mun = document.getElementById('mobile-username');
+  const mabtn = document.getElementById('mobile-avatar-btn');
+  if (mav) mav.textContent = (currentUser||'?').slice(0,2).toUpperCase();
+  if (mun) mun.textContent = currentUser || '';
+  if (mabtn) mabtn.style.display = 'flex';
 }
 
 // ── AUTH ──
@@ -982,6 +1030,14 @@ function openAddModal() {
     document.getElementById(id)?.classList.remove('filled');
   });
   document.getElementById('job-status').value = 'to apply';
+  const srcEl = document.getElementById('job-source');
+  if (srcEl) { srcEl.value = ''; srcEl.onchange = () => {
+    const refField = document.getElementById('referral-field');
+    if (refField) refField.style.display = srcEl.value === 'Referral' ? 'block' : 'none';
+  }; }
+  const refField = document.getElementById('referral-field');
+  if (refField) refField.style.display = 'none';
+  ['job-deadline','job-followup','job-referred-by'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
   document.getElementById('parse-status').style.display = 'none';
   document.getElementById('parse-btn').textContent = 'Open';
   pendingHtml = null; pendingText = null;
@@ -1000,10 +1056,14 @@ function addJob() {
     url:      document.getElementById('job-url').value.trim(),
     location: document.getElementById('job-location').value.trim(),
     workType,
-    salary:   document.getElementById('job-salary').value.trim(),
-    status:   document.getElementById('job-status').value,
+    salary:     document.getElementById('job-salary').value.trim(),
+    status:     document.getElementById('job-status').value,
+    source:     document.getElementById('job-source')?.value || null,
+    referredBy: document.getElementById('job-referred-by')?.value.trim() || null,
+    deadline:   document.getElementById('job-deadline')?.value || null,
+    followUpDate: document.getElementById('job-followup')?.value || null,
     createdAt: Date.now(),
-    notes: [],
+    notes: [], contacts: [], interviews: [],
     resume: null, cover: null,
     tailoredResume: null, tailoredCover: null,
     postingHtml: pendingHtml,
@@ -1058,6 +1118,8 @@ function renderJobList() {
         <div class="job-item-meta">
           <div class="status-dot" style="background:${statusColor(j.status)}"></div>
           <span style="font-size:10px;font-family:var(--mono);color:${statusColor(j.status)}">${j.status}</span>
+          ${j.followUpDate && new Date(j.followUpDate) <= new Date(Date.now()+86400000*2) ? '<span style="font-size:9px;padding:1px 4px;background:rgba(251,191,36,0.15);color:var(--amber);border-radius:3px">↩</span>' : ''}
+          ${j.deadline && new Date(j.deadline) <= new Date(Date.now()+86400000*3) ? '<span style="font-size:9px;padding:1px 4px;background:rgba(239,68,68,0.12);color:var(--red);border-radius:3px">⏰</span>' : ''}
           <span style="flex:1"></span>
           <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">${fmtDate(j.createdAt)}</span>
         </div>
@@ -1070,6 +1132,11 @@ function selectJob(id) {
   activeDetailTab = 'notes';
   tailorFor = {resume:false, cover:false};
   activeTailorDoc = 'resume';
+  // Clear session tailoring state for new job
+  sessionTailoredResume = null;
+  sessionTailoredCover = null;
+  sessionTailoredResumeHtml = null;
+  sessionTailoredCoverHtml = null;
   renderJobList();
   renderDetail();
   document.getElementById('empty-state').style.display = 'none';
@@ -1118,6 +1185,9 @@ function renderDetail() {
             ${STATUSES.map(s=>`<option value="${s}"${j.status===s?' selected':''}>${s}</option>`).join('')}
           </select>
           <span class="date-added">Added ${fmtDate(j.createdAt)}</span>
+          ${j.source ? `<span style="font-size:11px;color:var(--text3);font-family:var(--mono)">${j.source}${j.referredBy ? ` · via ${esc(j.referredBy)}` : ''}</span>` : ''}
+          ${j.deadline ? `<span style="font-size:11px;color:var(--red);font-family:var(--mono)">⏰ Due ${fmtDate(j.deadline)}</span>` : ''}
+          ${j.followUpDate ? `<span style="font-size:11px;color:var(--amber);font-family:var(--mono)">↩ Follow up ${fmtDate(j.followUpDate)}</span>` : ''}
         </div>
       </div>
       <button class="icon-btn danger" onclick="deleteJob('${j.id}')" title="Delete application">
@@ -1130,6 +1200,8 @@ function renderDetail() {
       <div class="detail-tab${activeDetailTab==='posting'?' active':''}"  onclick="switchTab('posting')">Job Posting</div>
       <div class="detail-tab${activeDetailTab==='files'?' active':''}"    onclick="switchTab('files')">Tailoring</div>
       <div class="detail-tab${activeDetailTab==='documents'?' active':''}"  onclick="switchTab('documents')">Documents${j.documents?.length ? ` <span style="font-size:10px;padding:1px 5px;background:var(--bg3);border-radius:100px;border:1px solid var(--border)">${j.documents.length}</span>` : ''}</div>
+      <div class="detail-tab${activeDetailTab==='contacts'?' active':''}"   onclick="switchTab('contacts')">Contacts${j.contacts?.length ? ` <span style="font-size:10px;padding:1px 5px;background:var(--bg3);border-radius:100px;border:1px solid var(--border)">${j.contacts.length}</span>` : ''}</div>
+      <div class="detail-tab${activeDetailTab==='interview'?' active':''}"  onclick="switchTab('interview')">Interview Prep</div>
     </div>
     ${activeDetailTab === 'posting'
       ? renderPostingTab(j)
@@ -1137,12 +1209,23 @@ function renderDetail() {
         ? renderInsightsTab(j)
         : activeDetailTab === 'documents'
           ? `<div class="tab-pane">${renderDocumentsTab(j)}</div>`
-          : `<div class="tab-pane">${activeDetailTab==='notes' ? renderNotesTab(j) : renderFilesTab(j)}</div>`
+          : activeDetailTab === 'contacts'
+            ? `<div class="tab-pane">${renderContactsTab(j)}</div>`
+            : activeDetailTab === 'interview'
+              ? `<div class="tab-pane">${renderInterviewTab(j)}</div>`
+              : `<div class="tab-pane">${activeDetailTab==='notes' ? renderNotesTab(j) : renderFilesTab(j)}</div>`
     }
   `;
 }
 
 function switchTab(t) {
+  if (t === 'files') {
+    // Always start fresh on the Tailoring tab
+    sessionTailoredResume = null;
+    sessionTailoredCover = null;
+    sessionTailoredResumeHtml = null;
+    sessionTailoredCoverHtml = null;
+  }
   activeDetailTab = t;
   renderDetail();
   // Auto-fetch insights on first load only (no auto-refresh)
@@ -1331,8 +1414,8 @@ function fileSlotHtml(type, file, label, iconSvg, uploadLabel) {
 function renderFilesTab(j) {
   const type = activeTailorDoc;
   const doc = type === 'resume' ? j.resume : j.cover;
-  const tailored = type === 'resume' ? j.tailoredResume : j.tailoredCover;
-  const tailoredHtml = type === 'resume' ? j.tailoredResumeHtml : j.tailoredCoverHtml;
+  const tailored = type === 'resume' ? sessionTailoredResume : sessionTailoredCover;
+  const tailoredHtml = type === 'resume' ? sessionTailoredResumeHtml : sessionTailoredCoverHtml;
   const label = type === 'resume' ? 'Resume' : 'Cover Letter';
 
   return `<div class="tailor-wrap" style="max-width:680px;margin:0 auto">
@@ -1415,8 +1498,8 @@ function renderTailoredDoc(type, text, jobId) {
   const displayContent = htmlContent || esc(text);
   return `
     <div>
-      <div id="${editorId}" class="wysiwyg-editor" style="min-height:200px;max-height:420px;overflow-y:auto;border:1px solid var(--border);border-radius:var(--radius-sm) var(--radius-sm) 0 0;padding:20px;background:var(--bg2);font-size:13px;line-height:1.7;color:var(--text);outline:none" contenteditable="true" oninput="saveTailoredEdit('${type}','${jobId}',this)">${displayContent}</div>
-      <div style="display:flex;gap:8px;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-top:none;border-radius:0 0 var(--radius-sm) var(--radius-sm);flex-wrap:wrap">
+      <div id="${editorId}" class="wysiwyg-editor" style="min-height:200px;max-height:420px;overflow-y:auto;border:none;border-radius:0;padding:16px 0;background:transparent;font-size:13px;line-height:1.7;color:var(--text);outline:none" contenteditable="true" oninput="saveTailoredEdit('${type}','${jobId}',this)">${displayContent}</div>
+      <div style="display:flex;gap:8px;padding:10px 0;background:transparent;border-top:1px solid var(--border);flex-wrap:wrap">
         <button onclick="downloadTailoredDocx('${type}','${jobId}')" style="padding:6px 14px;background:var(--accent-bg);border:none;border-radius:var(--radius-sm);font-size:12px;font-family:var(--font);color:#1a1917;cursor:pointer;font-weight:600">↓ Download .docx</button>
         <button onclick="downloadTailoredTxt('${type}','${jobId}')" style="padding:6px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:var(--font);color:var(--text2);cursor:pointer">↓ .txt</button>
         <button onclick="saveToJobDocuments('${type}','${jobId}')" style="padding:6px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:var(--font);color:var(--text2);cursor:pointer">+ Save to Documents</button>
@@ -1445,9 +1528,13 @@ function saveTailoredEdit(type, jobId, el) {
   if (type === 'resume') {
     j.tailoredResumeHtml = el.innerHTML;
     j.tailoredResume = el.innerText;
+    sessionTailoredResumeHtml = el.innerHTML;
+    sessionTailoredResume = el.innerText;
   } else {
     j.tailoredCoverHtml = el.innerHTML;
     j.tailoredCover = el.innerText;
+    sessionTailoredCoverHtml = el.innerHTML;
+    sessionTailoredCover = el.innerText;
   }
   scheduleSave();
 }
@@ -1579,9 +1666,13 @@ async function runTailoring(docType) {
     if (docType === 'resume') {
       j.tailoredResumeHtml = result;
       j.tailoredResume = plainText;
+      sessionTailoredResumeHtml = result;
+      sessionTailoredResume = plainText;
     } else {
       j.tailoredCoverHtml = result;
       j.tailoredCover = plainText;
+      sessionTailoredCoverHtml = result;
+      sessionTailoredCover = plainText;
     }
     scheduleSave();
     renderDetail();
@@ -2645,7 +2736,7 @@ function renderDocumentsTab(j) {
       </div>` : `
       <div style="display:flex;flex-direction:column;gap:8px">
         ${docs.map(d => `
-          <div style="background:var(--bg2);border:1px solid ${d.usedForApplication?'var(--green)':'var(--border)'};border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;gap:12px;transition:border-color 0.15s">
+          <div style="background:transparent;border:none;border-bottom:1px solid var(--border);padding:12px 0;display:flex;align-items:center;gap:12px;transition:all 0.15s" >
             <span style="font-size:18px;flex-shrink:0">${d.type==='resume'?'📄':d.type==='cover'?'✉️':'📎'}</span>
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.name)}</div>
@@ -2807,6 +2898,467 @@ async function saveToJobDocuments(type, jobId) {
   } catch(e) { alert('Save failed: ' + e.message); }
 }
 
+// ══════════════════════════════════════════════
+// ── CONTACTS TAB ──
+// ══════════════════════════════════════════════
+function renderContactsTab(j) {
+  if (!j.contacts) j.contacts = [];
+  const cs = j.contacts;
+  return `<div style="max-width:680px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="font-size:14px;font-weight:600;color:var(--text)">Contacts at ${esc(j.company)}</div>
+      <button onclick="openContactModal('${j.id}')" style="padding:6px 14px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer">+ Add contact</button>
+    </div>
+    ${cs.length === 0 ? `
+      <div style="text-align:center;padding:48px 20px;color:var(--text3)">
+        <div style="font-size:32px;margin-bottom:12px">👤</div>
+        <div style="font-size:14px;font-weight:500;color:var(--text2);margin-bottom:6px">No contacts yet</div>
+        <div style="font-size:13px;line-height:1.6">Add recruiters, hiring managers, or anyone you've connected with at this company.</div>
+      </div>` : `
+      <div style="display:flex;flex-direction:column;gap:0">
+        ${cs.map(c => `
+          <div style="padding:14px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:14px">
+            <div style="width:38px;height:38px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;color:var(--text2);flex-shrink:0;font-family:var(--mono)">
+              ${esc(c.name||'?').slice(0,2).toUpperCase()}
+            </div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(c.name||'')}</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:1px">${esc(c.role||'')}${c.company ? ` · ${esc(c.company)}` : ''}</div>
+              <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
+                ${c.linkedin ? `<a href="${esc(c.linkedin)}" target="_blank" style="font-size:11px;color:var(--blue);text-decoration:none">LinkedIn ↗</a>` : ''}
+                ${c.email ? `<a href="mailto:${esc(c.email)}" style="font-size:11px;color:var(--blue);text-decoration:none">${esc(c.email)}</a>` : ''}
+                ${c.lastContact ? `<span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Last contact: ${fmtDate(c.lastContact)}</span>` : ''}
+              </div>
+              ${c.notes ? `<div style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.5">${esc(c.notes)}</div>` : ''}
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0">
+              <button onclick="openContactModal('${j.id}','${c.id}')" style="padding:4px 10px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);color:var(--text2);cursor:pointer">Edit</button>
+              <button onclick="deleteContact('${j.id}','${c.id}')" style="padding:4px 10px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);color:var(--red);cursor:pointer">✕</button>
+            </div>
+          </div>`).join('')}
+      </div>`}
+    ${cs.some(c=>c.isReferral) ? `` : cs.length > 0 ? `
+      <div style="margin-top:12px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius-sm)">
+        <span style="font-size:12px;color:var(--text3)">💡 Ask one of these contacts to refer you — referred candidates are 3–5× more likely to get an interview.</span>
+      </div>` : ''}
+  </div>`;
+}
+
+// ── Contact modal ──
+let _editContactId = null;
+function openContactModal(jobId, contactId) {
+  _editContactId = contactId || null;
+  const j = jobs[jobId];
+  const c = contactId ? (j.contacts||[]).find(x=>x.id===contactId) : null;
+  const overlay = document.createElement('div');
+  overlay.id = 'contact-modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border-radius:var(--radius);width:min(480px,92vw);padding:24px;box-shadow:0 16px 64px rgba(0,0,0,0.2)">
+      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:16px">${c ? 'Edit contact' : 'Add contact'}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">NAME</label>
+          <input id="cm-name" value="${esc(c?.name||'')}" placeholder="Full name" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none"></div>
+        <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">ROLE</label>
+          <input id="cm-role" value="${esc(c?.role||'')}" placeholder="e.g. Hiring Manager" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">EMAIL</label>
+          <input id="cm-email" value="${esc(c?.email||'')}" placeholder="email@company.com" type="email" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none"></div>
+        <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">LAST CONTACT</label>
+          <input id="cm-date" value="${c?.lastContact||''}" type="date" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none"></div>
+      </div>
+      <div style="margin-bottom:10px"><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">LINKEDIN URL</label>
+        <input id="cm-linkedin" value="${esc(c?.linkedin||'')}" placeholder="https://linkedin.com/in/..." style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none"></div>
+      <div style="margin-bottom:16px"><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">NOTES</label>
+        <textarea id="cm-notes" rows="2" placeholder="Context, what you discussed, follow-up needed..." style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;resize:none;line-height:1.5">${esc(c?.notes||'')}</textarea></div>
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('contact-modal-overlay').remove()" style="flex:1;padding:9px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer">Cancel</button>
+        <button onclick="saveContact('${jobId}')" style="flex:1;padding:9px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Save</button>
+      </div>
+    </div>`;
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('cm-name')?.focus(), 50);
+}
+
+function saveContact(jobId) {
+  const j = jobs[jobId]; if (!j) return;
+  if (!j.contacts) j.contacts = [];
+  const name = document.getElementById('cm-name').value.trim();
+  if (!name) return;
+  const contact = {
+    id: _editContactId || genId(),
+    name,
+    role:        document.getElementById('cm-role').value.trim(),
+    email:       document.getElementById('cm-email').value.trim(),
+    linkedin:    document.getElementById('cm-linkedin').value.trim(),
+    lastContact: document.getElementById('cm-date').value || null,
+    notes:       document.getElementById('cm-notes').value.trim(),
+  };
+  if (_editContactId) {
+    const idx = j.contacts.findIndex(c=>c.id===_editContactId);
+    if (idx >= 0) j.contacts[idx] = contact;
+  } else {
+    j.contacts.push(contact);
+  }
+  document.getElementById('contact-modal-overlay')?.remove();
+  scheduleSave(); renderDetail();
+}
+
+function deleteContact(jobId, contactId) {
+  const j = jobs[jobId]; if (!j) return;
+  j.contacts = (j.contacts||[]).filter(c=>c.id!==contactId);
+  scheduleSave(); renderDetail();
+}
+
+// ══════════════════════════════════════════════
+// ── INTERVIEW PREP TAB ──
+// ══════════════════════════════════════════════
+const INTERVIEW_CATEGORIES = ['Behavioral', 'Technical', 'Culture Fit', 'Role-Specific', 'Questions to Ask'];
+
+function renderInterviewTab(j) {
+  if (!j.interviews) j.interviews = [];
+  const byCategory = {};
+  INTERVIEW_CATEGORIES.forEach(c => byCategory[c] = []);
+  j.interviews.forEach(q => { (byCategory[q.category] = byCategory[q.category]||[]).push(q); });
+  const practiced = j.interviews.filter(q=>q.practiced).length;
+  const total = j.interviews.length;
+
+  return `<div style="max-width:680px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:14px;font-weight:600;color:var(--text)">Interview Prep</div>
+        ${total > 0 ? `<div style="font-size:12px;color:var(--text3);margin-top:2px">${practiced}/${total} practiced</div>` : ''}
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="generateInterviewQuestions('${j.id}')" id="gen-q-btn" style="padding:6px 14px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;display:flex;align-items:center;gap:6px">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.1 2.6 2.6.4-1.9 1.8.5 2.6L6 7.2 3.7 8.4l.5-2.6L2.3 4l2.6-.4L6 1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>
+          Generate with AI
+        </button>
+        <button onclick="openAddQuestionModal('${j.id}')" style="padding:6px 14px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:12px;font-family:var(--font);color:var(--text2);cursor:pointer">+ Add question</button>
+      </div>
+    </div>
+    <div id="interview-gen-status" style="margin-bottom:12px"></div>
+
+    ${total === 0 ? `
+      <div style="text-align:center;padding:48px 20px;color:var(--text3)">
+        <div style="font-size:32px;margin-bottom:12px">🎯</div>
+        <div style="font-size:14px;font-weight:500;color:var(--text2);margin-bottom:6px">No questions yet</div>
+        <div style="font-size:13px;line-height:1.6;max-width:320px;margin:0 auto">Generate AI questions tailored to this role, or add your own to practice.</div>
+      </div>` : `
+      ${INTERVIEW_CATEGORIES.map(cat => {
+        const qs = byCategory[cat]||[];
+        if (!qs.length) return '';
+        return `<div style="margin-bottom:24px">
+          <div style="font-size:11px;font-weight:600;color:var(--text3);letter-spacing:.5px;font-family:var(--mono);margin-bottom:10px">${cat.toUpperCase()}</div>
+          ${qs.map(q => `
+            <div style="padding:10px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:12px">
+              <button onclick="togglePracticed('${j.id}','${q.id}')" style="width:18px;height:18px;border-radius:4px;border:2px solid ${q.practiced?'var(--accent)':'var(--border2)'};background:${q.practiced?'var(--accent-bg)':'transparent'};cursor:pointer;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#1a1917">
+                ${q.practiced?'✓':''}
+              </button>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;color:${q.practiced?'var(--text3)':'var(--text)'};${q.practiced?'text-decoration:line-through;':''};line-height:1.5">${esc(q.question)}</div>
+                ${q.notes ? `<div style="font-size:12px;color:var(--text2);margin-top:4px;font-style:italic;line-height:1.5">${esc(q.notes)}</div>` : ''}
+              </div>
+              <div style="display:flex;gap:4px;flex-shrink:0">
+                <button onclick="openAddQuestionModal('${j.id}','${q.id}')" style="padding:3px 8px;background:transparent;border:none;font-size:11px;color:var(--text3);cursor:pointer">Edit</button>
+                <button onclick="deleteQuestion('${j.id}','${q.id}')" style="padding:3px 8px;background:transparent;border:none;font-size:11px;color:var(--red);cursor:pointer">✕</button>
+              </div>
+            </div>`).join('')}
+        </div>`;
+      }).join('')}`}
+  </div>`;
+}
+
+function togglePracticed(jobId, qId) {
+  const j = jobs[jobId]; if (!j) return;
+  const q = (j.interviews||[]).find(x=>x.id===qId);
+  if (q) { q.practiced = !q.practiced; scheduleSave(); renderDetail(); }
+}
+
+function deleteQuestion(jobId, qId) {
+  const j = jobs[jobId]; if (!j) return;
+  j.interviews = (j.interviews||[]).filter(x=>x.id!==qId);
+  scheduleSave(); renderDetail();
+}
+
+let _editQuestionId = null;
+function openAddQuestionModal(jobId, questionId) {
+  _editQuestionId = questionId || null;
+  const j = jobs[jobId];
+  const q = questionId ? (j.interviews||[]).find(x=>x.id===questionId) : null;
+  const overlay = document.createElement('div');
+  overlay.id = 'question-modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border-radius:var(--radius);width:min(500px,92vw);padding:24px;box-shadow:0 16px 64px rgba(0,0,0,0.2)">
+      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:16px">${q ? 'Edit question' : 'Add question'}</div>
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">CATEGORY</label>
+        <select id="qm-cat" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none">
+          ${INTERVIEW_CATEGORIES.map(c=>`<option value="${c}"${q?.category===c?' selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
+      <div style="margin-bottom:10px">
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">QUESTION</label>
+        <textarea id="qm-q" rows="3" placeholder="e.g. Tell me about a time you led a difficult project..." style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;resize:none;line-height:1.5">${esc(q?.question||'')}</textarea>
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">YOUR NOTES / ANSWER OUTLINE</label>
+        <textarea id="qm-notes" rows="3" placeholder="Key points, examples, STAR framework notes..." style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;resize:none;line-height:1.5">${esc(q?.notes||'')}</textarea>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('question-modal-overlay').remove()" style="flex:1;padding:9px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer">Cancel</button>
+        <button onclick="saveQuestion('${jobId}')" style="flex:1;padding:9px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Save</button>
+      </div>
+    </div>`;
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  setTimeout(() => document.getElementById('qm-q')?.focus(), 50);
+}
+
+function saveQuestion(jobId) {
+  const j = jobs[jobId]; if (!j) return;
+  if (!j.interviews) j.interviews = [];
+  const question = document.getElementById('qm-q').value.trim();
+  if (!question) return;
+  const q = {
+    id: _editQuestionId || genId(),
+    category: document.getElementById('qm-cat').value,
+    question,
+    notes: document.getElementById('qm-notes').value.trim(),
+    practiced: _editQuestionId ? (j.interviews.find(x=>x.id===_editQuestionId)?.practiced||false) : false,
+  };
+  if (_editQuestionId) {
+    const idx = j.interviews.findIndex(x=>x.id===_editQuestionId);
+    if (idx>=0) j.interviews[idx] = q;
+  } else {
+    j.interviews.push(q);
+  }
+  document.getElementById('question-modal-overlay')?.remove();
+  scheduleSave(); renderDetail();
+}
+
+async function generateInterviewQuestions(jobId) {
+  const j = jobs[jobId]; if (!j) return;
+  const btn = document.getElementById('gen-q-btn');
+  const status = document.getElementById('interview-gen-status');
+  if (btn) { btn.disabled=true; btn.textContent='Generating...'; }
+  if (status) status.innerHTML = '<span style="font-size:12px;color:var(--text3)">Generating questions tailored to this role...</span>';
+
+  const context = `Job title: ${j.title}\nCompany: ${j.company}\nJob posting: ${(j.postingText||'').slice(0,3000)}`;
+  try {
+    const result = await callAI(`You are an expert interview coach. Generate 15 interview questions for this job application.
+
+${context}
+
+Return ONLY a JSON array in this exact format, no other text:
+[
+  {"category": "Behavioral", "question": "..."},
+  {"category": "Technical", "question": "..."},
+  {"category": "Culture Fit", "question": "..."},
+  {"category": "Role-Specific", "question": "..."},
+  {"category": "Questions to Ask", "question": "..."}
+]
+
+Include 3-4 questions per category. Make them specific to this role and company. For "Questions to Ask", generate thoughtful questions the candidate should ask the interviewer.`);
+
+    let questions;
+    try {
+      const clean = result.replace(/```json|```/g,'').trim();
+      questions = JSON.parse(clean);
+    } catch(e) {
+      const match = result.match(/\[[\s\S]*\]/);
+      questions = match ? JSON.parse(match[0]) : [];
+    }
+
+    if (!j.interviews) j.interviews = [];
+    questions.forEach(q => {
+      if (q.question && q.category) {
+        j.interviews.push({ id: genId(), category: q.category, question: q.question, notes: '', practiced: false });
+      }
+    });
+    scheduleSave(); renderDetail();
+    if (status) status.innerHTML = '';
+  } catch(e) {
+    if (status) status.innerHTML = `<span style="font-size:12px;color:var(--red)">Failed: ${e.message}</span>`;
+    if (btn) { btn.disabled=false; btn.innerHTML='<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.1 2.6 2.6.4-1.9 1.8.5 2.6L6 7.2 3.7 8.4l.5-2.6L2.3 4l2.6-.4L6 1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg> Generate with AI'; }
+  }
+}
+
+// ══════════════════════════════════════════════
+// ── EMAIL TEMPLATES ──
+// ══════════════════════════════════════════════
+const EMAIL_TEMPLATES = [
+  {
+    id: 'cold-recruiter',
+    label: 'Cold outreach to recruiter',
+    icon: '📨',
+    subject: 'Interest in [Role] at [Company]',
+    body: `Hi [Name],
+
+I came across the [Role] position at [Company] and wanted to reach out directly. [One sentence about why you're excited about this specific company/role].
+
+I have [X] years of experience in [relevant area] and have [brief specific achievement]. I'd love to learn more about the team and the role.
+
+Would you have 15 minutes for a brief call this week?
+
+Best,
+[Your name]`,
+  },
+  {
+    id: 'post-application-followup',
+    label: 'Post-application follow-up',
+    icon: '📬',
+    subject: 'Following up — [Role] application',
+    body: `Hi [Name],
+
+I applied for the [Role] position on [date] and wanted to follow up to reiterate my interest.
+
+[One sentence connecting your background to something specific about the role or company].
+
+I'm happy to provide any additional information and look forward to hearing from you.
+
+Best,
+[Your name]`,
+  },
+  {
+    id: 'post-interview-thankyou',
+    label: 'Post-interview thank you',
+    icon: '🙏',
+    subject: 'Thank you — [Role] interview',
+    body: `Hi [Name],
+
+Thank you for taking the time to speak with me today about the [Role] position at [Company]. I really enjoyed learning about [specific thing discussed].
+
+Our conversation reinforced my excitement about this opportunity — particularly [specific aspect of role/team]. I think my experience with [relevant skill] would be a great fit.
+
+Looking forward to next steps.
+
+Best,
+[Your name]`,
+  },
+  {
+    id: 'offer-negotiation',
+    label: 'Offer negotiation',
+    icon: '💼',
+    subject: 'Re: [Role] Offer',
+    body: `Hi [Name],
+
+Thank you so much for the offer — I'm genuinely excited about the opportunity to join [Company].
+
+I'd like to discuss the compensation. Based on my [X years of experience / market research / competing offers], I was hoping we could consider a base of [target amount]. I'm confident I can bring [specific value] to the team.
+
+I'm flexible on structure and open to discussing options. Is there room to move on the base?
+
+Best,
+[Your name]`,
+  },
+  {
+    id: 'declining-offer',
+    label: 'Declining an offer gracefully',
+    icon: '🚫',
+    subject: 'Re: [Role] Offer — Update',
+    body: `Hi [Name],
+
+Thank you so much for the offer to join [Company] as [Role]. After careful consideration, I've decided to pursue another opportunity that's a closer fit for where I'm headed right now.
+
+This was a genuinely difficult decision — I have a lot of respect for [Company] and the team I met. I hope our paths cross again in the future.
+
+Thank you again for the time and consideration.
+
+Best,
+[Your name]`,
+  },
+  {
+    id: 'referral-request',
+    label: 'Asking for a referral',
+    icon: '🤝',
+    subject: 'Quick favor — referral at [Company]?',
+    body: `Hi [Name],
+
+Hope you're doing well! I saw that [Company] is hiring for a [Role] and I'm very interested in applying.
+
+Would you be comfortable referring me? I've [brief context on why you're a fit]. I'd do all the legwork — I just need the referral code or to be submitted through your company's system.
+
+Totally understand if it's not a good fit. Either way, let me know if you'd like to catch up soon.
+
+Thanks!
+[Your name]`,
+  },
+];
+
+function openEmailTemplates(jobId) {
+  document.getElementById('email-templates-overlay')?.remove();
+  const j = jobId ? jobs[jobId] : null;
+  const overlay = document.createElement('div');
+  overlay.id = 'email-templates-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border-radius:var(--radius);width:min(700px,95vw);height:min(85vh,660px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 16px 64px rgba(0,0,0,0.25)">
+      <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <div style="font-size:15px;font-weight:600;color:var(--text);flex:1">Email Templates</div>
+        <button onclick="document.getElementById('email-templates-overlay').remove()" style="width:28px;height:28px;background:var(--bg3);border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:16px;color:var(--text2)">×</button>
+      </div>
+      <div style="display:flex;flex:1;overflow:hidden">
+        <!-- Template list -->
+        <div style="width:220px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:10px 8px">
+          ${EMAIL_TEMPLATES.map(t => `
+            <button onclick="showEmailTemplate('${t.id}','${jobId||''}')" id="et-btn-${t.id}" style="width:100%;padding:10px 12px;background:transparent;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;text-align:left;transition:all 0.12s" onmouseover="this.style.background='var(--bg3)'" onmouseout="if(!this.classList.contains('et-active'))this.style.background='transparent'">
+              <span style="font-size:16px">${t.icon}</span>
+              <span style="line-height:1.3">${t.label}</span>
+            </button>`).join('')}
+        </div>
+        <!-- Template body -->
+        <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+          <div id="et-content" style="flex:1;padding:20px;overflow-y:auto;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:13px">
+            Select a template →
+          </div>
+        </div>
+      </div>
+    </div>`;
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function showEmailTemplate(id, jobId) {
+  const t = EMAIL_TEMPLATES.find(x=>x.id===id);
+  if (!t) return;
+  const j = jobId ? jobs[jobId] : null;
+  // Personalize with job data
+  let subject = t.subject;
+  let body = t.body;
+  if (j) {
+    subject = subject.replace(/\[Role\]/g, j.title||'[Role]').replace(/\[Company\]/g, j.company||'[Company]');
+    body = body.replace(/\[Role\]/g, j.title||'[Role]').replace(/\[Company\]/g, j.company||'[Company]');
+  }
+  // Highlight active button
+  document.querySelectorAll('[id^="et-btn-"]').forEach(b => { b.classList.remove('et-active'); b.style.background='transparent'; });
+  const btn = document.getElementById('et-btn-'+id);
+  if (btn) { btn.classList.add('et-active'); btn.style.background='var(--bg3)'; }
+
+  document.getElementById('et-content').innerHTML = `
+    <div style="width:100%">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:20px">${t.icon}</span>${t.label}
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px;margin-bottom:6px">SUBJECT</div>
+        <div style="padding:8px 10px;background:var(--bg3);border-radius:var(--radius-sm);font-size:13px;color:var(--text);font-family:var(--mono)">${esc(subject)}</div>
+      </div>
+      <div style="margin-bottom:14px">
+        <div style="font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px;margin-bottom:6px">BODY</div>
+        <textarea id="et-body" rows="12" style="width:100%;padding:12px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;resize:none;line-height:1.7">${esc(body)}</textarea>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="navigator.clipboard.writeText(document.getElementById('et-body').value).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy body',1500)})" style="padding:8px 16px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer">Copy body</button>
+        <button onclick="navigator.clipboard.writeText('${esc(subject)}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy subject',1500)})" style="padding:8px 16px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:13px;font-family:var(--font);color:var(--text2);cursor:pointer">Copy subject</button>
+      </div>
+      <div style="margin-top:10px;font-size:11px;color:var(--text3)">Edit the template above before copying. Fields in [brackets] need to be filled in.</div>
+    </div>`;
+}
+
 async function checkAIProviders() {
   const el = document.getElementById('ai-provider-status');
   if (el) el.textContent = 'Checking...';
@@ -2831,6 +3383,8 @@ function openSettings(section) {
   document.getElementById('s-username').textContent = currentUser;
   document.getElementById('s-job-count').textContent = Object.keys(jobs).length + ' applications';
   document.getElementById('s-finnhub-key').value = localStorage.getItem('finnhub_key') || '';
+  const su = document.getElementById('s-session-user');
+  if (su) su.textContent = currentUser || '';
   // Clear form fields
   ['s-pw-current','s-pw-new','s-pw-confirm','s-delete-confirm'].forEach(id => {
     const el = document.getElementById(id); if (el) el.value = '';
@@ -2998,7 +3552,6 @@ setInterval(() => {
             <div style="font-size:13px;font-weight:600;color:var(--text)" id="s-username"></div>
             <div style="font-size:11px;color:var(--text3)" id="s-job-count"></div>
           </div>
-          <button onclick="closeSettings()" title="Close" style="width:26px;height:26px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--text3);font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1" onmouseover="this.style.background='var(--bg4)';this.style.color='var(--text)'" onmouseout="this.style.background='transparent';this.style.color='var(--text3)'">&#x2715;</button>
         </div>
       </div>
       <div style="flex:1;overflow-y:auto">
@@ -3017,7 +3570,11 @@ setInterval(() => {
     </div>
 
     <!-- Content -->
-    <div style="flex:1;overflow-y:auto;padding:32px" id="settings-content">
+    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;justify-content:flex-end;padding:12px 16px 0;flex-shrink:0">
+        <button onclick="closeSettings()" title="Close" style="width:28px;height:28px;background:transparent;border:none;border-radius:var(--radius-sm);cursor:pointer;color:var(--text3);font-size:16px;display:flex;align-items:center;justify-content:center;line-height:1" onmouseover="this.style.background='var(--bg3)';this.style.color='var(--text)'" onmouseout="this.style.background='transparent';this.style.color='var(--text3)'">&#x2715;</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:16px 32px 32px" id="settings-content">
 
       <!-- ACCOUNT -->
       <div class="settings-pane" id="spane-account">
@@ -3030,6 +3587,13 @@ setInterval(() => {
             <div class="settings-field"><label>NEW PASSWORD</label><input type="password" id="s-pw-new" placeholder="At least 6 characters" autocomplete="new-password"></div>
             <div class="settings-field"><label>CONFIRM NEW PASSWORD</label><input type="password" id="s-pw-confirm" placeholder="Repeat new password" autocomplete="new-password"></div>
             <button class="settings-btn primary" onclick="changePassword()">Update password</button>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-section-title">SESSION</div>
+          <div class="settings-section-body">
+            <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Signed in as <strong style="color:var(--text)" id="s-session-user"></strong></div>
+            <button class="settings-btn danger" onclick="closeSettings();doLogout()">Sign out</button>
           </div>
         </div>
       </div>
@@ -3081,7 +3645,7 @@ setInterval(() => {
       <!-- BROWSER EXTENSIONS -->
       <div class="settings-pane" id="spane-extension" style="display:none">
         <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px">Browser Extensions</div>
-        <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Add jobs to Applied in one click from any job site &mdash; LinkedIn, Indeed, Greenhouse, Lever, Workday, and more.</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Add jobs to Pursuit in one click from any job site &mdash; LinkedIn, Indeed, Greenhouse, Lever, Workday, and more.</div>
         <div style="margin-bottom:20px">
           <a href="/extension.zip" download style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:var(--accent-bg);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;color:#1a1917;text-decoration:none">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M1 11v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -3098,7 +3662,7 @@ setInterval(() => {
               <li>Enable <strong style="color:var(--text2)">Developer Mode</strong></li>
               <li>Click <strong style="color:var(--text2)">Load unpacked</strong></li>
               <li>Select the <code style="background:var(--bg4);padding:1px 4px;border-radius:3px">applied-extension</code> folder</li>
-              <li>Sign in with your Applied credentials</li>
+              <li>Sign in with your Pursuit credentials</li>
             </ol>
           </div>
           <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:18px">
@@ -3109,9 +3673,9 @@ setInterval(() => {
             <ol style="font-size:12px;color:var(--text3);line-height:1.9;padding-left:16px;margin:0">
               <li>Install <a href="https://apps.apple.com/app/xcode/id497799835" target="_blank" style="color:var(--blue)">Xcode</a> (free)</li>
               <li>Download and unzip</li>
-              <li>Double-click <code style="background:var(--bg4);padding:1px 4px;border-radius:3px;font-size:11px">Install Applied Extension.app</code></li>
+              <li>Double-click <code style="background:var(--bg4);padding:1px 4px;border-radius:3px;font-size:11px">Install Pursuit Extension.app</code></li>
               <li>Click <strong style="color:var(--text2)">Install</strong> &mdash; fully automated</li>
-              <li>Enable <strong style="color:var(--text2)">Applied</strong> in Safari &rarr; Extensions</li>
+              <li>Enable <strong style="color:var(--text2)">Pursuit</strong> in Safari &rarr; Extensions</li>
             </ol>
             <div style="margin-top:10px;font-size:11px;color:var(--text3)">Keep the companion app in your Dock while using the extension.</div>
           </div>
@@ -3164,7 +3728,7 @@ setInterval(() => {
       <!-- FEEDBACK -->
       <div class="settings-pane" id="spane-feedback" style="display:none">
         <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px">Feedback</div>
-        <div style="font-size:13px;color:var(--text3);margin-bottom:24px">Help make Applied better — report bugs or suggest new features directly on GitHub.</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:24px">Help make Pursuit better — report bugs or suggest new features directly on GitHub.</div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px">
           <a href="https://github.com/vramakanth/Job-Application-Tracker/issues/new?labels=bug" target="_blank" style="display:flex;flex-direction:column;gap:10px;padding:20px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius);text-decoration:none;transition:all 0.15s" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='rgba(239,68,68,0.06)'">
@@ -3208,6 +3772,7 @@ setInterval(() => {
         </div>
       </div>
 
+      </div>
     </div>
   </div>
 </div>>
