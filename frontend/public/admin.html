@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Applied — Admin</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{--bg:#1a1917;--bg2:#222220;--bg3:#2a2927;--bg4:#333330;--border:#3a3835;--border2:#555;--text:#e8e6e3;--text2:#b5b2ad;--text3:#8a8680;--accent:#a3e635;--accent-bg:#a3e635;--blue:#60a5fa;--green:#34d399;--red:#f87171;--amber:#fbbf24;--radius:10px;--radius-sm:6px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--mono:'SF Mono','Fira Code',monospace}
+  body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+  a{color:var(--blue);text-decoration:none}
+
+  /* Auth */
+  #login-screen{flex:1;display:flex;align-items:center;justify-content:center}
+  .login-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:36px;width:360px}
+  .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+  .logo-mark{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#1a1917;flex-shrink:0}
+  .login-title{font-size:18px;font-weight:600}
+  .login-sub{font-size:12px;color:var(--text3);margin-top:2px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;font-weight:600;margin-bottom:5px}
+  .field input{width:100%;padding:9px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border .15s}
+  .field input:focus{border-color:var(--border2)}
+  .btn{padding:9px 18px;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
+  .btn-primary{background:var(--accent-bg);color:#1a1917;width:100%}
+  .btn-primary:hover{background:#bef264}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+  .error{color:var(--red);font-size:12px;margin-top:8px}
+
+  /* App */
+  #app-screen{flex:1;display:none;flex-direction:column}
+  .topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 24px;flex-shrink:0}
+  .topbar-logo{display:flex;align-items:center;gap:8px}
+  .topbar-title{font-size:14px;font-weight:600}
+  .topbar-badge{font-size:10px;padding:2px 7px;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,.25);border-radius:100px;font-family:var(--mono);font-weight:600;letter-spacing:.5px}
+  .topbar-user{margin-left:auto;font-size:12px;color:var(--text3)}
+  .topbar-logout{background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text3);font-size:12px;font-family:var(--font);cursor:pointer;padding:5px 10px}
+  .topbar-logout:hover{color:var(--red);border-color:rgba(239,68,68,.3)}
+
+  .main{flex:1;padding:28px;overflow-y:auto;max-width:1100px;width:100%;margin:0 auto}
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+  .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+  .stat-label{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;font-weight:600;margin-bottom:6px}
+  .stat-value{font-size:26px;font-weight:700;letter-spacing:-1px}
+
+  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .section-title{font-size:14px;font-weight:600;color:var(--text)}
+  .search-input{padding:7px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:13px;outline:none;width:220px}
+  .search-input:focus{border-color:var(--border2)}
+
+  table{width:100%;border-collapse:collapse;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+  thead{background:var(--bg3)}
+  th{padding:10px 14px;text-align:left;font-size:11px;font-family:var(--mono);color:var(--text3);font-weight:600;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+  td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:rgba(255,255,255,.02)}
+
+  .badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-family:var(--mono);font-weight:600}
+  .badge-active{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
+  .badge-inactive{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2)}
+  .badge-admin{background:rgba(163,230,53,.1);color:var(--accent);border:1px solid rgba(163,230,53,.2)}
+
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .act-btn{padding:4px 10px;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:all .12s}
+  .act-btn:hover{background:var(--bg4);color:var(--text)}
+  .act-btn.danger:hover{color:var(--red);border-color:rgba(239,68,68,.3)}
+  .act-btn.success:hover{color:var(--green);border-color:rgba(52,211,153,.3)}
+  .act-btn.warn:hover{color:var(--amber);border-color:rgba(251,191,36,.3)}
+
+  /* Modal */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}
+  .modal-bg.open{display:flex}
+  .modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:min(440px,92vw);padding:28px;box-shadow:0 24px 64px rgba(0,0,0,.4)}
+  .modal-title{font-size:16px;font-weight:600;margin-bottom:6px}
+  .modal-sub{font-size:13px;color:var(--text3);margin-bottom:20px;line-height:1.5}
+  .modal-actions{display:flex;gap:8px;margin-top:20px}
+  .btn-ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border);flex:1}
+  .btn-ghost:hover{background:var(--bg4)}
+  .btn-danger{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);flex:1}
+  .btn-danger:hover{background:rgba(239,68,68,.25)}
+  .btn-success{background:var(--accent-bg);color:#1a1917;border:none;flex:1}
+  .btn-success:hover{background:#bef264}
+  .modal-status{font-size:12px;margin-top:8px;padding:6px 10px;border-radius:var(--radius-sm);display:none}
+  .modal-status.ok{background:rgba(52,211,153,.1);color:var(--green);display:block}
+  .modal-status.err{background:rgba(248,113,113,.1);color:var(--red);display:block}
+
+  .empty{text-align:center;padding:40px;color:var(--text3);font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-mark">A</div>
+      <div>
+        <div class="login-title">Applied Admin</div>
+        <div class="login-sub">Administrator access only</div>
+      </div>
+    </div>
+    <div class="field"><label>USERNAME</label><input id="login-user" placeholder="Admin username" autocomplete="username"></div>
+    <div class="field"><label>PASSWORD</label><input id="login-pass" type="password" placeholder="Admin password" autocomplete="current-password"></div>
+    <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Sign in as Administrator</button>
+    <div class="error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- App -->
+<div id="app-screen">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="logo-mark" style="width:28px;height:28px;font-size:12px">A</div>
+      <div class="topbar-title">Applied Admin</div>
+      <div class="topbar-badge">ADMIN</div>
+    </div>
+    <div class="topbar-user" id="topbar-user"></div>
+    <button class="topbar-logout" onclick="doLogout()">Sign out</button>
+  </div>
+  <div class="main">
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-label">TOTAL USERS</div><div class="stat-value" id="stat-total" style="color:var(--blue)">—</div></div>
+      <div class="stat-card"><div class="stat-label">ACTIVE</div><div class="stat-value" id="stat-active" style="color:var(--green)">—</div></div>
+      <div class="stat-card"><div class="stat-label">DEACTIVATED</div><div class="stat-value" id="stat-inactive" style="color:var(--red)">—</div></div>
+      <div class="stat-card"><div class="stat-label">TOTAL JOBS</div><div class="stat-value" id="stat-jobs" style="color:var(--amber)">—</div></div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">Users</div>
+      <input class="search-input" id="user-search" placeholder="Search by username or email..." oninput="renderTable()">
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>USER</th>
+          <th>EMAIL</th>
+          <th>JOBS</th>
+          <th>JOINED</th>
+          <th>LAST LOGIN</th>
+          <th>STATUS</th>
+          <th>ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody id="user-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Reset Password Modal -->
+<div class="modal-bg" id="modal-reset" onclick="if(event.target===this)closeModal('modal-reset')">
+  <div class="modal">
+    <div class="modal-title">Reset Password</div>
+    <div class="modal-sub" id="modal-reset-sub"></div>
+    <div class="field"><label>NEW PASSWORD</label><input id="modal-new-pw" type="password" placeholder="Min 6 characters"></div>
+    <div class="modal-status" id="modal-reset-status"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-reset')">Cancel</button>
+      <button class="btn btn-success" onclick="submitReset()">Set Password &amp; Email User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Send Reset Link Modal -->
+<div class="modal-bg" id="modal-link" onclick="if(event.target===this)closeModal('modal-link')">
+  <div class="modal">
+    <div class="modal-title">Send Password Reset Link</div>
+    <div class="modal-sub" id="modal-link-sub"></div>
+    <div class="modal-status" id="modal-link-status"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-link')">Cancel</button>
+      <button class="btn btn-success" onclick="submitSendLink()">Send Reset Email</button>
+    </div>
+  </div>
+</div>
+
+<!-- Deactivate Modal -->
+<div class="modal-bg" id="modal-deactivate" onclick="if(event.target===this)closeModal('modal-deactivate')">
+  <div class="modal">
+    <div class="modal-title" id="modal-deactivate-title"></div>
+    <div class="modal-sub" id="modal-deactivate-sub"></div>
+    <div class="modal-status" id="modal-deactivate-status"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-deactivate')">Cancel</button>
+      <button class="btn btn-danger" id="modal-deactivate-btn" onclick="submitDeactivate()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal-bg" id="modal-delete" onclick="if(event.target===this)closeModal('modal-delete')">
+  <div class="modal">
+    <div class="modal-title" style="color:var(--red)">Delete User Account</div>
+    <div class="modal-sub" id="modal-delete-sub"></div>
+    <div class="modal-status" id="modal-delete-status"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-delete')">Cancel</button>
+      <button class="btn btn-danger" onclick="submitDelete()">Permanently Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+let token = sessionStorage.getItem('admin_token');
+let adminUser = sessionStorage.getItem('admin_user');
+let users = [];
+let selectedUser = null;
+let deactivateAction = null; // 'deactivate' or 'reactivate'
+
+// ── INIT ──
+window.addEventListener('DOMContentLoaded', () => {
+  if (token) { showApp(); loadUsers(); }
+  else { showLogin(); }
+  document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+});
+
+function showLogin() { document.getElementById('login-screen').style.display='flex'; document.getElementById('app-screen').style.display='none'; }
+function showApp() { document.getElementById('login-screen').style.display='none'; document.getElementById('app-screen').style.display='flex'; document.getElementById('topbar-user').textContent=adminUser||''; }
+
+async function doLogin() {
+  const u = document.getElementById('login-user').value.trim();
+  const p = document.getElementById('login-pass').value;
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-error');
+  err.textContent=''; btn.disabled=true; btn.textContent='Signing in...';
+  try {
+    const res = await fetch(API+'/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u,password:p}) });
+    const data = await res.json();
+    if (!res.ok) { err.textContent = data.error || 'Login failed'; return; }
+    if (!data.isAdmin) { err.textContent = 'This account does not have admin access.'; return; }
+    token = data.token; adminUser = data.username;
+    sessionStorage.setItem('admin_token', token);
+    sessionStorage.setItem('admin_user', adminUser);
+    showApp(); loadUsers();
+  } catch(e) { err.textContent = 'Connection error: '+e.message; }
+  finally { btn.disabled=false; btn.textContent='Sign in as Administrator'; }
+}
+
+function doLogout() { sessionStorage.clear(); token=null; adminUser=null; users=[]; showLogin(); }
+
+// ── LOAD USERS ──
+async function loadUsers() {
+  try {
+    const res = await fetch(API+'/api/admin/users', { headers:{ Authorization:'Bearer '+token } });
+    if (res.status===401||res.status===403) { doLogout(); return; }
+    users = await res.json();
+    updateStats(); renderTable();
+  } catch(e) { console.error(e); }
+}
+
+function updateStats() {
+  const active = users.filter(u=>u.isActive).length;
+  document.getElementById('stat-total').textContent = users.length;
+  document.getElementById('stat-active').textContent = active;
+  document.getElementById('stat-inactive').textContent = users.length - active;
+  document.getElementById('stat-jobs').textContent = users.reduce((s,u)=>s+u.jobCount,0);
+}
+
+function renderTable() {
+  const q = document.getElementById('user-search').value.toLowerCase();
+  const filtered = users.filter(u => !q || u.username.toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q));
+  const tbody = document.getElementById('user-tbody');
+  if (!filtered.length) { tbody.innerHTML='<tr><td colspan="7" class="empty">No users found</td></tr>'; return; }
+  tbody.innerHTML = filtered.map(u => `
+    <tr>
+      <td>
+        <div style="font-weight:500">${esc(u.username)}</div>
+        ${u.isAdmin ? '<div><span class="badge badge-admin" style="font-size:10px">ADMIN</span></div>' : ''}
+      </td>
+      <td style="color:var(--text3);font-size:12px;font-family:var(--mono)">${esc(u.email||'—')}</td>
+      <td style="font-family:var(--mono);color:var(--text2)">${u.jobCount}</td>
+      <td style="font-size:12px;color:var(--text3)">${fmtDate(u.createdAt)}</td>
+      <td style="font-size:12px;color:var(--text3)">${u.lastLogin ? fmtDate(u.lastLogin) : '—'}</td>
+      <td><span class="badge ${u.isActive?'badge-active':'badge-inactive'}">${u.isActive?'Active':'Inactive'}</span></td>
+      <td>
+        <div class="actions">
+          ${!u.isAdmin ? `
+          <button class="act-btn ${u.isActive?'danger':'success'}" onclick="openDeactivate('${esc(u.username)}',${!u.isActive})">
+            ${u.isActive?'Deactivate':'Reactivate'}
+          </button>
+          <button class="act-btn warn" onclick="openReset('${esc(u.username)}','${esc(u.email||'')}')">Reset PW</button>
+          <button class="act-btn" onclick="openSendLink('${esc(u.username)}','${esc(u.email||'')}')">Send Link</button>
+          <button class="act-btn danger" onclick="openDelete('${esc(u.username)}')">Delete</button>
+          ` : '<span style="font-size:12px;color:var(--text3)">Admin account</span>'}
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+// ── MODAL HELPERS ──
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); clearModalStatus(id); }
+function clearModalStatus(id) {
+  const s = document.querySelector('#'+id+' .modal-status');
+  if (s) { s.className='modal-status'; s.textContent=''; }
+}
+function setModalStatus(id, type, msg) {
+  const s = document.querySelector('#'+id+' .modal-status');
+  if (s) { s.className='modal-status '+(type==='ok'?'ok':'err'); s.textContent=msg; }
+}
+
+// ── DEACTIVATE ──
+function openDeactivate(username, makeActive) {
+  selectedUser = username;
+  deactivateAction = makeActive;
+  document.getElementById('modal-deactivate-title').textContent = makeActive ? 'Reactivate Account' : 'Deactivate Account';
+  document.getElementById('modal-deactivate-sub').textContent = makeActive
+    ? `Reactivate ${username}'s account? They will be able to log in again.`
+    : `Deactivate ${username}'s account? They will not be able to log in and will receive an email notification.`;
+  document.getElementById('modal-deactivate-btn').textContent = makeActive ? 'Reactivate' : 'Deactivate';
+  openModal('modal-deactivate');
+}
+async function submitDeactivate() {
+  try {
+    const res = await fetch(API+'/api/admin/deactivate', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({username:selectedUser, active:deactivateAction}),
+    });
+    const data = await res.json();
+    if (!res.ok) { setModalStatus('modal-deactivate','err',data.error); return; }
+    setModalStatus('modal-deactivate','ok', deactivateAction ? 'Account reactivated.' : 'Account deactivated. Email sent.');
+    await loadUsers();
+    setTimeout(() => closeModal('modal-deactivate'), 1500);
+  } catch(e) { setModalStatus('modal-deactivate','err',e.message); }
+}
+
+// ── RESET PASSWORD ──
+function openReset(username, email) {
+  selectedUser = username;
+  document.getElementById('modal-reset-sub').textContent = `Set a new password for ${username}${email?' ('+email+')':''}. The new password will be emailed to the user.`;
+  document.getElementById('modal-new-pw').value = '';
+  openModal('modal-reset');
+}
+async function submitReset() {
+  const pw = document.getElementById('modal-new-pw').value;
+  if (pw.length < 6) { setModalStatus('modal-reset','err','Password must be at least 6 characters'); return; }
+  try {
+    const res = await fetch(API+'/api/admin/reset-password', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({username:selectedUser, newPassword:pw}),
+    });
+    const data = await res.json();
+    if (!res.ok) { setModalStatus('modal-reset','err',data.error); return; }
+    setModalStatus('modal-reset','ok','Password updated. Email sent to user.');
+    setTimeout(() => closeModal('modal-reset'), 1800);
+  } catch(e) { setModalStatus('modal-reset','err',e.message); }
+}
+
+// ── SEND RESET LINK ──
+function openSendLink(username, email) {
+  selectedUser = username;
+  if (!email) { alert('No email on file for this user.'); return; }
+  document.getElementById('modal-link-sub').textContent = `Send a self-service password reset link to ${username} at ${email}. The link expires in 1 hour.`;
+  openModal('modal-link');
+}
+async function submitSendLink() {
+  try {
+    const res = await fetch(API+'/api/admin/send-reset-link', {
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body:JSON.stringify({username:selectedUser}),
+    });
+    const data = await res.json();
+    if (!res.ok||!data.ok) { setModalStatus('modal-link','err',data.error||'Failed to send'); return; }
+    setModalStatus('modal-link','ok','Reset link emailed successfully.');
+    setTimeout(() => closeModal('modal-link'), 1800);
+  } catch(e) { setModalStatus('modal-link','err',e.message); }
+}
+
+// ── DELETE ──
+function openDelete(username) {
+  selectedUser = username;
+  document.getElementById('modal-delete-sub').textContent = `Permanently delete ${username}'s account and all their data (jobs, documents, notes). This cannot be undone.`;
+  openModal('modal-delete');
+}
+async function submitDelete() {
+  try {
+    const res = await fetch(API+'/api/admin/users/'+encodeURIComponent(selectedUser), {
+      method:'DELETE', headers:{'Authorization':'Bearer '+token},
+    });
+    const data = await res.json();
+    if (!res.ok) { setModalStatus('modal-delete','err',data.error); return; }
+    setModalStatus('modal-delete','ok','User deleted.');
+    await loadUsers();
+    setTimeout(() => closeModal('modal-delete'), 1500);
+  } catch(e) { setModalStatus('modal-delete','err',e.message); }
+}
+
+// ── UTILS ──
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtDate(ts){ return new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+</script>
+</body>
+</html>

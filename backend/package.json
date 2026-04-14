@@ -18,7 +18,10 @@
     "archiver": "^6.0.1",
     "docx": "^8.5.0",
     "html-to-docx": "^1.8.0",
-    "adm-zip": "^0.5.16"
+    "adm-zip": "^0.5.16",
+    "nodemailer": "^6.9.0",
+    "resend": "^4.0.0",
+    "crypto": "*"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

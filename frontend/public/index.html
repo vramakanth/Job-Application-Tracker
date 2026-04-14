@@ -503,6 +503,7 @@ input[type="file"] { display: none; }
     <div class="auth-sub">Start tracking your job applications for free.</div>
     <div class="auth-error" id="register-error"></div>
     <div class="auth-field"><label>USERNAME</label><input type="text" id="reg-username" placeholder="choose a username" autocomplete="username"></div>
+    <div class="auth-field"><label>EMAIL</label><input type="email" id="reg-email" placeholder="you@example.com" autocomplete="email"></div>
     <div class="auth-field"><label>PASSWORD</label><input type="password" id="reg-password" placeholder="at least 6 characters" autocomplete="new-password"></div>
     <div class="auth-field"><label>CONFIRM PASSWORD</label><input type="password" id="reg-confirm" placeholder="repeat password" onkeydown="if(event.key==='Enter')doRegister()"></div>
     <button class="auth-btn" id="register-btn" onclick="doRegister()">Create account</button>
@@ -528,6 +529,7 @@ input[type="file"] { display: none; }
     </div>
     <div class="filter-tabs">
       <div class="filter-tab active" onclick="setFilter('all',this)">all</div>
+      <div class="filter-tab" onclick="setFilter('to apply',this)">to apply</div>
       <div class="filter-tab" onclick="setFilter('applied',this)">applied</div>
       <div class="filter-tab" onclick="setFilter('interviewing',this)">interview</div>
       <div class="filter-tab" onclick="setFilter('offer',this)">offer</div>
@@ -609,6 +611,7 @@ input[type="file"] { display: none; }
     <div class="field">
       <label>STATUS</label>
       <select id="job-status">
+        <option value="to apply" selected>To Apply</option>
         <option value="applied">Applied</option>
         <option value="screening">Screening</option>
         <option value="interviewing">Interviewing</option>
@@ -658,7 +661,7 @@ let jobs = {}, currentJobId = null, currentFilter = 'all', activeDetailTab = 'no
 let tailorFor = {resume:false, cover:false}, isGenerating = false, saveTimer = null;
 let activeTailorDoc = 'resume'; // which doc type is selected in tailoring UI
 let pendingHtml = null, pendingText = null;
-const STATUSES = ['applied','screening','interviewing','offer','rejected','ghosted','withdrawn','expired'];
+const STATUSES = ['to apply','applied','screening','interviewing','offer','rejected','ghosted','withdrawn','expired'];
 
 // ── UTILITIES ──
 function esc(s) {
@@ -670,7 +673,7 @@ function fmtDate(ts) {
   return new Date(ts).toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric'});
 }
 function statusColor(s) {
-  return {applied:'#3b82f6',screening:'#8b5cf6',interviewing:'#f59e0b',offer:'#10b981',rejected:'#ef4444',ghosted:'#6b7280',withdrawn:'#9ca3af',expired:'#f97316'}[s] || '#6b7280';
+  return {'to apply':'#64748b',applied:'#3b82f6',screening:'#8b5cf6',interviewing:'#f59e0b',offer:'#10b981',rejected:'#ef4444',ghosted:'#6b7280',withdrawn:'#9ca3af',expired:'#f97316'}[s] || '#6b7280';
 }
 function formatBytes(n) {
   if (!n) return '0b';
@@ -710,7 +713,7 @@ async function doLogin() {
   if (!u||!p) { showErr(err,'Please fill in all fields.'); return; }
   btn.disabled=true; btn.textContent='Signing in...';
   try {
-    const res = await fetch(API+'/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u,password:p})});
+    const res = await fetch(API+'/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u,password:p,email:(document.getElementById('reg-email')?.value?.trim()||'')})});
     const d = await res.json();
     if (!res.ok) { showErr(err, d.error||'Login failed'); return; }
     token=d.token; currentUser=d.username;
@@ -723,16 +726,18 @@ async function doLogin() {
 
 async function doRegister() {
   const u = document.getElementById('reg-username').value.trim();
+  const e = document.getElementById('reg-email')?.value.trim() || '';
   const p = document.getElementById('reg-password').value;
   const c = document.getElementById('reg-confirm').value;
   const err = document.getElementById('register-error');
   const btn = document.getElementById('register-btn');
   err.classList.remove('show');
   if (!u||!p) { showErr(err,'Please fill in all fields.'); return; }
+  if (!e||!e.includes('@')) { showErr(err,'Please enter a valid email address.'); return; }
   if (p!==c) { showErr(err,'Passwords do not match.'); return; }
   btn.disabled=true; btn.textContent='Creating account...';
   try {
-    const res = await fetch(API+'/api/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u,password:p})});
+    const res = await fetch(API+'/api/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u,email:e,password:p})});
     const d = await res.json();
     if (!res.ok) { showErr(err, d.error||'Registration failed'); return; }
     token=d.token; currentUser=d.username;
@@ -911,7 +916,7 @@ function openAddModal() {
   ['f-title','f-company','f-location','f-salary'].forEach(id => {
     document.getElementById(id)?.classList.remove('filled');
   });
-  document.getElementById('job-status').value = 'applied';
+  document.getElementById('job-status').value = 'to apply';
   document.getElementById('parse-status').style.display = 'none';
   document.getElementById('parse-btn').textContent = 'Open';
   pendingHtml = null; pendingText = null;
@@ -2303,7 +2308,7 @@ function renderAnalytics(overlay) {
   const activeCount = all.filter(j => !['rejected','ghosted','withdrawn','expired'].includes(j.status)).length;
 
   const statusColors = {
-    applied:'#3b82f6', screening:'#8b5cf6', interviewing:'#f59e0b',
+    'to apply':'#64748b', applied:'#3b82f6', screening:'#8b5cf6', interviewing:'#f59e0b',
     offer:'#10b981', rejected:'#ef4444', ghosted:'#6b7280',
     withdrawn:'#9ca3af', expired:'#f97316'
   };

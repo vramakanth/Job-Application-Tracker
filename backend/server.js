@@ -21,6 +21,43 @@ const ANTHROPIC_API_KEY_ENV = process.env.ANTHROPIC_API_KEY || '';
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
 const GOOGLE_MODEL = process.env.GOOGLE_MODEL || 'gemini-2.0-flash';
 
+// ── Admin & Email config ──
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME || '';
+const SMTP_HOST     = process.env.SMTP_HOST || '';
+const SMTP_PORT     = parseInt(process.env.SMTP_PORT || '587');
+const SMTP_USER     = process.env.SMTP_USER || '';
+const SMTP_PASS     = process.env.SMTP_PASS || '';
+const SMTP_FROM     = process.env.SMTP_FROM || SMTP_USER;
+const APP_URL       = process.env.APP_URL || 'https://job-application-tracker-hf1f.onrender.com';
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const FROM_EMAIL    = process.env.FROM_EMAIL || 'Applied <noreply@applied.app>';
+const resetTokens   = {};
+
+// Reset tokens store
+const TOKENS_FILE = path.join(DATA_DIR, 'reset-tokens.json');
+function loadTokens() { try { return JSON.parse(fs.readFileSync(TOKENS_FILE,'utf8')); } catch { return {}; } }
+function saveTokens(t) { fs.writeFileSync(TOKENS_FILE, JSON.stringify(t)); }
+
+// Nodemailer transporter (lazy — only created if SMTP configured)
+function getMailer() {
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) return null;
+  const nodemailer = require('nodemailer');
+  return nodemailer.createTransport({
+    host: SMTP_HOST, port: SMTP_PORT,
+    secure: SMTP_PORT === 465,
+    auth: { user: SMTP_USER, pass: SMTP_PASS },
+  });
+}
+
+async function sendMail(to, subject, html) {
+  const mailer = getMailer();
+  if (!mailer) throw new Error('Email not configured — set SMTP_HOST, SMTP_USER, SMTP_PASS');
+  await mailer.sendMail({ from: `"Applied Job Tracker" <${SMTP_FROM}>`, to, subject, html });
+}
+
+// Admin middleware
+
+
 const PROVIDERS = {
   groq: {
     baseUrl: 'https://api.groq.com/openai/v1/chat/completions',
@@ -233,8 +270,9 @@ function authMiddleware(req, res, next) {
 
 // --- Auth Routes ---
 app.post('/api/register', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, email } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
+  if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email address required' });
   if (username.length < 3) return res.status(400).json({ error: 'Username must be at least 3 characters' });
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
@@ -242,12 +280,13 @@ app.post('/api/register', async (req, res) => {
   const key = username.toLowerCase().trim();
   if (users[key]) return res.status(409).json({ error: 'Username already taken' });
 
+  const isAdmin = key === ADMIN_USERNAME.toLowerCase();
   const hashed = await bcrypt.hash(password, 12);
   const userId = Date.now().toString(36) + Math.random().toString(36).slice(2);
-  users[key] = { id: userId, username: username.trim(), password: hashed, createdAt: Date.now() };
+  users[key] = { id: userId, username: username.trim(), email: email.toLowerCase().trim(), password: hashed, createdAt: Date.now(), isActive: true, isAdmin };
   saveUsers(users);
 
-  const token = jwt.sign({ id: userId, username: username.trim() }, JWT_SECRET, { expiresIn: '30d' });
+  const token = jwt.sign({ id: userId, username: username.trim(), isAdmin }, JWT_SECRET, { expiresIn: '30d' });
   res.json({ token, username: username.trim() });
 });
 
@@ -259,12 +298,14 @@ app.post('/api/login', async (req, res) => {
   const key = username.toLowerCase().trim();
   const user = users[key];
   if (!user) return res.status(401).json({ error: 'Invalid username or password' });
+  if (user.isActive === false) return res.status(403).json({ error: 'Account deactivated. Contact the administrator.' });
 
   const valid = await bcrypt.compare(password, user.password);
   if (!valid) return res.status(401).json({ error: 'Invalid username or password' });
 
-  const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
-  res.json({ token, username: user.username });
+  const isAdmin = user.isAdmin || key === ADMIN_USERNAME.toLowerCase();
+  const token = jwt.sign({ id: user.id, username: user.username, isAdmin }, JWT_SECRET, { expiresIn: '30d' });
+  res.json({ token, username: user.username, isAdmin });
 });
 
 // --- Jobs Routes ---
@@ -937,6 +978,42 @@ Return ONLY a valid JSON object with these exact fields (no markdown, no backtic
 // Each user has a docs file: DATA_DIR/docs/<userId>.json
 // Structure: { id, name, type ('resume'|'cover'), content, createdAt, updatedAt }
 
+// Send email via Resend API
+async function sendEmail(to, subject, html) {
+  if (!RESEND_API_KEY) {
+    console.warn('RESEND_API_KEY not set — email not sent to', to);
+    return { ok: false, error: 'Email not configured' };
+  }
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + RESEND_API_KEY,
+      },
+      body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Resend error');
+    return { ok: true, id: data.id };
+  } catch(e) {
+    console.error('Email error:', e.message);
+    return { ok: false, error: e.message };
+  }
+}
+
+// Admin middleware — checks JWT AND isAdmin flag
+function adminMiddleware(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
+  try {
+    const payload = require('jsonwebtoken').verify(auth.slice(7), JWT_SECRET);
+    if (!payload.isAdmin) return res.status(403).json({ error: 'Admin access required' });
+    req.user = payload;
+    next();
+  } catch(e) { res.status(401).json({ error: 'Invalid token' }); }
+}
+
 const DOCS_DIR = path.join(DATA_DIR, 'docs');
 if (!fs.existsSync(DOCS_DIR)) fs.mkdirSync(DOCS_DIR, { recursive: true });
 
@@ -1429,6 +1506,289 @@ app.post('/api/tailor-docx', authMiddleware, async (req, res) => {
     console.error('DOCX template injection error:', e);
     res.status(500).json({ error: e.message });
   }
+});
+
+// ── ADMIN ROUTES ──
+
+// POST /api/admin/deactivate — deactivate a user account
+app.post('/api/admin/deactivate', adminMiddleware, (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'username required' });
+  if (username === ADMIN_USERNAME) return res.status(400).json({ error: 'Cannot deactivate admin account' });
+  const users = loadUsers();
+  if (!users[username]) return res.status(404).json({ error: 'User not found' });
+  users[username].active = false;
+  saveUsers(users);
+  res.json({ ok: true });
+});
+
+// POST /api/admin/reactivate — reactivate a user account
+app.post('/api/admin/reactivate', adminMiddleware, (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'username required' });
+  const users = loadUsers();
+  if (!users[username]) return res.status(404).json({ error: 'User not found' });
+  users[username].active = true;
+  saveUsers(users);
+  res.json({ ok: true });
+});
+
+// POST /api/admin/reset-password — admin sets a new password directly
+app.post('/api/admin/reset-password', adminMiddleware, async (req, res) => {
+  const { username, newPassword } = req.body;
+  if (!username || !newPassword) return res.status(400).json({ error: 'username and newPassword required' });
+  const users = loadUsers();
+  if (!users[username]) return res.status(404).json({ error: 'User not found' });
+  users[username].passwordHash = await bcrypt.hash(newPassword, 12);
+  saveUsers(users);
+  // Notify user by email if they have one
+  const email = users[username].email;
+  if (email) {
+    try {
+      await sendMail(email, 'Your Applied password has been reset',
+        `<p>Hi ${username},</p><p>An administrator has reset your Applied Job Tracker password.</p><p>Please <a href="${APP_URL}">sign in</a> with the new password provided to you.</p><p>If you didn't expect this, contact your administrator.</p>`
+      );
+    } catch(e) { console.warn('Email send failed:', e.message); }
+  }
+  res.json({ ok: true, emailSent: !!email });
+});
+
+// POST /api/admin/send-reset-link — generate a reset token and email it
+app.post('/api/admin/send-reset-link', adminMiddleware, async (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'username required' });
+  const users = loadUsers();
+  const user = users[username];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (!user.email) return res.status(400).json({ error: 'User has no email address' });
+
+  const token = require('crypto').randomBytes(32).toString('hex');
+  const tokens = loadTokens();
+  tokens[token] = { username, expiresAt: Date.now() + 3600000 }; // 1 hour
+  saveTokens(tokens);
+
+  const resetUrl = `${APP_URL}/reset-password?token=${token}`;
+  try {
+    await sendMail(user.email, 'Reset your Applied password',
+      `<p>Hi ${username},</p><p>A password reset was requested for your Applied Job Tracker account.</p><p><a href="${resetUrl}" style="padding:10px 20px;background:#a3e635;color:#1a1917;border-radius:6px;text-decoration:none;font-weight:600">Reset Password</a></p><p>This link expires in 1 hour. If you didn't request this, ignore this email.</p><p><small>Or paste this URL: ${resetUrl}</small></p>`
+    );
+    res.json({ ok: true, resetUrl });
+  } catch(e) {
+    res.status(500).json({ error: 'Email failed: ' + e.message });
+  }
+});
+
+// POST /api/admin/update-email — update a user's email
+app.post('/api/admin/update-email', adminMiddleware, async (req, res) => {
+  const { username, email } = req.body;
+  if (!username) return res.status(400).json({ error: 'username required' });
+  const users = loadUsers();
+  if (!users[username]) return res.status(404).json({ error: 'User not found' });
+  users[username].email = email || '';
+  saveUsers(users);
+  res.json({ ok: true });
+});
+
+// POST /api/admin/delete-user — delete a user and all their data
+app.post('/api/admin/delete-user', adminMiddleware, (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'username required' });
+  if (username === ADMIN_USERNAME) return res.status(400).json({ error: 'Cannot delete admin account' });
+  const users = loadUsers();
+  if (!users[username]) return res.status(404).json({ error: 'User not found' });
+  delete users[username];
+  saveUsers(users);
+  // Clean up user data files
+  [
+    path.join(DATA_DIR, 'jobs', `${username}.json`),
+    path.join(DATA_DIR, 'docs', `${username}.json`),
+  ].forEach(f => { try { fs.unlinkSync(f); } catch {} });
+  res.json({ ok: true });
+});
+
+// POST /api/reset-password — user resets via token (public endpoint)
+app.post('/api/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token || !newPassword) return res.status(400).json({ error: 'token and newPassword required' });
+  const tokens = loadTokens();
+  const entry = tokens[token];
+  if (!entry) return res.status(400).json({ error: 'Invalid or expired reset link' });
+  if (Date.now() > entry.expiresAt) {
+    delete tokens[token]; saveTokens(tokens);
+    return res.status(400).json({ error: 'Reset link has expired' });
+  }
+  const users = loadUsers();
+  const user = users[entry.username];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  user.passwordHash = await bcrypt.hash(newPassword, 12);
+  saveUsers(users);
+  delete tokens[token]; saveTokens(tokens);
+  res.json({ ok: true, username: entry.username });
+});
+
+// GET /api/admin/status — check if requester is admin
+app.get('/api/admin/status', adminMiddleware, (req, res) => {
+  res.json({ admin: true, username: req.user.username });
+});
+
+// Serve admin panel
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/public/admin.html'));
+});
+
+// Serve password reset page
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/public/reset-password.html'));
+});
+
+// ═══════════════════════════════════════════
+// ── ADMIN ROUTES (admin JWT required) ──
+// ═══════════════════════════════════════════
+
+// GET /api/admin/users — list all users
+app.get('/api/admin/users', adminMiddleware, (req, res) => {
+  const users = loadUsers();
+  const userList = Object.values(users).map(u => {
+    // Count jobs for this user
+    const jobsFile = path.join(DATA_DIR, 'jobs', u.id + '.json');
+    let jobCount = 0;
+    try {
+      if (fs.existsSync(jobsFile)) {
+        jobCount = Object.keys(JSON.parse(fs.readFileSync(jobsFile, 'utf8'))).length;
+      }
+    } catch(e) {}
+    return {
+      username: u.username,
+      email: u.email || '',
+      createdAt: u.createdAt,
+      isActive: u.isActive !== false,
+      isAdmin: u.isAdmin || false,
+      lastLogin: u.lastLogin || null,
+      jobCount,
+    };
+  }).sort((a, b) => b.createdAt - a.createdAt);
+  res.json(userList);
+});
+
+// POST /api/admin/deactivate — toggle user active status
+app.post('/api/admin/deactivate', adminMiddleware, (req, res) => {
+  const { username, active } = req.body;
+  const users = loadUsers();
+  const key = username.toLowerCase();
+  if (!users[key]) return res.status(404).json({ error: 'User not found' });
+  if (users[key].isAdmin) return res.status(400).json({ error: 'Cannot deactivate admin account' });
+  users[key].isActive = !!active;
+  saveUsers(users);
+  // Optionally notify the user
+  if (!active && users[key].email) {
+    sendEmail(
+      users[key].email,
+      'Your Applied account has been deactivated',
+      `<p>Hi ${users[key].username},</p><p>Your Applied Job Tracker account has been deactivated. Please contact the administrator if you believe this is an error.</p>`
+    );
+  }
+  res.json({ ok: true, isActive: !!active });
+});
+
+// POST /api/admin/reset-password — force set a new password
+app.post('/api/admin/reset-password', adminMiddleware, async (req, res) => {
+  const { username, newPassword } = req.body;
+  if (!newPassword || newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  const users = loadUsers();
+  const key = username.toLowerCase();
+  if (!users[key]) return res.status(404).json({ error: 'User not found' });
+  users[key].password = await bcrypt.hash(newPassword, 12);
+  saveUsers(users);
+  // Email the user
+  if (users[key].email) {
+    await sendEmail(
+      users[key].email,
+      'Your Applied password has been reset',
+      `<p>Hi ${users[key].username},</p><p>Your Applied Job Tracker password has been reset by an administrator.</p><p>Your new temporary password is: <strong>${newPassword}</strong></p><p>Please log in and change your password immediately.</p><p><a href="${APP_URL}">Open Applied</a></p>`
+    );
+  }
+  res.json({ ok: true });
+});
+
+// POST /api/admin/send-reset-link — email a self-service reset link
+app.post('/api/admin/send-reset-link', adminMiddleware, async (req, res) => {
+  const { username } = req.body;
+  const users = loadUsers();
+  const key = username.toLowerCase();
+  if (!users[key]) return res.status(404).json({ error: 'User not found' });
+  if (!users[key].email) return res.status(400).json({ error: 'No email on file for this user' });
+
+  const crypto = require('crypto');
+  const token = crypto.randomBytes(32).toString('hex');
+  resetTokens[token] = { username: key, expires: Date.now() + 60 * 60 * 1000 }; // 1 hour
+
+  const resetUrl = `${APP_URL}/reset-password?token=${token}`;
+  const result = await sendEmail(
+    users[key].email,
+    'Reset your Applied password',
+    `<p>Hi ${users[key].username},</p><p>Click the link below to reset your Applied Job Tracker password. This link expires in 1 hour.</p><p><a href="${resetUrl}" style="display:inline-block;padding:10px 20px;background:#a3e635;color:#1a1917;text-decoration:none;border-radius:6px;font-weight:600">Reset Password</a></p><p>Or copy this URL: ${resetUrl}</p><p>If you didn't request this, ignore this email.</p>`
+  );
+  res.json({ ok: result.ok, error: result.error });
+});
+
+// POST /api/admin/delete-user — permanently delete a user
+app.delete('/api/admin/users/:username', adminMiddleware, (req, res) => {
+  const users = loadUsers();
+  const key = req.params.username.toLowerCase();
+  if (!users[key]) return res.status(404).json({ error: 'User not found' });
+  if (users[key].isAdmin) return res.status(400).json({ error: 'Cannot delete admin account' });
+  const userId = users[key].id;
+  delete users[key];
+  saveUsers(users);
+  // Remove their data files
+  try { fs.unlinkSync(path.join(DATA_DIR, 'jobs', userId + '.json')); } catch(e) {}
+  try { fs.unlinkSync(path.join(DOCS_DIR, userId + '.json')); } catch(e) {}
+  res.json({ ok: true });
+});
+
+// GET /api/reset-password-check — validate reset token
+app.get('/api/reset-password-check', (req, res) => {
+  const { token } = req.query;
+  const entry = resetTokens[token];
+  if (!entry || entry.expires < Date.now()) return res.status(400).json({ error: 'Invalid or expired reset link' });
+  res.json({ valid: true, username: entry.username });
+});
+
+// POST /api/reset-password — apply new password from reset link
+app.post('/api/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+  const entry = resetTokens[token];
+  if (!entry || entry.expires < Date.now()) return res.status(400).json({ error: 'Invalid or expired reset link' });
+  if (!newPassword || newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  const users = loadUsers();
+  const user = users[entry.username];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  user.password = await bcrypt.hash(newPassword, 12);
+  saveUsers(users);
+  delete resetTokens[token];
+  res.json({ ok: true });
+});
+
+// Track last login
+app.use((req, res, next) => {
+  if (req.path === '/api/login' && req.method === 'POST') {
+    res.on('finish', () => {
+      if (res.statusCode === 200) {
+        const key = (req.body?.username || '').toLowerCase();
+        const users = loadUsers();
+        if (users[key]) { users[key].lastLogin = Date.now(); saveUsers(users); }
+      }
+    });
+  }
+  next();
+});
+
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/public/admin.html'));
+});
+
+app.get('/reset-password', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/public/reset-password.html'));
 });
 
 app.get('*', (req, res) => {
