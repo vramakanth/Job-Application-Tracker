@@ -1266,6 +1266,14 @@ function switchTab(t) {
       runInsights(currentJobId);
     }
   }
+  // Auto-generate interview questions on first open if none exist
+  if (t === 'interview') {
+    const j = jobs[currentJobId];
+    if (j && (!j.interviews || j.interviews.length === 0)) {
+      // Short delay so the tab renders first
+      setTimeout(() => generateInterviewQuestions(currentJobId), 300);
+    }
+  }
 }
 
 // ── POSTING TAB ──
@@ -2967,6 +2975,9 @@ async function runDocTailor(jobId, docId) {
     if (resultArea) {
       resultArea.style.display = 'block';
       resultArea.innerHTML = renderTailorResult(jobId, docId, tailored, jobDoc);
+      // Set content as plain text — avoids HTML injection entirely
+      const editor = document.getElementById('tailor-result-editor-' + docId);
+      if (editor) editor.innerText = tailored;
     }
     // Cache result on doc
     jobDoc._tailored = tailored;
@@ -2982,7 +2993,7 @@ function renderTailorResult(jobId, docId, tailored, jobDoc) {
   return `
     <div style="margin-top:4px">
       <div style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px;margin-bottom:8px">TAILORED ${label.toUpperCase()}</div>
-      <div id="tailor-result-editor-${docId}" contenteditable="true" style="min-height:200px;max-height:500px;overflow-y:auto;padding:16px 0;font-size:13px;line-height:1.7;color:var(--text);outline:none;border-bottom:1px solid var(--border)">${esc(tailored).replace(/\n/g,'<br>')}</div>
+      <div id="tailor-result-editor-${docId}" contenteditable="true" style="min-height:200px;max-height:500px;overflow-y:auto;padding:16px 0;font-size:13px;line-height:1.7;color:var(--text);outline:none;border-bottom:1px solid var(--border);white-space:pre-wrap"></div>
       <div style="display:flex;gap:8px;padding:10px 0;flex-wrap:wrap">
         <button onclick="saveTailoredToLibrary('${jobId}','${docId}')" style="padding:6px 14px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer">Save to library</button>
         <button onclick="downloadTailoredResult('${docId}','txt')" style="padding:6px 14px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:12px;font-family:var(--font);color:var(--text2);cursor:pointer">↓ .txt</button>
@@ -3321,7 +3332,7 @@ function renderInterviewTab(j) {
       <div style="display:flex;gap:8px">
         <button onclick="generateInterviewQuestions('${j.id}')" id="gen-q-btn" style="padding:6px 14px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;display:flex;align-items:center;gap:6px">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.1 2.6 2.6.4-1.9 1.8.5 2.6L6 7.2 3.7 8.4l.5-2.6L2.3 4l2.6-.4L6 1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>
-          Generate with AI
+          ${total > 0 ? 'Get more questions' : 'Generate with AI'}
         </button>
         <button onclick="openAddQuestionModal('${j.id}')" style="padding:6px 14px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:12px;font-family:var(--font);color:var(--text2);cursor:pointer">+ Add question</button>
       </div>
@@ -3431,12 +3442,21 @@ async function generateInterviewQuestions(jobId) {
   const j = jobs[jobId]; if (!j) return;
   const btn = document.getElementById('gen-q-btn');
   const status = document.getElementById('interview-gen-status');
-  if (btn) { btn.disabled=true; btn.textContent='Generating...'; }
-  if (status) status.innerHTML = '<span style="font-size:12px;color:var(--text3)">Generating questions tailored to this role...</span>';
+  const existing = j.interviews || [];
+  const isAdding = existing.length > 0;
 
-  const context = `Job title: ${j.title}\nCompany: ${j.company}\nJob posting: ${(j.postingText||'').slice(0,3000)}`;
+  if (btn) { btn.disabled=true; btn.textContent = isAdding ? 'Getting more...' : 'Generating...'; }
+  if (status) status.innerHTML = `<span style="font-size:12px;color:var(--text3)">${isAdding ? 'Generating additional questions...' : 'Generating questions tailored to this role...'}</span>`;
+
+  // Build context including existing questions so AI doesn't repeat them
+  const existingList = existing.map(q => `- ${q.question}`).join('\n');
+  const avoidSection = isAdding && existing.length > 0
+    ? `\n\nAlready generated (DO NOT repeat these):\n${existingList}` : '';
+
+  const context = `Job title: ${j.title}\nCompany: ${j.company}\nJob posting: ${(j.postingText||'').slice(0,3000)}${avoidSection}`;
   try {
-    const prompt = `You are an expert interview coach. Generate 15 interview questions for this job application.
+    const count = isAdding ? 10 : 15;
+    const prompt = `You are an expert interview coach. Generate ${count} ${isAdding ? 'ADDITIONAL' : ''} interview questions for this job application.
 
 ${context}
 
@@ -3449,7 +3469,7 @@ Return ONLY a JSON array in this exact format, no other text:
   {"category": "Questions to Ask", "question": "..."}
 ]
 
-Include 3-4 questions per category. Make them specific to this role and company. For "Questions to Ask", generate thoughtful questions the candidate should ask the interviewer.`;
+${isAdding ? 'Generate 2-3 NEW questions per category that are different from the existing ones.' : 'Include 3-4 questions per category.'} Make them specific to this role and company. For "Questions to Ask", generate thoughtful questions the candidate should ask the interviewer.`;
 
     const res = await fetch(API + '/api/interview-questions', {
       method: 'POST',
@@ -3461,14 +3481,23 @@ Include 3-4 questions per category. Make them specific to this role and company.
     if (data.error) throw new Error(data.error);
     const questions = data.questions || [];
     if (!j.interviews) j.interviews = [];
+    const existingQuestions = new Set(j.interviews.map(q => q.question.toLowerCase().trim()));
+    let added = 0;
     questions.forEach(q => {
-      if (q.question && q.category) {
+      if (q.question && q.category && !existingQuestions.has(q.question.toLowerCase().trim())) {
         j.interviews.push({ id: genId(), category: q.category, question: q.question, notes: '', practiced: false });
+        existingQuestions.add(q.question.toLowerCase().trim());
+        added++;
       }
     });
     scheduleSave(); renderDetail();
-    if (status) status.innerHTML = '';
-    if (btn) { btn.disabled=false; btn.innerHTML='<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.1 2.6 2.6.4-1.9 1.8.5 2.6L6 7.2 3.7 8.4l.5-2.6L2.3 4l2.6-.4L6 1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg> Generate with AI'; }
+    if (status) {
+      status.innerHTML = added > 0
+        ? `<span style="font-size:12px;color:var(--green)">✓ Added ${added} new question${added !== 1 ? 's' : ''}</span>`
+        : '<span style="font-size:12px;color:var(--text3)">No new unique questions to add</span>';
+      setTimeout(() => { if (status) status.innerHTML = ''; }, 3000);
+    }
+    if (btn) { btn.disabled=false; btn.textContent = (j.interviews||[]).length > 0 ? 'Get more questions' : 'Generate with AI'; }
     return; // handled above
   } catch(e) {
     if (status) status.innerHTML = `<span style="font-size:12px;color:var(--red)">Failed: ${e.message}</span>`;

@@ -972,21 +972,21 @@ app.post('/api/tailor', authMiddleware, async (req, res) => {
   const docLabel = docType === 'resume' ? 'RESUME' : 'COVER LETTER';
   const outputLabel = docType === 'resume' ? 'TAILORED RESUME' : 'TAILORED COVER LETTER';
 
-  const systemPrompt = 'You are a professional career coach and resume writer. Return ONLY the tailored document as clean HTML. Use <h1>, <h2>, <h3> for headings, <p> for paragraphs, <strong> for bold, <em> for italic, <ul>/<li> for bullet lists. Preserve all section structure and formatting from the original. No preamble, no labels, no explanation, no markdown, no backticks — just valid HTML starting with the first element.';
-  const userPrompt = `Tailor this ${docLabel} for the following role. Return ONLY valid HTML with formatting preserved. Use proper heading tags, bold, lists etc.
-
-Company: ${company}
-Role: ${title}
-${location ? 'Location: ' + location : ''}
-${salary ? 'Target salary: ' + salary : ''}
-${context ? 'Additional context: ' + context : ''}
-${jobCtx}
-
-${docLabel} TO TAILOR (may be HTML or plain text — preserve all structure and formatting):
-${docContent}`;
+  const systemPrompt = 'You are a professional career coach and resume writer. Return ONLY the tailored document as plain text. Preserve the structure using plain text formatting: use ALL CAPS for section headings, hyphens for bullet points, and blank lines between sections. No HTML tags, no markdown, no backticks, no preamble, no explanation — just the plain text document starting immediately.';
+  const userPrompt = 'Tailor this ' + docLabel + ' for the following role. Return ONLY the plain text document — no HTML, no markdown, no labels, no explanation.' +
+    '\n\nCompany: ' + company +
+    '\nRole: ' + title +
+    (location ? '\nLocation: ' + location : '') +
+    (salary ? '\nTarget salary: ' + salary : '') +
+    (context ? '\nAdditional context: ' + context : '') +
+    jobCtx +
+    '\n\n' + docLabel + ' TO TAILOR:\n' + docContent;
 
   try {
-    const result = await callAIFast(systemPrompt, userPrompt, 3000);
+    const rawResult = await callAIFast(systemPrompt, userPrompt, 3000);
+    // Strip any HTML the AI may have returned despite instructions
+    const hasHtmlOutput = rawResult.includes('<') && rawResult.includes('>') && /<[a-z][\s\S]*>/i.test(rawResult);
+    const result = hasHtmlOutput ? stripHtml(rawResult) : rawResult;
     res.json({ result: result.trim(), docType });
   } catch (e) {
     console.error('Tailor error:', e.message);
