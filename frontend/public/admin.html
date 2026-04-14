@@ -116,6 +116,7 @@
       <div class="logo-mark" style="width:28px;height:28px;font-size:12px">A</div>
       <div class="topbar-title">Applied Admin</div>
       <div class="topbar-badge">ADMIN</div>
+      <div style="font-size:10px;font-family:monospace;color:#666;letter-spacing:0.02em">v1.4.0</div>
     </div>
     <div class="topbar-user" id="topbar-user"></div>
     <button class="topbar-logout" onclick="doLogout()">Sign out</button>
@@ -219,6 +220,7 @@
 
 <script>
 const API = '';
+const APP_VERSION = '1.4.0';
 let token = sessionStorage.getItem('admin_token');
 let adminUser = sessionStorage.getItem('admin_user');
 let users = [];

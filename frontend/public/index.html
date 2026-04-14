@@ -589,6 +589,7 @@ input[type="file"] { display: none; }
     <div class="user-bar">
       <div class="user-avatar" id="user-avatar">?</div>
       <div class="user-name" id="user-name-display"></div>
+      <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:0.02em;flex-shrink:0" id="version-label"></div>
       <button class="logout-btn" onclick="openSettings()" title="Settings" style="margin-right:2px">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 10a2 2 0 100-4 2 2 0 000 4z" stroke="currentColor" stroke-width="1.3"/><path d="M13.3 6.6l-.8-.4a5.1 5.1 0 000-1.2l.8-.5a.6.6 0 00.2-.8l-.8-1.3a.6.6 0 00-.8-.2l-.8.5a5 5 0 00-1-.6V1.5a.6.6 0 00-.6-.5H8.5a.6.6 0 00-.6.5v.9a5 5 0 00-1 .6l-.8-.5a.6.6 0 00-.8.2L4.5 4.5a.6.6 0 00.2.8l.8.5a5.1 5.1 0 000 1.2l-.8.5a.6.6 0 00-.2.8l.8 1.3c.2.3.5.4.8.2l.8-.5a5 5 0 001 .6v.9c0 .3.3.6.6.6h1.6c.3 0 .6-.3.6-.6v-.9a5 5 0 001-.6l.8.5c.3.2.6.1.8-.2l.8-1.3a.6.6 0 00-.2-.8z" stroke="currentColor" stroke-width="1.3"/></svg>
       </button>
@@ -693,6 +694,7 @@ input[type="file"] { display: none; }
 
 <script>
 const API = '';
+const APP_VERSION = '1.4.0';
 let token = localStorage.getItem('applied_token');
 let currentUser = localStorage.getItem('applied_user');
 let jobs = {}, currentJobId = null, currentFilter = 'all', activeDetailTab = 'notes';
@@ -747,6 +749,8 @@ function showApp() {
   showScreen('app');
   document.getElementById('user-avatar').textContent = (currentUser||'?').slice(0,2).toUpperCase();
   document.getElementById('user-name-display').textContent = currentUser;
+  const vl = document.getElementById('version-label');
+  if (vl) vl.textContent = 'v' + APP_VERSION;
 }
 
 // ── AUTH ──

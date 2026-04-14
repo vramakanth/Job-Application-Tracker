@@ -386,7 +386,8 @@ async function parseJobFromUrl(url) {
 
         if (liRes.ok) {
           const liHtml = await liRes.text();
-          // Extract from JSON-LD structured data
+
+          // Try JSON-LD structured data first
           const structured = extractStructuredData(liHtml);
           if (structured && structured.title) {
             return {
@@ -395,15 +396,52 @@ async function parseJobFromUrl(url) {
               text: stripHtml(liHtml).slice(0, 8000),
             };
           }
-          // Try meta tags
-          const titleMatch = liHtml.match(/<title[^>]*>([^<]+)<\/title>/i);
-          const ogTitle = liHtml.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i);
-          const title = ogTitle?.[1] || titleMatch?.[1]?.split(' at ')?.[0]?.trim() || null;
-          const company = titleMatch?.[1]?.split(' at ')?.[1]?.split(' |')?.[0]?.trim() ||
-                          liHtml.match(/<meta[^>]+name="author"[^>]+content="([^"]+)"/i)?.[1] || null;
+
+          // Parse LinkedIn's page title format:
+          // "{Company} hiring {Job Title} in {City, State} | LinkedIn"
+          // OR "{Job Title} at {Company} | LinkedIn"
+          const rawTitle = liHtml.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim() || '';
+          const ogTitle = liHtml.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i)?.[1]?.trim() || '';
+          const pageTitle = (ogTitle || rawTitle).replace(' | LinkedIn', '').trim();
+
+          let title = null, company = null, location = null;
+
+          // Pattern 1: "Company hiring Title in Location"
+          const hiringMatch = pageTitle.match(/^(.+?)\s+hiring\s+(.+?)\s+in\s+(.+)$/i);
+          if (hiringMatch) {
+            company  = hiringMatch[1].trim();
+            title    = hiringMatch[2].trim();
+            location = hiringMatch[3].trim();
+          }
+          // Pattern 2: "Title at Company"
+          else {
+            const atMatch = pageTitle.match(/^(.+?)\s+at\s+(.+)$/i);
+            if (atMatch) {
+              title   = atMatch[1].trim();
+              company = atMatch[2].trim();
+            } else {
+              // Fallback: use the whole thing as title
+              title = pageTitle;
+            }
+          }
+
+          // Work type from location string
+          let remote = null;
+          if (location) {
+            if (/remote/i.test(location)) { remote = true; location = location.replace(/[,\s]*remote[,\s]*/i, '').trim(); }
+            else if (/hybrid/i.test(location)) { location = location; }
+          }
+
+          // Also try og:description for more context
+          const desc = liHtml.match(/<meta[^>]+property="og:description"[^>]+content="([^"]+)"/i)?.[1] || '';
+          if (!company && desc) {
+            const compFromDesc = desc.match(/at ([^.]+)\./i)?.[1]?.trim();
+            if (compFromDesc) company = compFromDesc;
+          }
+
           if (title) {
             return {
-              fields: { title, company, location: null, salary: null, remote: null },
+              fields: { title, company, location: location || null, salary: null, remote },
               html: liHtml.slice(0, 50000),
               text: stripHtml(liHtml).slice(0, 8000),
             };
