@@ -26,14 +26,16 @@
 <!-- iOS splash / safe areas -->
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&display=swap">
+
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* ── LIGHT THEME (default) ── */
 :root {
-  --font: 'DM Sans', sans-serif;
-  --mono: 'DM Mono', monospace;
+  --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'JetBrains Mono', 'Fira Code', monospace;
   --radius: 10px;
   --radius-sm: 6px;
   --safe-top:    env(safe-area-inset-top, 0px);
@@ -80,7 +82,7 @@
   }
 }
 
-html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; letter-spacing: -0.01em; }
 
 /* ── AUTH ── */
 .auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--bg); }
@@ -149,7 +151,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .logo { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
 .logo-mark { width: 28px; height: 28px; background: var(--accent-bg); border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .logo-mark svg { width: 16px; height: 16px; }
-.logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.3px; color: var(--text); }
+.logo-text { font-size: 15px; font-weight: 600; letter-spacing: -0.4px; color: var(--text); }
 .logo-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); }
 .add-btn { width: 100%; padding: 8px 12px; background: var(--accent-bg); color: #1a1917; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s; }
 .add-btn:hover { background: var(--accent-bg2); }
