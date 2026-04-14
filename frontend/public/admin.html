@@ -199,6 +199,21 @@
   </div>
 </div>
 
+<!-- Edit User Modal -->
+<div class="modal-bg" id="modal-edit" onclick="if(event.target===this)closeModal('modal-edit')">
+  <div class="modal">
+    <div class="modal-title">Edit User</div>
+    <div class="modal-sub" id="modal-edit-sub"></div>
+    <div class="field"><label>EMAIL</label><input type="email" id="modal-edit-email" placeholder="user@example.com"></div>
+    <div class="field"><label>USERNAME (read-only)</label><input id="modal-edit-username" readonly style="opacity:.5;cursor:not-allowed"></div>
+    <div class="modal-status" id="modal-edit-status"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit')">Cancel</button>
+      <button class="btn btn-success" onclick="submitEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const API = '';
 let token = sessionStorage.getItem('admin_token');
@@ -275,6 +290,7 @@ function renderTable() {
       <td>
         <div class="actions">
           ${!u.isAdmin ? `
+          <button class="act-btn" onclick="openEdit('${esc(u.username)}','${esc(u.email||'')}')">Edit</button>
           <button class="act-btn ${u.isActive?'danger':'success'}" onclick="openDeactivate('${esc(u.username)}',${!u.isActive})">
             ${u.isActive?'Deactivate':'Reactivate'}
           </button>
@@ -383,6 +399,36 @@ async function submitDelete() {
     await loadUsers();
     setTimeout(() => closeModal('modal-delete'), 1500);
   } catch(e) { setModalStatus('modal-delete','err',e.message); }
+}
+
+// ── EDIT USER ──
+function openEdit(username, email) {
+  selectedUser = username;
+  document.getElementById('modal-edit-sub').textContent = `Update profile for ${username}`;
+  document.getElementById('modal-edit-username').value = username;
+  document.getElementById('modal-edit-email').value = email || '';
+  openModal('modal-edit');
+  setTimeout(() => document.getElementById('modal-edit-email').focus(), 100);
+}
+
+async function submitEdit() {
+  const email = document.getElementById('modal-edit-email').value.trim();
+  if (!email || !email.includes('@')) {
+    setModalStatus('modal-edit', 'err', 'Please enter a valid email address');
+    return;
+  }
+  try {
+    const res = await fetch(API + '/api/admin/update-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ username: selectedUser, email }),
+    });
+    const data = await res.json();
+    if (!res.ok) { setModalStatus('modal-edit', 'err', data.error || 'Failed'); return; }
+    setModalStatus('modal-edit', 'ok', 'Saved successfully');
+    await loadUsers();
+    setTimeout(() => closeModal('modal-edit'), 1200);
+  } catch(e) { setModalStatus('modal-edit', 'err', e.message); }
 }
 
 // ── UTILS ──

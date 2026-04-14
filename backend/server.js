@@ -1627,6 +1627,18 @@ app.get('/reset-password', (req, res) => {
 // ── ADMIN ROUTES (admin JWT required) ──
 // ═══════════════════════════════════════════
 
+// POST /api/admin/update-user — update email and other profile fields
+app.post('/api/admin/update-user', adminMiddleware, (req, res) => {
+  const { username, email } = req.body;
+  if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email required' });
+  const users = loadUsers();
+  const key = username.toLowerCase();
+  if (!users[key]) return res.status(404).json({ error: 'User not found' });
+  users[key].email = email.toLowerCase().trim();
+  saveUsers(users);
+  res.json({ ok: true });
+});
+
 // GET /api/admin/users — list all users
 app.get('/api/admin/users', adminMiddleware, (req, res) => {
   const users = loadUsers();
