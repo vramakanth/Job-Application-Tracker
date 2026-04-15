@@ -1327,6 +1327,8 @@ Return ONLY a valid JSON object with these exact fields (no markdown, no backtic
     "glassdoorDiversity": 3.9,
     "topLocations": ["San Diego, CA", "San Jose, CA", "Remote"],
     "internationalPct": 30,
+    "medianAge": 32,
+    "ageRanges": {"under30": 35, "30to40": 38, "40to50": 18, "over50": 9},
     "note": "1-2 sentences on overall workforce culture, diversity initiatives, or notable workforce facts"
   },
   "news": [
@@ -1337,7 +1339,7 @@ Return ONLY a valid JSON object with these exact fields (no markdown, no backtic
 }`;
 
   try {
-    const aiResponse = await callAIFast(systemPrompt, userPrompt, 4000);
+    const aiResponse = await callAIFast(systemPrompt, userPrompt, 5000);
     const finalText = (aiResponse.text || aiResponse || '').trim();
     console.log(`Insights: provider=${aiResponse.provider} model=${aiResponse.model} length=${finalText.length}`);
     if (!finalText) throw new Error('Empty response from AI');

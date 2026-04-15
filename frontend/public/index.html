@@ -347,6 +347,7 @@ input[type=\"file\"] { display: none; }
 
 /* ── INSIGHTS ── */
 .insights-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 24px 28px; }
+  .insights-inner { max-width: 760px; }
 .insights-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; gap: 16px; }
 .insights-header-left { flex: 1; min-width: 0; }
 .insights-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
@@ -555,6 +556,13 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 #to-body { flex-direction: row !important; }
 @media (max-width: 680px) { #to-body { flex-direction: column !important; } }
 
+
+/* ── Sidebar action buttons ── */
+.sidebar-action-btns { display: flex; flex-direction: column; border-top: 1px solid var(--border); flex-shrink: 0; }
+.sidebar-action-btn { display: flex; align-items: center; gap: 9px; padding: 9px 16px; border: none; background: none; color: var(--text3); font-family: var(--font); font-size: 12px; cursor: pointer; width: 100%; text-align: left; transition: all .12s; }
+.sidebar-action-btn:hover { background: var(--bg3); color: var(--text2); }
+.sidebar-action-btn svg { flex-shrink: 0; }
+@media (max-width: 680px) { .sidebar-action-btns { display: none !important; } }
 </style>
 </head>
 <body>
@@ -695,6 +703,30 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
     <div class="job-list" id="job-list"></div>
 
+    <!-- Sidebar action buttons -->
+    <div class="sidebar-action-btns">
+      <button class="sidebar-action-btn" onclick="showAnalytics()" title="Pipeline & analytics">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 20V14M8 20V10M12 20V4M16 20V10M20 20V14"/></svg>
+        Analytics
+      </button>
+      <button class="sidebar-action-btn" onclick="showDocumentsPage()" title="Document library">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Documents
+      </button>
+      <button class="sidebar-action-btn" onclick="showWatchlist()" title="Watchlist">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        Watchlist
+      </button>
+      <button class="sidebar-action-btn" onclick="showReferralPipeline()" title="Referral pipeline">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Referrals
+      </button>
+      <button class="sidebar-action-btn" onclick="showStaleJobs()" title="Jobs needing attention">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Stale jobs
+      </button>
+    </div>
+
     <!-- User bar -->
     <div class="user-bar">
       <button id="mobile-avatar-btn" onclick="openSettings()" style="display:none;width:28px;height:28px;border-radius:50%;background:var(--accent-bg);border:none;cursor:pointer;font-size:11px;font-weight:700;color:#1a1917;font-family:var(--mono);flex-shrink:0;align-items:center;justify-content:center" id="mobile-avatar-btn">
@@ -710,11 +742,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       </button>
     </div>
 
-    <!-- Sidebar bottom buttons (mobile nav on desktop hidden by CSS) -->
-    <div class="sidebar-nav-btns" style="display:none">
-      <button onclick="showDocumentsPage()">Docs</button>
-      <button onclick="showAnalytics()">Stats</button>
-    </div>
+
   </div>
 
   <!-- MAIN CONTENT -->
@@ -1240,42 +1268,118 @@ async function doRecover() {
 }
 
 function showRecoveryCodesModal(codes, onDone, isNewAccount = false) {
+  // Build entirely via DOM — no inline onclick with interpolated strings
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px';
-  overlay.innerHTML = `
-    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:min(480px,100%);padding:28px;max-height:90vh;overflow-y:auto">
-      ${isNewAccount ? `
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <span style="font-size:24px">🔐</span>
-        <div style="font-size:18px;font-weight:700;color:var(--text)">Save your recovery codes now</div>
-      </div>
-      <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;font-size:13px;color:#ef4444;font-weight:600">
-        ⚠ These codes are your ONLY backup. If you lose your password and these codes, your encrypted data is gone forever — even we can't recover it.
-      </div>` : `
-      <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px">New recovery codes</div>`}
-      <div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">
-        Each code works <strong>once only</strong>. Store them in a password manager, print them, or write them somewhere physically safe.
-        <strong style="color:var(--red)">You will not see these again.</strong>
-      </div>
-      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          ${codes.map((c, i) => `<div style="font-family:var(--mono);font-size:14px;letter-spacing:2px;color:var(--text);padding:6px 10px;background:var(--bg2);border-radius:4px">${i+1}. ${c}</div>`).join('')}
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:16px">
-        <button onclick="navigator.clipboard.writeText(${JSON.stringify(codes.join('\n'))}).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy all',1500)})" style="flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer">Copy all</button>
-        <button onclick="printRecoveryCodes(${JSON.stringify(codes)})" style="flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer">Print</button>
-      </div>
-      <label style="display:flex;align-items:center;gap:8px;margin-bottom:16px;cursor:pointer;font-size:13px;color:var(--text2)">
-        <input type="checkbox" id="codes-saved-confirm" onchange="document.getElementById('codes-done-btn').disabled=!this.checked">
-        I have saved these codes in a safe place
-      </label>
-      <button id="codes-done-btn" onclick="document.body.removeChild(this.closest('[style*=fixed]'));(${onDone.toString()})()" disabled style="width:100%;padding:10px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;opacity:0.5" onmouseenter="if(!this.disabled)this.style.opacity='1'" onmouseleave="if(!this.disabled)this.style.opacity=''">
-        I've saved my codes — continue to app →
-      </button>
-    </div>`;
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)';
 
-  // Enable button when checkbox ticked
+  const card = document.createElement('div');
+  card.style.cssText = 'background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:min(500px,100%);padding:28px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.5);position:relative';
+
+  // ── Close button (top-right) ──
+  const closeBtn = document.createElement('button');
+  closeBtn.style.cssText = 'position:absolute;top:16px;right:16px;width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:16px;line-height:1';
+  closeBtn.innerHTML = '&times;';
+  closeBtn.title = 'Close';
+  closeBtn.onclick = () => { document.body.removeChild(overlay); if (onDone) onDone(); };
+  card.appendChild(closeBtn);
+
+  // ── Header ──
+  if (isNewAccount) {
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-right:40px';
+    hdr.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>';
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:17px;font-weight:700;color:var(--text)';
+    title.textContent = 'Save your recovery codes';
+    hdr.appendChild(title);
+    card.appendChild(hdr);
+    const warn = document.createElement('div');
+    warn.style.cssText = 'background:rgba(232,96,96,0.1);border:1px solid rgba(232,96,96,0.3);border-radius:6px;padding:12px;margin-bottom:14px;font-size:13px;color:var(--red);line-height:1.5';
+    warn.textContent = '⚠ These codes are your ONLY backup. If you lose your password and all codes, your encrypted data cannot be recovered.';
+    card.appendChild(warn);
+  } else {
+    const title = document.createElement('div');
+    title.style.cssText = 'font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;padding-right:40px';
+    title.textContent = 'New recovery codes generated';
+    card.appendChild(title);
+  }
+
+  // ── Description ──
+  const desc = document.createElement('div');
+  desc.style.cssText = 'font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6';
+  desc.innerHTML = 'Each code works <strong>once only</strong>. Store them in a password manager, print them, or write them somewhere safe. <strong style="color:var(--red)">You will not see these again.</strong>';
+  card.appendChild(desc);
+
+  // ── Code grid ──
+  const grid = document.createElement('div');
+  grid.style.cssText = 'background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px';
+  const gridInner = document.createElement('div');
+  gridInner.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px';
+  codes.forEach((c, i) => {
+    const cell = document.createElement('div');
+    cell.style.cssText = 'font-family:var(--mono);font-size:13px;letter-spacing:1.5px;color:var(--text);padding:6px 10px;background:var(--bg2);border-radius:4px;user-select:all';
+    cell.textContent = (i + 1) + '. ' + c;
+    gridInner.appendChild(cell);
+  });
+  grid.appendChild(gridInner);
+  card.appendChild(grid);
+
+  // ── Action buttons: Copy + Print ──
+  const actionRow = document.createElement('div');
+  actionRow.style.cssText = 'display:flex;gap:8px;margin-bottom:16px';
+
+  const copyBtn = document.createElement('button');
+  copyBtn.style.cssText = 'flex:1;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer;transition:all .15s';
+  copyBtn.textContent = 'Copy all';
+  copyBtn.onclick = () => {
+    navigator.clipboard.writeText(codes.join('\n')).then(() => {
+      copyBtn.textContent = '✓ Copied!';
+      copyBtn.style.color = 'var(--green)';
+      setTimeout(() => { copyBtn.textContent = 'Copy all'; copyBtn.style.color = ''; }, 2000);
+    });
+  };
+
+  const printBtn = document.createElement('button');
+  printBtn.style.cssText = 'flex:1;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer;transition:all .15s';
+  printBtn.textContent = 'Print codes';
+  printBtn.onclick = () => printRecoveryCodes(codes);
+
+  actionRow.appendChild(copyBtn);
+  actionRow.appendChild(printBtn);
+  card.appendChild(actionRow);
+
+  // ── Confirm checkbox ──
+  const confirmLabel = document.createElement('label');
+  confirmLabel.style.cssText = 'display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;cursor:pointer;font-size:13px;color:var(--text2);line-height:1.5';
+  const confirmCheck = document.createElement('input');
+  confirmCheck.type = 'checkbox';
+  confirmCheck.style.cssText = 'margin-top:2px;flex-shrink:0;accent-color:var(--accent-bg);width:15px;height:15px;cursor:pointer';
+  const confirmText = document.createTextNode('I have saved these codes somewhere safe and understand I cannot recover them later');
+  confirmLabel.appendChild(confirmCheck);
+  confirmLabel.appendChild(confirmText);
+  card.appendChild(confirmLabel);
+
+  // ── Done button ──
+  const doneBtn = document.createElement('button');
+  doneBtn.style.cssText = 'width:100%;padding:11px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:6px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;opacity:0.45;transition:opacity .15s';
+  doneBtn.disabled = true;
+  doneBtn.textContent = "I've saved my codes — close";
+  doneBtn.onclick = () => { document.body.removeChild(overlay); if (onDone) onDone(); };
+
+  confirmCheck.onchange = () => {
+    doneBtn.disabled = !confirmCheck.checked;
+    doneBtn.style.opacity = confirmCheck.checked ? '1' : '0.45';
+    doneBtn.style.cursor = confirmCheck.checked ? 'pointer' : 'not-allowed';
+  };
+
+  card.appendChild(doneBtn);
+  overlay.appendChild(card);
+
+  // Click outside to close (but not if new account — must use Done)
+  if (!isNewAccount) {
+    overlay.onclick = (e) => { if (e.target === overlay) { document.body.removeChild(overlay); if (onDone) onDone(); } };
+  }
+
   document.body.appendChild(overlay);
 }
 
@@ -2189,8 +2293,8 @@ function renderFilesTab(j) {
 
     <!-- Tailor prompt -->
     ${(j.resume || j.cover) ? `
-    <div style="margin-bottom:24px;padding:14px 16px;background:var(--bg3);border-radius:var(--radius-sm);display:flex;gap:12px;align-items:center">
-      <span style="font-size:18px">✦</span>
+    <div style="margin-bottom:24px;padding:14px 0;border-top:1px solid var(--border);display:flex;gap:12px;align-items:flex-start">
+      <svg width="14" height="14" viewBox="0 0 13 13" fill="none" style="flex-shrink:0;margin-top:2px;color:var(--accent-bg)"><path d="M6.5 1l1.3 3 3 .5-2.2 2.1.5 3L6.5 8.3l-2.8 1.3.5-3L2 4.5l3-.5L6.5 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px">Tailor for this role</div>
         <div style="font-size:12px;color:var(--text2)">Go to the <strong>Documents</strong> tab to tailor these files for ${esc(j.company)} with auto-save and versioning.</div>
@@ -2300,6 +2404,7 @@ function renderInsightsTab(j) {
   const ins = j.insights;
   const hasFinnhub = !!localStorage.getItem('finnhub_key');
   return `<div class="insights-wrap" id="insights-wrap">
+    <div class="insights-inner">
     <div class="insights-header">
       <div class="insights-header-left">
         <div class="insights-subtitle">${esc(j.company)} · ${esc(j.title)}</div>
@@ -2413,6 +2518,7 @@ function renderInsightsTab(j) {
       <svg width="56" height="56" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="26" stroke="currentColor" stroke-width="2"/><path d="M20 28h16M28 20v16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <p>Click <strong>Research this role</strong> to get AI-powered insights about ${esc(j.company)} and the ${esc(j.title)} position.</p>
     </div>`}
+  </div>
   </div>`;
 }
 
@@ -2497,6 +2603,33 @@ function renderFlags(flags) {
   </div>`;
 }
 
+
+
+function renderAgeDistribution(wf) {
+  if (!wf.ageRanges && !wf.medianAge) return '';
+  const ar = wf.ageRanges || {};
+  const segs = [
+    { label: 'Under 30', val: ar.under30 || 0, color: 'var(--blue)' },
+    { label: '30–40',    val: ar['30to40'] || 0, color: 'var(--green)' },
+    { label: '40–50',    val: ar['40to50'] || 0, color: 'var(--amber)' },
+    { label: '50+',      val: ar.over50 || 0, color: 'var(--text3)' },
+  ].filter(s => s.val > 0);
+  const total = segs.reduce((s, r) => s + r.val, 0) || 100;
+  const bar = segs.map(s =>
+    '<div style="width:' + (s.val/total*100).toFixed(1) + '%;background:' + s.color + ';height:100%"></div>'
+  ).join('');
+  const legend = segs.map(s =>
+    '<span style="font-size:11px;font-family:var(--mono);color:var(--text3)"><span style="color:' + s.color + '">●</span> ' + s.label + ': ' + s.val + '%</span>'
+  ).join('');
+  return '<div style="margin-bottom:16px">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+      '<div style="font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px">AGE DISTRIBUTION</div>' +
+      (wf.medianAge ? '<span style="font-size:11px;font-family:var(--mono);color:var(--text3)">Median: <strong style=\"color:var(--text2)\">' + wf.medianAge + '</strong></span>' : '') +
+    '</div>' +
+    (segs.length ? '<div style="height:8px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:8px">' + bar + '</div>' +
+      '<div style="display:flex;flex-wrap:wrap;gap:10px">' + legend + '</div>' : '') +
+  '</div>';
+}
 
 function renderWorkforceSection(wf) {
   if (!wf) return '';
@@ -2622,17 +2755,20 @@ function renderWorkforceSection(wf) {
         </div>` : ''}
       </div>` : ''}
 
-      <!-- Visa detail + top locations -->
-      <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:4px">
-        ${wf.visaNote ? `<div style="flex:1;min-width:200px">
+      <!-- Age distribution -->
+      ${renderAgeDistribution(wf)}
+
+      <!-- Visa + locations -->
+      ${(wf.visaNote || wf.topLocations?.length) ? `<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:14px">
+        ${wf.visaNote ? `<div style="flex:1;min-width:180px">
           <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;margin-bottom:4px">VISA SPONSORSHIP</div>
           <div style="font-size:12px;color:var(--text2);line-height:1.6">${esc(wf.visaNote)}</div>
         </div>` : ''}
         ${wf.topLocations?.length ? `<div>
           <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;margin-bottom:6px">TOP OFFICES</div>
-          ${wf.topLocations.map(l => `<div style="font-size:12px;color:var(--text2);margin-bottom:2px;display:flex;align-items:center;gap:5px"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${esc(l)}</div>`).join('')}
+          ${wf.topLocations.map(l => '<div style="font-size:12px;color:var(--text2);margin-bottom:2px">' + esc(l) + '</div>').join('')}
         </div>` : ''}
-      </div>
+      </div>` : ''}
 
       <!-- Summary note -->
       ${wf.note ? `<div style="margin-top:14px;font-size:12px;color:var(--text2);line-height:1.6;padding-top:12px;border-top:1px solid var(--border)">${esc(wf.note)}</div>` : ''}
@@ -3041,7 +3177,7 @@ function renderDocsPage() {
       ${filtered.length === 0 ? `
         <div style="padding:40px;text-align:center;color:var(--text3);font-size:13px">
           ${q ? `No documents matching "${esc(q)}"` : `<div style="max-width:280px;margin:0 auto">
-              <div style="font-size:32px;margin-bottom:12px">📄</div>
+              <div style="margin-bottom:14px;color:var(--text3)"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
               <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px">No documents yet</div>
               <div style="font-size:13px;line-height:1.6;margin-bottom:16px">Upload a resume or cover letter to start tailoring it for specific roles.</div>
               <label style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;background:var(--accent-bg);color:#1a1917;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">
@@ -3057,7 +3193,10 @@ function renderDocsPage() {
               <div class="doc-card-actions">
                 <button class="doc-card-btn danger" onclick="event.stopPropagation();deleteDoc('${d.id}')">✕</button>
               </div>
-              <div class="doc-card-icon">${d.type === 'resume' ? '📄' : '✉️'}</div>
+              <div class="doc-card-icon">${d.type === 'resume'
+                ? '<svg viewBox="0 0 24 24" fill="none" width="28" height="28" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
+                : '<svg viewBox="0 0 24 24" fill="none" width="28" height="28" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8l10 7 10-7"/></svg>'
+              }</div>
               <div class="doc-card-name">${esc(d.name)}</div>
               <div class="doc-card-meta">${d.type} · ${Math.round(d.size/100)/10}kb · ${new Date(d.createdAt).toLocaleDateString()}</div>
             </div>`).join('')}
@@ -3501,14 +3640,20 @@ function renderDocumentsTab(j) {
     <!-- Document list -->
     ${docs.length === 0 ? `
       <div style="text-align:center;padding:48px 20px;color:var(--text3)">
-        <div style="font-size:32px;margin-bottom:12px">📄</div>
+        <div style="margin-bottom:14px;color:var(--text3)"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
         <div style="font-size:14px;font-weight:500;color:var(--text2);margin-bottom:6px">No documents yet</div>
-        <div style="font-size:13px;line-height:1.6">Upload a resume or cover letter to tailor it for this role,<br>or pick one from your Document Library.</div>
+        <div style="font-size:13px;line-height:1.6">Upload a resume or cover letter to tailor it for this role, or pick one from your Document Library.</div>
       </div>` : `
       <div style="display:flex;flex-direction:column;gap:0">
         ${docs.map(d => `
           <div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
-            <span style="font-size:20px;flex-shrink:0">${d.type==='resume'?'📄':d.type==='cover'?'✉️':'📎'}</span>
+            <span style="color:var(--text3);flex-shrink:0;display:flex">${
+                d.type==='resume'
+                  ? '<svg viewBox="0 0 24 24" fill="none" width="18" height="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
+                  : d.type==='cover'
+                    ? '<svg viewBox="0 0 24 24" fill="none" width="18" height="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 8l10 7 10-7"/></svg>'
+                    : '<svg viewBox="0 0 24 24" fill="none" width="18" height="18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>'
+              }</span>
             <div style="flex:1;min-width:0">
               <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.name)}</div>
               <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px;display:flex;gap:8px">
@@ -4023,7 +4168,7 @@ function renderContactsTab(j) {
     <div id="suggest-contacts-result-${j.id}" style="margin-bottom:12px"></div>
     ${cs.length === 0 ? `
       <div style="text-align:center;padding:40px 20px;color:var(--text3)">
-        <div style="font-size:32px;margin-bottom:12px">👤</div>
+        <div style="margin-bottom:14px;color:var(--text3)"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
         <div style="font-size:14px;font-weight:500;color:var(--text2);margin-bottom:8px">No contacts yet</div>
         <div style="font-size:13px;line-height:1.6;margin-bottom:16px">Add recruiters, hiring managers, or anyone you've connected with at this company.</div>
         <button onclick="suggestOutreachTargets('${j.id}')" id="suggest-contacts-btn-${j.id}" style="padding:8px 18px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;display:inline-flex;align-items:center;gap:6px">
@@ -4160,7 +4305,7 @@ function renderInterviewTab(j) {
 
     ${total === 0 ? `
       <div style="text-align:center;padding:48px 20px;color:var(--text3)">
-        <div style="font-size:32px;margin-bottom:12px">🎯</div>
+        <div style="margin-bottom:14px;color:var(--text3)"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
         <div style="font-size:14px;font-weight:500;color:var(--text2);margin-bottom:6px">No questions yet</div>
         <div style="font-size:13px;line-height:1.6;max-width:320px;margin:0 auto">Generate AI questions tailored to this role, or add your own to practice.</div>
       </div>` : `
@@ -5351,7 +5496,7 @@ async function generateNewRecoveryCodes() {
   } catch(e) {
     if (err) { err.textContent = 'Could not connect.'; err.classList.add('show'); }
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = '🔑 Generate 8 new recovery codes'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Generate 8 new recovery codes'; }
   }
 }
 
