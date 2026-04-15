@@ -116,7 +116,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 
 /* ── MOBILE RESPONSIVE ── */
 /* ── DOC VIEWER ── */
-.doc-editor-panel { position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:600;display:flex;align-items:center;justify-content:center; }
+.doc-editor-panel { position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.45);z-index:600;display:flex;align-items:center;justify-content:center; }
 .doc-editor-inner { background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:min(680px,92vw);height:min(80vh,700px);display:flex;flex-direction:column;overflow:hidden; }
 
 /* ── TAILOR OVERLAY LAYOUT FIX ── */
@@ -254,7 +254,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
 
 /* ADD MODAL */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+.modal-overlay { position: fixed; top:0;right:0;bottom:0;left:0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
 .modal { background: var(--bg2); border: 0.5px solid var(--border2); border-radius: 14px; width: 100%; max-width: 520px; padding: 28px; }
 .modal-title { font-size: 17px; font-weight: 500; margin-bottom: 6px; letter-spacing: -0.3px; }
 .modal-sub { font-size: 12px; color: var(--text2); margin-bottom: 24px; }
@@ -301,7 +301,7 @@ input[type=\"file\"] { display: none; }
 .mobile-bottom-btn svg { width: 20px; height: 20px; }
 
 /* ── FILE EDITOR DRAWER ── */
-.file-editor-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 500; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+.file-editor-overlay { position: fixed; top:0;right:0;bottom:0;left:0; background: rgba(0,0,0,0.35); z-index: 500; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
 .file-editor-overlay.open { opacity: 1; pointer-events: all; }
 .file-editor-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(680px, 100vw); background: var(--bg2); border-left: 1px solid var(--border2); display: flex; flex-direction: column; z-index: 501; transform: translateX(100%); transition: transform 0.22s cubic-bezier(0.4,0,0.2,1); box-shadow: -8px 0 32px rgba(0,0,0,0.12); }
 .file-editor-drawer.open { transform: translateX(0); }
@@ -320,7 +320,7 @@ input[type=\"file\"] { display: none; }
 .doc-editor-body { flex:1;overflow-y:auto;padding:20px;font-size:13px;line-height:1.7;color:var(--text);outline:none;white-space:pre-wrap; }
 
 /* ── SETTINGS ── */
-.settings-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 600; display: flex; align-items: flex-start; justify-content: flex-end; }
+.settings-overlay { position: fixed; top:0;right:0;bottom:0;left:0; background: rgba(0,0,0,0.4); z-index: 600; display: flex; align-items: flex-start; justify-content: flex-end; }
 .settings-panel { width: min(480px, 100vw); height: 100vh; background: var(--bg2); border-left: 1px solid var(--border2); display: flex; flex-direction: column; overflow: visible; animation: slideInRight 0.2s ease; }
 @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 .settings-header { display: flex; align-items: center; gap: 12px; padding: 20px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
@@ -484,7 +484,7 @@ input[type=\"file\"] { display: none; }
 .tab-pane { animation: fadeIn .15s ease; }
 .typing-cursor { display: inline-block; width: 2px; height: 14px; background: var(--accent-bg); animation: blink 1s infinite; vertical-align: middle; }
 ::selection { background: rgba(232,168,56,0.25); color: var(--text); }
-.modal-overlay { backdrop-filter: blur(2px); }
+.modal-overlay { -webkit-backdrop-filter: blur(2px);backdrop-filter: blur(2px); }
 .job-list { overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--bg4) transparent; }
 .job-item.active::before { content:''; position:absolute; left:0; top:4px; bottom:4px; width:3px; background:var(--accent-bg); border-radius:0 3px 3px 0; }
 .job-item { position: relative; }
@@ -515,17 +515,17 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 /* ── KEY IDs ── */
 #detail-view { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
 #job-list { flex: 1; overflow-y: auto; }
-#analytics-overlay { position: fixed; inset: 0; background: var(--bg); z-index: 500; display: flex; flex-direction: column; overflow: hidden; }
-#settings-overlay { position: fixed; inset: 0; z-index: 600; }
+#analytics-overlay { position: fixed; top:0;right:0;bottom:0;left:0; background: var(--bg); z-index: 500; display: flex; flex-direction: column; overflow: hidden; }
+#settings-overlay { position: fixed; top:0;right:0;bottom:0;left:0; z-index: 600; }
 #empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; height: 100%; color: var(--text3); padding: 40px; text-align: center; }
 #empty-state h2 { font-size: 18px; font-weight: 600; color: var(--text); }
 #empty-state p { font-size: 13px; line-height: 1.6; max-width: 280px; }
 #empty-state svg { opacity: 0.2; }
 
 @media (max-width: 680px) {
-  .sidebar { position: fixed; inset: 0; z-index: 200; width: 100% !important; min-width: 100% !important; transform: translateX(0); transition: transform 0.25s ease; border-right: none !important; }
+  .sidebar { position: fixed; top:0;right:0;bottom:0;left:0; z-index: 200; width: 100% !important; min-width: 100% !important; transform: translateX(0); transition: transform 0.25s ease; border-right: none !important; }
   .sidebar.hidden-mobile { transform: translateX(-100%); }
-  .main { position: fixed; inset: 0; z-index: 200; transform: translateX(100%); transition: transform 0.25s ease; }
+  .main { position: fixed; top:0;right:0;bottom:0;left:0; z-index: 200; transform: translateX(100%); transition: transform 0.25s ease; }
   .main.visible-mobile { transform: translateX(0); }
   .mobile-back-btn { display: flex !important; }
   .mobile-bottom-bar { display: flex !important; }
@@ -563,6 +563,11 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 .sidebar-action-btn:hover { background: var(--bg3); color: var(--text2); }
 .sidebar-action-btn svg { flex-shrink: 0; }
 @media (max-width: 680px) { .sidebar-action-btns { display: none !important; } }
+
+/* ── Section view panel ── */
+#section-view { background: var(--bg); }
+#section-view .docs-overlay { position:static; z-index:auto; }
+.sidebar-action-btn.active { color: var(--accent-bg) !important; background: var(--bg3); border-left: 2px solid var(--accent-bg); padding-left: 14px; }
 </style>
 </head>
 <body>
@@ -570,21 +575,125 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 <!-- ═══ SCREENS ═══ -->
 
 <!-- LANDING -->
-<div id="screen-landing" style="display:block;position:fixed;inset:0;z-index:900;background:#1a1714;overflow-y:auto">
-  <div style="max-width:960px;margin:0 auto;padding:80px 32px 120px;text-align:center">
-    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:64px">
-      <div style="width:36px;height:36px;background:#e8a838;border-radius:8px;display:flex;align-items:center;justify-content:center">
-        <svg viewBox="0 0 20 20" fill="none" width="20" height="20"><path d="M4 16V9l6-5 6 5v7H13v-5H7v5H4z" fill="#1a1714"/></svg>
+<div id="screen-landing" style="display:block;position:fixed;top:0;right:0;bottom:0;left:0;z-index:900;background:#1a1714;overflow-y:auto;-webkit-overflow-scrolling:touch">
+
+  <!-- Nav bar -->
+  <div style="display:-webkit-flex;display:flex;align-items:center;justify-content:space-between;padding:20px 32px;border-bottom:1px solid rgba(255,235,180,0.08)">
+    <div style="display:-webkit-flex;display:flex;align-items:center;gap:10px">
+      <div style="width:30px;height:30px;background:#e8a838;border-radius:7px;display:-webkit-flex;display:flex;align-items:center;justify-content:center">
+        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M4 16V9l6-5 6 5v7H13v-5H7v5H4z" fill="#1a1714"/></svg>
       </div>
-      <span style="font-size:20px;font-weight:600;color:#f2ead8;letter-spacing:-0.5px">Pursuit</span>
+      <span style="font-size:16px;font-weight:600;color:#f2ead8;letter-spacing:-0.3px">Pursuit</span>
     </div>
-    <h1 style="font-size:48px;font-weight:700;color:#f2ead8;letter-spacing:-1.5px;line-height:1.1;margin-bottom:16px">Track every application.<br>Land the right role.</h1>
-    <p style="font-size:17px;color:#b8a888;line-height:1.7;max-width:500px;margin:0 auto 40px">AI-powered job tracking with tailored resumes, company insights, and interview prep — all in one place.</p>
-    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-      <button onclick="showScreen('register')" style="padding:13px 28px;background:#e8a838;color:#1a1714;border:none;border-radius:6px;font-size:15px;font-weight:600;cursor:pointer">Get started free</button>
-      <button onclick="showScreen('login')" style="padding:13px 28px;background:transparent;color:#f2ead8;border:1px solid rgba(255,235,180,0.2);border-radius:6px;font-size:15px;cursor:pointer">Sign in</button>
+    <div style="display:-webkit-flex;display:flex;align-items:center;gap:10px">
+      <button onclick="showScreen('login')" style="padding:7px 16px;background:transparent;color:#b8a888;border:1px solid rgba(255,235,180,0.15);border-radius:6px;font-size:13px;cursor:pointer;font-family:inherit">Sign in</button>
+      <button onclick="showScreen('register')" style="padding:7px 16px;background:#e8a838;color:#1a1714;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit">Get started free</button>
     </div>
   </div>
+
+  <!-- Hero -->
+  <div style="max-width:680px;margin:0 auto;padding:72px 32px 56px;text-align:center">
+    <div style="display:inline-block;padding:5px 14px;background:rgba(232,168,56,0.12);border:1px solid rgba(232,168,56,0.25);border-radius:100px;font-size:11px;color:#e8a838;letter-spacing:0.8px;margin-bottom:24px;font-family:monospace">PRIVATE BETA</div>
+    <h1 style="font-size:clamp(32px,5vw,52px);font-weight:700;color:#f2ead8;letter-spacing:-1.5px;line-height:1.08;margin:0 0 20px">Track every application.<br>Land the right role.</h1>
+    <p style="font-size:16px;color:#9a8a6a;line-height:1.75;max-width:480px;margin:0 auto 36px">AI-powered job tracking with tailored resumes, company insights, salary intelligence, and interview prep — all encrypted, all yours.</p>
+    <div style="display:-webkit-flex;display:flex;gap:12px;justify-content:center;-webkit-flex-wrap:wrap;flex-wrap:wrap">
+      <button onclick="showScreen('register')" style="padding:13px 28px;background:#e8a838;color:#1a1714;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:-0.2px">Get started — it&#39;s free</button>
+      <button onclick="showScreen('login')" style="padding:13px 28px;background:transparent;color:#f2ead8;border:1px solid rgba(255,235,180,0.18);border-radius:8px;font-size:15px;cursor:pointer;font-family:inherit">Sign in</button>
+    </div>
+  </div>
+
+  <!-- Feature grid -->
+  <div style="max-width:960px;margin:0 auto;padding:0 24px 80px;display:-webkit-flex;display:flex;-webkit-flex-wrap:wrap;flex-wrap:wrap;gap:12px;justify-content:center">
+
+    <!-- Card 1: Pipeline -->
+    <div style="background:#211e1b;border:1px solid rgba(255,235,180,0.08);border-radius:12px;padding:24px;width:280px;text-align:left">
+      <div style="width:40px;height:40px;background:rgba(232,168,56,0.1);border-radius:10px;display:-webkit-flex;display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e8a838" stroke-width="1.7" stroke-linecap="round"><path d="M4 20V14M8 20V10M12 20V4M16 20V10M20 20V14"/></svg>
+      </div>
+      <div style="font-size:14px;font-weight:600;color:#f2ead8;margin-bottom:8px">Pipeline tracking</div>
+      <div style="font-size:13px;color:#9a8a6a;line-height:1.6">Kanban-style status tracking from wishlist to offer. See your full funnel at a glance.</div>
+      <div style="margin-top:16px;display:-webkit-flex;display:flex;gap:6px">
+        <span style="padding:3px 8px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);border-radius:4px;font-size:10px;color:#4ade80;font-family:monospace">applied</span>
+        <span style="padding:3px 8px;background:rgba(232,168,56,0.1);border:1px solid rgba(232,168,56,0.2);border-radius:4px;font-size:10px;color:#e8a838;font-family:monospace">interview</span>
+        <span style="padding:3px 8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);border-radius:4px;font-size:10px;color:#818cf8;font-family:monospace">offer</span>
+      </div>
+    </div>
+
+    <!-- Card 2: AI Tailoring -->
+    <div style="background:#211e1b;border:1px solid rgba(255,235,180,0.08);border-radius:12px;padding:24px;width:280px;text-align:left">
+      <div style="width:40px;height:40px;background:rgba(129,140,248,0.1);border-radius:10px;display:-webkit-flex;display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818cf8" stroke-width="1.7" stroke-linecap="round"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+      </div>
+      <div style="font-size:14px;font-weight:600;color:#f2ead8;margin-bottom:8px">AI resume tailoring</div>
+      <div style="font-size:13px;color:#9a8a6a;line-height:1.6">Instantly tailor your resume and cover letter to each role. Auto-saves versions with change tracking.</div>
+      <div style="margin-top:16px;padding:8px 10px;background:rgba(129,140,248,0.06);border-radius:6px;font-size:11px;color:#818cf8;font-family:monospace">fastest available AI · auto-selected</div>
+    </div>
+
+    <!-- Card 3: Company Insights -->
+    <div style="background:#211e1b;border:1px solid rgba(255,235,180,0.08);border-radius:12px;padding:24px;width:280px;text-align:left">
+      <div style="width:40px;height:40px;background:rgba(52,211,153,0.1);border-radius:10px;display:-webkit-flex;display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      </div>
+      <div style="font-size:14px;font-weight:600;color:#f2ead8;margin-bottom:8px">Company intelligence</div>
+      <div style="font-size:13px;color:#9a8a6a;line-height:1.6">Live stock data, Glassdoor ratings, salary ranges, culture analysis, and latest news — all in one click.</div>
+      <div style="margin-top:16px;display:-webkit-flex;display:flex;align-items:center;gap:8px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#e8a838" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-8"/></svg>
+        <span style="font-size:12px;color:#9a8a6a;font-family:monospace">$62.95 · +1.2% · 24.2B mkt cap</span>
+      </div>
+    </div>
+
+    <!-- Card 4: Interview Prep -->
+    <div style="background:#211e1b;border:1px solid rgba(255,235,180,0.08);border-radius:12px;padding:24px;width:280px;text-align:left">
+      <div style="width:40px;height:40px;background:rgba(251,146,60,0.1);border-radius:10px;display:-webkit-flex;display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fb923c" stroke-width="1.7" stroke-linecap="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </div>
+      <div style="font-size:14px;font-weight:600;color:#f2ead8;margin-bottom:8px">Interview prep</div>
+      <div style="font-size:13px;color:#9a8a6a;line-height:1.6">AI-generated role-specific questions covering behavioral, technical, and culture fit. Track what you've practiced.</div>
+      <div style="margin-top:16px;display:-webkit-flex;display:flex;align-items:center;gap:8px">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+        <span style="font-size:12px;color:#9a8a6a">12 / 15 practiced</span>
+      </div>
+    </div>
+
+    <!-- Card 5: Salary Intel -->
+    <div style="background:#211e1b;border:1px solid rgba(255,235,180,0.08);border-radius:12px;padding:24px;width:280px;text-align:left">
+      <div style="width:40px;height:40px;background:rgba(250,204,21,0.1);border-radius:10px;display:-webkit-flex;display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v2m0 8v2M9.5 9.5a2.5 2.5 0 015 0c0 1.5-2.5 2-2.5 3.5m0 1h.01"/></svg>
+      </div>
+      <div style="font-size:14px;font-weight:600;color:#f2ead8;margin-bottom:8px">Salary intelligence</div>
+      <div style="font-size:13px;color:#9a8a6a;line-height:1.6">P25–P90 salary bands, total comp breakdown, equity details, and negotiation leverage signals.</div>
+      <div style="margin-top:16px;height:8px;background:rgba(255,255,255,0.06);border-radius:4px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:20%;right:35%;height:100%;background:rgba(232,168,56,0.4);border-radius:4px"></div>
+        <div style="position:absolute;top:0;left:47%;width:4px;height:100%;background:#e8a838;border-radius:2px"></div>
+      </div>
+      <div style="display:-webkit-flex;display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:#9a8a6a;font-family:monospace">
+        <span>P25 $180k</span><span>median $240k</span><span>P90 $380k</span>
+      </div>
+    </div>
+
+    <!-- Card 6: Encryption -->
+    <div style="background:#211e1b;border:1px solid rgba(255,235,180,0.08);border-radius:12px;padding:24px;width:280px;text-align:left">
+      <div style="width:40px;height:40px;background:rgba(239,68,68,0.08);border-radius:10px;display:-webkit-flex;display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      </div>
+      <div style="font-size:14px;font-weight:600;color:#f2ead8;margin-bottom:8px">End-to-end encrypted</div>
+      <div style="font-size:13px;color:#9a8a6a;line-height:1.6">Your resumes and documents are encrypted before they leave your device. We never see your files.</div>
+      <div style="margin-top:16px;padding:8px 10px;background:rgba(239,68,68,0.05);border-radius:6px;font-size:11px;color:#f87171;font-family:monospace">AES-256 · client-side encryption</div>
+    </div>
+
+  </div>
+
+  <!-- Footer with version -->
+  <div style="text-align:center;padding:24px 32px 40px;border-top:1px solid rgba(255,235,180,0.06)">
+    <div style="display:-webkit-flex;display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:12px">
+      <div style="width:18px;height:18px;background:#e8a838;border-radius:4px;display:-webkit-flex;display:flex;align-items:center;justify-content:center">
+        <svg viewBox="0 0 20 20" fill="none" width="10" height="10"><path d="M4 16V9l6-5 6 5v7H13v-5H7v5H4z" fill="#1a1714"/></svg>
+      </div>
+      <span style="font-size:13px;color:#6b5f50">Pursuit · Job Tracker</span>
+    </div>
+    <div style="font-size:11px;color:#4a3f30;font-family:monospace">v1.4.0 · private beta</div>
+  </div>
+
 </div>
 
 <!-- LOGIN -->
@@ -615,6 +724,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       Don't have an account? <a onclick="showScreen('register')">Create one</a>
       <br><a onclick="showScreen('forgot')" style="font-size:12px;color:var(--text3)">Forgot password?</a>
     </div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.4.0 · private beta</div>
   </div>
 </div>
 
@@ -651,6 +761,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     </div>
     <button id="register-btn" class="auth-btn" onclick="register()">Create account</button>
     <div class="auth-switch">Already have an account? <a onclick="showScreen('login')">Sign in</a></div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.4.0 · private beta</div>
   </div>
 </div>
 
@@ -666,6 +777,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <div class="auth-field"><label>CONFIRM PASSWORD</label><input id="recover-confirmpw" type="password" placeholder="Confirm new password"></div>
     <button id="recover-btn" class="auth-btn" onclick="recoverAccount()">Reset password</button>
     <div class="auth-switch"><a onclick="showScreen('login')">Back to sign in</a></div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.4.0 · private beta</div>
   </div>
 </div>
 
@@ -705,23 +817,23 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
     <!-- Sidebar action buttons -->
     <div class="sidebar-action-btns">
-      <button class="sidebar-action-btn" onclick="showAnalytics()" title="Pipeline & analytics">
+      <button class="sidebar-action-btn" onclick="showAnalytics()" data-section="analytics" title="Pipeline & analytics">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 20V14M8 20V10M12 20V4M16 20V10M20 20V14"/></svg>
         Analytics
       </button>
-      <button class="sidebar-action-btn" onclick="showDocumentsPage()" title="Document library">
+      <button class="sidebar-action-btn" onclick="showDocumentsPage()" data-section="library" title="Document library">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Documents
       </button>
-      <button class="sidebar-action-btn" onclick="showWatchlist()" title="Watchlist">
+      <button class="sidebar-action-btn" onclick="showWatchlist()" data-section="watchlist" title="Watchlist">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
         Watchlist
       </button>
-      <button class="sidebar-action-btn" onclick="showReferralPipeline()" title="Referral pipeline">
+      <button class="sidebar-action-btn" onclick="showReferralPipeline()" data-section="referrals" title="Referral pipeline">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
         Referrals
       </button>
-      <button class="sidebar-action-btn" onclick="showStaleJobs()" title="Jobs needing attention">
+      <button class="sidebar-action-btn" onclick="showStaleJobs()" data-section="stale" title="Jobs needing attention">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         Stale jobs
       </button>
@@ -755,6 +867,8 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     </div>
     <!-- Detail view (populated by JS) -->
     <div id="detail-view" style="display:none;flex:1;overflow:hidden;flex-direction:column"></div>
+    <!-- Section view (analytics, docs, watchlist etc) — swaps into right pane -->
+    <div id="section-view" style="display:none;flex:1;overflow:hidden;flex-direction:column"></div>
   </div>
 
 </div>
@@ -866,7 +980,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 <div id="stale-nudge" class="stale-nudge" style="display:none;margin:8px 16px;"></div>
 
 <!-- ANALYTICS OVERLAY -->
-<div id="analytics-overlay" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;flex-direction:column;overflow:hidden">
+<div id="analytics-overlay" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:var(--bg);z-index:500;flex-direction:column;overflow:hidden">
   <div style="display:flex;align-items:center;gap:12px;padding:20px 24px;border-bottom:1px solid var(--border);flex-shrink:0">
     <div style="font-size:16px;font-weight:600;color:var(--text);flex:1">Application analytics</div>
     <button onclick="closeAnalytics()" style="width:32px;height:32px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:18px;color:var(--text2);display:flex;align-items:center;justify-content:center">×</button>
@@ -875,7 +989,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 </div>
 
 <!-- WATCHLIST OVERLAY -->
-<div id="watchlist-overlay" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;flex-direction:column">
+<div id="watchlist-overlay" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:var(--bg);z-index:500;flex-direction:column">
   <div style="display:flex;align-items:center;gap:12px;padding:20px 24px;border-bottom:1px solid var(--border);flex-shrink:0">
     <div style="font-size:16px;font-weight:600;color:var(--text);flex:1">Watchlist</div>
     <button onclick="closeWatchlist()" style="width:32px;height:32px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:18px;color:var(--text2);display:flex;align-items:center;justify-content:center">×</button>
@@ -884,7 +998,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 </div>
 
 <!-- REFERRAL PIPELINE OVERLAY -->
-<div id="referral-pipeline-overlay" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:500;flex-direction:column">
+<div id="referral-pipeline-overlay" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:var(--bg);z-index:500;flex-direction:column">
   <div style="display:flex;align-items:center;gap:12px;padding:20px 24px;border-bottom:1px solid var(--border);flex-shrink:0">
     <div style="font-size:16px;font-weight:600;color:var(--text);flex:1">Referral pipeline</div>
     <button onclick="closeReferralPipeline()" style="width:32px;height:32px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:18px;color:var(--text2);display:flex;align-items:center;justify-content:center">×</button>
@@ -893,7 +1007,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 </div>
 
 <!-- EMAIL TEMPLATES OVERLAY -->
-<div id="email-templates-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:600;align-items:center;justify-content:center">
+<div id="email-templates-overlay" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.4);z-index:600;align-items:center;justify-content:center">
   <div style="background:var(--bg2);border-radius:var(--radius);width:min(640px,92vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
     <div style="display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)">
       <div style="flex:1;font-size:15px;font-weight:600;color:var(--text)">Email templates</div>
@@ -904,7 +1018,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 </div>
 
 <!-- EMAIL TEMPLATE RESULT OVERLAY -->
-<div id="email-tpl-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:700;align-items:center;justify-content:center">
+<div id="email-tpl-overlay" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.4);z-index:700;align-items:center;justify-content:center">
   <div style="background:var(--bg2);border-radius:var(--radius);width:min(600px,92vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden">
     <div style="display:flex;align-items:center;padding:16px 20px;border-bottom:1px solid var(--border)">
       <div style="flex:1;font-size:14px;font-weight:600;color:var(--text)" id="et-content">Email</div>
@@ -918,7 +1032,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 </div>
 
 <!-- KEYBOARD SHORTCUTS OVERLAY -->
-<div id="kbd-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:600;align-items:center;justify-content:center" onclick="if(event.target===this)document.getElementById('kbd-overlay').style.display='none'">
+<div id="kbd-overlay" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.4);z-index:600;align-items:center;justify-content:center" onclick="if(event.target===this)document.getElementById('kbd-overlay').style.display='none'">
   <div style="background:var(--bg2);border-radius:var(--radius);width:min(480px,90vw);padding:24px;max-height:80vh;overflow-y:auto">
     <div style="font-size:16px;font-weight:600;margin-bottom:16px;color:var(--text)">Keyboard shortcuts</div>
     <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--text2)">
@@ -1270,7 +1384,7 @@ async function doRecover() {
 function showRecoveryCodesModal(codes, onDone, isNewAccount = false) {
   // Build entirely via DOM — no inline onclick with interpolated strings
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)';
+  overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.72);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;-webkit-backdrop-filter:blur(2px)';
 
   const card = document.createElement('div');
   card.style.cssText = 'background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:min(500px,100%);padding:28px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.5);position:relative';
@@ -1458,7 +1572,7 @@ async function doRegister() {
 function showEncryptionWarning(username) {
   return new Promise(resolve => {
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.8);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px';
     overlay.innerHTML = `
       <div style="background:var(--bg2);border:2px solid rgba(239,68,68,0.4);border-radius:var(--radius);width:min(520px,100%);padding:32px;max-height:90vh;overflow-y:auto">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
@@ -1869,6 +1983,12 @@ function renderJobList() {
 }
 
 function selectJob(id) {
+  // Deactivate any open section panel
+  _currentSection = null;
+  document.querySelectorAll('.sidebar-action-btn').forEach(btn => btn.classList.remove('active'));
+  const _sv = document.getElementById('section-view');
+  if (_sv) { _sv.style.display = 'none'; _sv.innerHTML = ''; }
+
   _setMobileActiveBtn('jobs');
   _mobileSection = 'jobs';
   currentJobId = id;
@@ -1899,6 +2019,67 @@ function selectJob(id) {
 // MOBILE NAVIGATION — bottom bar routing
 // ═══════════════════════════════════════════
 let _mobileSection = 'jobs'; // jobs | library | stats | settings
+
+// ─────────────────────────────────────────────────────────────────
+//  SECTION PANEL SYSTEM — desktop right-pane navigation
+// ─────────────────────────────────────────────────────────────────
+let _currentSection = null;
+
+function openSection(name) {
+  _currentSection = name;
+  currentJobId = null;
+
+  // Highlight matching sidebar button
+  document.querySelectorAll('.sidebar-action-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.section === name);
+  });
+
+  // Show section-view, hide others
+  const sv = document.getElementById('section-view');
+  const ev = document.getElementById('empty-state');
+  const dv = document.getElementById('detail-view');
+  if (ev) ev.style.display = 'none';
+  if (dv) dv.style.display = 'none';
+  sv.style.display = 'flex';
+  sv.style.flex = '1';
+  sv.style.flexDirection = 'column';
+  sv.style.overflow = 'hidden';
+  sv.innerHTML = '';
+
+  renderJobList(); // deselect any job highlight
+
+  // Mobile: slide main pane in
+  if (window.innerWidth <= 680) {
+    document.querySelector('.sidebar')?.classList.add('hidden-mobile');
+    document.querySelector('.main')?.classList.add('visible-mobile');
+  }
+}
+
+function closeSection() {
+  _currentSection = null;
+  document.querySelectorAll('.sidebar-action-btn').forEach(btn => btn.classList.remove('active'));
+  const sv = document.getElementById('section-view');
+  if (sv) { sv.style.display = 'none'; sv.innerHTML = ''; }
+
+  const ev = document.getElementById('empty-state');
+  const dv = document.getElementById('detail-view');
+  if (currentJobId && jobs[currentJobId]) {
+    if (dv) { dv.style.display = 'flex'; dv.style.flexDirection = 'column'; dv.style.flex = '1'; }
+    if (ev) ev.style.display = 'none';
+  } else {
+    if (ev) ev.style.display = '';
+    if (dv) dv.style.display = 'none';
+  }
+
+  // Mobile: back to sidebar/jobs
+  if (window.innerWidth <= 680) {
+    _mobileSection = 'jobs';
+    _setMobileActiveBtn('jobs');
+    document.querySelector('.sidebar')?.classList.remove('hidden-mobile');
+    document.querySelector('.main')?.classList.remove('visible-mobile');
+  }
+}
+
 
 function mobileNav(section) {
   // Close all overlays first
@@ -2337,7 +2518,7 @@ function showLibraryPicker() {
   const filtered = libraryDocs.filter(d => d.type === libraryPickTarget);
   const overlay = document.createElement('div');
   overlay.id = 'lib-picker-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center';
+  overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center';
   overlay.innerHTML = `
     <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:min(480px,90vw);max-height:70vh;display:flex;flex-direction:column;overflow:hidden">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)">
@@ -3128,6 +3309,7 @@ let editingDoc = null;
 
 function openDocsPage() { showDocumentsPage(); } // mobile nav alias
 async function showDocumentsPage() {
+  openSection('library');
   // Load docs
   try {
     const res = await fetch(API + '/api/docs', { headers: { Authorization: 'Bearer ' + token } });
@@ -3140,10 +3322,11 @@ async function showDocumentsPage() {
 }
 
 function renderDocsPage() {
-  document.getElementById('docs-overlay')?.remove();
+  const _sv = document.getElementById('section-view');
+  if (!_sv || _sv.style.display === 'none') return; // not in section mode
   const overlay = document.createElement('div');
   overlay.id = 'docs-overlay';
-  overlay.className = 'docs-overlay';
+  overlay.style.cssText = 'display:flex;flex-direction:column;flex:1;overflow:hidden;background:var(--bg)';
 
   const q = (window._docsSearchQuery || '').toLowerCase();
   const filtered = allDocs.filter(d =>
@@ -3157,8 +3340,7 @@ function renderDocsPage() {
       <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
         <svg width="18" height="18" viewBox="0 0 14 14" fill="none" style="flex-shrink:0"><path d="M2 2h6l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v4h4" stroke="currentColor" stroke-width="1.3"/></svg>
         <div class="docs-title" style="flex:1;min-width:0">Document Library</div>
-        <!-- Close button always paired with title so it's never pushed off -->
-        <button onclick="closeDocsPage()" style="width:32px;height:32px;flex-shrink:0;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:18px;color:var(--text2);display:flex;align-items:center;justify-content:center;line-height:1">×</button>
+
       </div>
       <!-- Upload button: wraps to next line on narrow screens -->
       <label class="tailor-btn" style="cursor:pointer;padding:7px 14px;flex-shrink:0">
@@ -3203,14 +3385,14 @@ function renderDocsPage() {
         </div>`}
     </div>`;
 
-  document.body.appendChild(overlay);
+  _sv.innerHTML = '';
+  _sv.appendChild(overlay);
   // Focus search input
   setTimeout(() => document.getElementById('docs-search-input')?.focus?.(), 50);
 }
 
 function closeDocsPage() {
-  document.getElementById('docs-overlay')?.remove();
-  if (_mobileSection === 'library') { _mobileSection = 'jobs'; _setMobileActiveBtn('jobs'); }
+  closeSection();
 }
 
 function setDocsFilter(f) {
@@ -3347,11 +3529,9 @@ async function handleFileUpload(event, type) {
 
 // ── ANALYTICS DASHBOARD ──
 function showAnalytics() {
-  const overlay = document.createElement('div');
-  overlay.id = 'analytics-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;overflow:hidden';
-  document.body.appendChild(overlay);
-  renderAnalytics(overlay);
+  openSection('analytics');
+  const sv = document.getElementById('section-view');
+  renderAnalytics(sv);
   _setMobileActiveBtn('stats');
   _mobileSection = 'stats';
 }
@@ -3797,7 +3977,7 @@ function openTailoringOverlay(jobId, jobDoc, j) {
 
   const overlay = document.createElement('div');
   overlay.id = 'tailor-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:700;display:flex;flex-direction:column;overflow:hidden;animation:fadeIn .18s ease';
+  overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:var(--bg);z-index:700;display:flex;flex-direction:column;overflow:hidden;animation:fadeIn .18s ease';
 
   overlay.innerHTML = `
     <!-- Header bar -->
@@ -4214,7 +4394,7 @@ function openContactModal(jobId, contactId) {
   const c = contactId ? (j.contacts||[]).find(x=>x.id===contactId) : null;
   const overlay = document.createElement('div');
   overlay.id = 'contact-modal-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center';
+  overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center';
   overlay.innerHTML = `
     <div style="background:var(--bg2);border-radius:var(--radius);width:min(480px,92vw);padding:24px;box-shadow:0 16px 64px rgba(0,0,0,0.2)">
       <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:16px">${c ? 'Edit contact' : 'Add contact'}</div>
@@ -4352,7 +4532,7 @@ function openAddQuestionModal(jobId, questionId) {
   const q = questionId ? (j.interviews||[]).find(x=>x.id===questionId) : null;
   const overlay = document.createElement('div');
   overlay.id = 'question-modal-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center';
+  overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center';
   overlay.innerHTML = `
     <div style="background:var(--bg2);border-radius:var(--radius);width:min(500px,92vw);padding:24px;box-shadow:0 16px 64px rgba(0,0,0,0.2)">
       <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:16px">${q ? 'Edit question' : 'Add question'}</div>
@@ -4576,7 +4756,7 @@ function openEmailTemplates(jobId) {
   const j = jobId ? jobs[jobId] : null;
   const overlay = document.createElement('div');
   overlay.id = 'email-templates-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center';
+  overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center';
   overlay.innerHTML = `
     <div style="background:var(--bg2);border-radius:var(--radius);width:min(700px,95vw);height:min(85vh,660px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 16px 64px rgba(0,0,0,0.25)">
       <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0">
@@ -4721,7 +4901,9 @@ function addSuggestedContact(jobId, idx) {
 // ── REFERRAL PIPELINE OVERLAY ──
 // ══════════════════════════════════════════════
 function showReferralPipeline() {
-  document.getElementById('referral-pipeline-overlay')?.remove();
+  openSection('referrals');
+  const sv = document.getElementById('section-view');
+  sv.style.flexDirection = 'column';
 
   // Build the data: all contacts across all jobs, grouped by company
   const allJobs = Object.values(jobs);
@@ -4746,21 +4928,16 @@ function showReferralPipeline() {
   const withContacts = Object.entries(companiesWithContacts).filter(([, v]) => v.contacts.length > 0);
   const opportunities = Object.entries(companiesWithContacts).filter(([, v]) => v.contacts.length === 0);
 
-  const overlay = document.createElement('div');
-  overlay.id = 'referral-pipeline-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;display:flex;align-items:center;justify-content:center';
-  overlay.innerHTML = `
-    <div style="background:var(--bg2);border-radius:var(--radius);width:min(740px,95vw);height:min(82vh,680px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 16px 64px rgba(0,0,0,0.25)">
-      <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0">
-        <div style="flex:1">
-          <div style="font-size:15px;font-weight:600;color:var(--text)">Referral Pipeline</div>
-          <div style="font-size:12px;color:var(--text3);margin-top:2px">Contacts who could refer you, and where you still need to find one</div>
-        </div>
-        <button onclick="document.getElementById('referral-pipeline-overlay').remove()" style="width:28px;height:28px;background:var(--bg3);border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:18px;color:var(--text2)">×</button>
+  sv.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.7" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:600;color:var(--text)">Referral Pipeline</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:1px">Contacts who could refer you, and where you still need to find one</div>
       </div>
-      <div style="flex:1;overflow-y:auto;padding:20px">
-
-        ${withContacts.length === 0 && opportunities.length === 0 ? `
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px">
+${withContacts.length === 0 && opportunities.length === 0 ? `
           <div style="text-align:center;padding:48px 20px;color:var(--text3)">
             <div style="font-size:32px;margin-bottom:12px">🤝</div>
             <div style="font-size:14px;font-weight:500;color:var(--text2);margin-bottom:6px">No contacts yet</div>
@@ -4788,7 +4965,7 @@ function showReferralPipeline() {
                         <div style="display:flex;gap:6px;flex-shrink:0">
                           ${c.email ? `<a href="mailto:${esc(c.email)}" style="padding:3px 8px;background:var(--accent-bg);color:#1a1917;border-radius:var(--radius-sm);font-size:11px;font-weight:600;text-decoration:none">Email</a>` : ''}
                           ${c.linkedin ? `<a href="${esc(c.linkedin)}" target="_blank" style="padding:3px 8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:11px;color:var(--blue);text-decoration:none">LinkedIn ↗</a>` : ''}
-                          <button onclick="document.getElementById('referral-pipeline-overlay').remove();selectJob('${c.jobId}');switchTab('contacts')" style="padding:3px 8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);color:var(--text2);cursor:pointer">View</button>
+                          <button onclick="selectJob('${c.jobId}');switchTab('contacts')" style="padding:3px 8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);color:var(--text2);cursor:pointer">View</button>
                         </div>
                       </div>`).join('')}
                   </div>
@@ -4815,50 +4992,18 @@ function showReferralPipeline() {
             </div>
           </div>` : ''}
       </div>
+    
     </div>`;
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-  document.body.appendChild(overlay);
+  _setMobileActiveBtn('referrals');
+  _mobileSection = 'referrals';
 }
-
-
-// ══════════════════════════════════════════════════════════════════
-// FEATURE 1: KEYBOARD SHORTCUTS
-// ══════════════════════════════════════════════════════════════════
-document.addEventListener('keydown', e => {
-  // Skip if typing in an input/textarea
-  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
-  if (e.target.contentEditable === 'true') return;
-  if (e.metaKey || e.ctrlKey || e.altKey) return;
-
-  const jobList = getFilteredJobs();
-  const idx = jobList.findIndex(j => j.id === currentJobId);
-
-  switch(e.key) {
-    case 'n': case 'N': openAddModal(); break;
-    case 'j': case 'J': // next job
-      if (jobList[idx + 1]) selectJob(jobList[idx + 1].id);
-      break;
-    case 'k': case 'K': // prev job
-      if (idx > 0) selectJob(jobList[idx - 1].id);
-      break;
-    case '1': if (currentJobId) switchTab('notes'); break;
-    case '2': if (currentJobId) switchTab('insights'); break;
-    case '3': if (currentJobId) switchTab('posting'); break;
-    case '4': if (currentJobId) switchTab('documents'); break;
-    case '5': if (currentJobId) switchTab('contacts'); break;
-    case '6': if (currentJobId) switchTab('interview'); break;
-    case '/': e.preventDefault(); document.getElementById('search-input')?.focus(); break;
-    case '?': showKeyboardShortcuts(); break;
-    case 'Escape': closeAddModal?.(); closeSettings?.(); closeAnalytics?.(); closeDocsPage?.(); break;
-  }
-});
 
 function showKeyboardShortcuts() {
   const existing = document.getElementById('kbd-overlay');
   if (existing) { existing.remove(); return; }
   const overlay = document.createElement('div');
   overlay.id = 'kbd-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:900;display:flex;align-items:center;justify-content:center';
+  overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.5);z-index:900;display:flex;align-items:center;justify-content:center';
   overlay.innerHTML = `<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:28px;width:min(480px,90vw);max-height:80vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.2)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
       <div style="font-size:16px;font-weight:700;color:var(--text)">Keyboard Shortcuts</div>
@@ -4919,36 +5064,38 @@ function renderStaleNudge() {
 }
 
 function showStaleJobs() {
+  openSection('stale');
+  const sv = document.getElementById('section-view');
   const stale = getStaleJobs();
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
-  overlay.innerHTML = `<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:min(500px,100%);max-height:70vh;overflow-y:auto;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,0.2)">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
-      <div style="font-size:16px;font-weight:700;color:var(--text)">⏰ Needs Follow-up</div>
-      <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
+  sv.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;padding:18px 24px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <div style="font-size:15px;font-weight:600;color:var(--text);flex:1">Needs Follow-up</div>
+      <div style="font-size:12px;color:var(--text3);font-family:var(--mono)">${stale.length} job${stale.length===1?'':'s'}</div>
     </div>
-    ${stale.map(j => {
-      const days = Math.floor((Date.now() - (j.updatedAt||j.createdAt||0)) / 86400000);
-      return `<div onclick="this.closest('[style*=fixed]').remove();selectJob('${j.id}')" style="padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:background .12s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
-        <div style="display:flex;justify-content:space-between;align-items:start">
-          <div>
-            <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(j.title)}</div>
-            <div style="font-size:12px;color:var(--text3)">${esc(j.company)} · ${esc(j.status)}</div>
-          </div>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--amber);white-space:nowrap">${days}d ago</div>
-        </div>
-      </div>`;
-    }).join('')}
-  </div>`;
-  overlay.addEventListener('click', e => { if (e.target===overlay) overlay.remove(); });
-  document.body.appendChild(overlay);
+    <div style="flex:1;overflow-y:auto;padding:20px">
+      ${stale.length === 0
+        ? `<div style="text-align:center;padding:48px;color:var(--text3)">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" style="opacity:.25;margin-bottom:12px"><circle cx="12" cy="12" r="10"/><path d="M20 6L9 17l-5-5"/></svg>
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">All caught up!</div>
+            <div style="font-size:13px">No applications need follow-up right now.</div>
+           </div>`
+        : stale.map(j => {
+            const days = Math.floor((Date.now() - (j.updatedAt||j.createdAt||0)) / 86400000);
+            return `<div onclick="selectJob('${j.id}')" style="padding:13px 16px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:background .12s;display:flex;align-items:center;gap:12px" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px">${esc(j.title)}</div>
+                <div style="font-size:12px;color:var(--text3)">${esc(j.company)} · ${esc(j.status)}</div>
+              </div>
+              <div style="font-size:11px;font-family:var(--mono);color:var(--amber);white-space:nowrap;flex-shrink:0">${days}d ago</div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text3)" stroke-width="1.7" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+            </div>`;
+          }).join('')
+      }
+    </div>`;
+  _setMobileActiveBtn('stale');
+  _mobileSection = 'stale';
 }
-
-// ══════════════════════════════════════════════════════════════════
-// FEATURE 3: BULK OPERATIONS
-// ══════════════════════════════════════════════════════════════════
-let bulkSelected = new Set();
-let bulkMode = false;
 
 function toggleBulkMode() {
   bulkMode = !bulkMode;
@@ -5004,35 +5151,34 @@ function bulkExport() {
 // FEATURE 4: COMPANY WATCHLIST
 // ══════════════════════════════════════════════════════════════════
 function showWatchlist() {
+  openSection('watchlist');
+  const sv = document.getElementById('section-view');
   const watchlist = Object.values(jobs).filter(j => j.watchlist);
-  const overlay = document.createElement('div');
-  overlay.id = 'watchlist-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;overflow:hidden';
-  overlay.innerHTML = `
+  sv.innerHTML = `
     <div style="display:flex;align-items:center;gap:14px;padding:18px 24px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
-      <div style="font-size:16px;font-weight:700;color:var(--text);flex:1">👀 Company Watchlist</div>
-      <button onclick="addToWatchlist()" style="padding:7px 14px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">+ Add company</button>
-      <button onclick="document.getElementById('watchlist-overlay').remove()" style="width:32px;height:32px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:18px;color:var(--text2)">×</button>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-bg)" stroke-width="1.7" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      <div style="font-size:15px;font-weight:600;color:var(--text);flex:1">Company Watchlist</div>
+      <button onclick="addToWatchlist()" style="padding:7px 14px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">+ Add company</button>
     </div>
     <div style="flex:1;overflow-y:auto;padding:24px">
       ${watchlist.length === 0 ? `<div style="text-align:center;padding:48px;color:var(--text3)">
-        <div style="font-size:40px;margin-bottom:12px">👀</div>
-        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">No companies on your watchlist</div>
-        <div style="font-size:13px">Add companies you want to work at eventually — track news, signals, and contacts over time.</div>
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" style="opacity:.25;margin-bottom:12px"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">No companies on your watchlist</div>
+        <div style="font-size:13px">Star any application from its detail view to add it here.</div>
       </div>` : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
         ${watchlist.map(j => `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative">
-          <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px">${esc(j.company)}</div>
-          <div style="font-size:12px;color:var(--text3);margin-bottom:10px">${esc(j.watchlistNote||'No notes yet')}</div>
-          ${j.url ? `<a href="${esc(j.url)}" target="_blank" style="font-size:12px;color:var(--blue)">Open posting ↗</a>` : ''}
-          <div style="position:absolute;top:12px;right:12px;display:flex;gap:4px">
-            <button onclick="document.getElementById('watchlist-overlay').remove();selectJob('${j.id}')" style="padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--text2);cursor:pointer">View</button>
-            <button onclick="toggleWatchlist('${j.id}');document.getElementById('watchlist-overlay').remove();showWatchlist()" style="padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--red);cursor:pointer">Remove</button>
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px">${esc(j.company)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:10px">${esc(j.title)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-bottom:10px">${esc(j.watchlistNote||'')}</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button onclick="selectJob('${j.id}')" style="padding:4px 10px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:4px;font-size:11px;font-weight:600;cursor:pointer;font-family:var(--font)">View</button>
+            <button onclick="toggleWatchlist('${j.id}');showWatchlist()" style="padding:4px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--red);cursor:pointer;font-family:var(--font)">Remove</button>
           </div>
         </div>`).join('')}
       </div>`}
     </div>`;
-  overlay.addEventListener('click', e => { if (e.target===overlay) overlay.remove(); });
-  document.body.appendChild(overlay);
+  _setMobileActiveBtn('watchlist');
+  _mobileSection = 'watchlist';
 }
 
 function toggleWatchlist(jobId) {
@@ -5145,7 +5291,7 @@ function showEmailTemplates(jobId) {
   const j = jobs[jobId || currentJobId]; if (!j) return;
   const overlay = document.createElement('div');
   overlay.id = 'email-tpl-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px';
   const types = [
     { id: 'thank-you',  label: 'Thank-you after interview',   icon: '🙏' },
     { id: 'follow-up',  label: 'Follow-up on application',    icon: '📬' },
@@ -5755,12 +5901,13 @@ setInterval(() => {
     </div>
     <button class="auth-btn" id="forgot-btn" onclick="doForgot()">Send recovery email</button>
     <div class="auth-switch" style="margin-top:12px"><a onclick="showScreen('login')">← Back to sign in</a></div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.4.0 · private beta</div>
   </div>
 </div>
 
 
 <!-- SETTINGS PANEL — full overlay with sidebar nav -->
-<div id="settings-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:800;align-items:center;justify-content:center" onclick="if(event.target===this)closeSettings()">
+<div id="settings-overlay" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.6);z-index:800;align-items:center;justify-content:center" onclick="if(event.target===this)closeSettings()">
   <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:min(860px,96vw);height:min(88vh,700px);display:flex;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.4)">
 
     <!-- Sidebar nav -->
