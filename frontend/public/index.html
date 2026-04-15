@@ -88,7 +88,7 @@
 html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; letter-spacing: -0.01em; }
 
 /* ── AUTH ── */
-.auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: linear-gradient(160deg,#0d1f35 0%,#1a2d4a 45%,#1e3320 100%); }
+.auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: transparent; }
 .auth-card { width: 100%; max-width: 400px; background: rgba(15,12,10,0.75); backdrop-filter: blur(20px); border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); padding: 32px; }
 .auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 36px; }
 .auth-logo-mark { width: 36px; height: 36px; background: var(--accent-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -98,10 +98,10 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .auth-heading { font-size: 24px; font-weight: 500; letter-spacing: -0.5px; margin-bottom: 6px; color: #ffffff; }
 .auth-sub { font-size: 13px; color: rgba(255,255,255,0.55); margin-bottom: 28px; line-height: 1.6; }
 .auth-field { margin-bottom: 14px; }
-.auth-field label { display: block; font-size: 11px; font-family: var(--mono); color: var(--text2); margin-bottom: 6px; letter-spacing: 0.5px; }
-.auth-field input { width: 100%; padding: 11px 14px; background: rgba(255,255,255,0.07); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--font); font-size: 14px; color: var(--text); outline: none; transition: border-color 0.15s; }
-.auth-field input:focus { border-color: var(--accent); }
-.auth-field input::placeholder { color: var(--text3); }
+.auth-field label { display: block; font-size: 11px; font-family: var(--mono); color: rgba(242,234,216,0.45); margin-bottom: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
+.auth-field input { width: 100%; padding: 11px 14px; background: rgba(255,255,255,0.09); border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius-sm); font-family: var(--font); font-size: 14px; color: #f2ead8; outline: none; transition: border-color 0.15s; }
+.auth-field input:focus { border-color: #e8a838; background: rgba(255,255,255,0.12); }
+.auth-field input::placeholder { color: rgba(242,234,216,0.3); }
 .auth-btn { width: 100%; padding: 12px; background: var(--accent-bg); color: #1a1917; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 8px; transition: background 0.15s; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .auth-btn:hover { background: var(--accent-bg2); }
 .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -528,7 +528,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
   .main { position: fixed; top:0;right:0;bottom:0;left:0; z-index: 200; transform: translateX(100%); transition: transform 0.25s ease; }
   .main.visible-mobile { transform: translateX(0); }
   .mobile-back-btn { display: flex !important; }
-  .mobile-bottom-bar { display: flex !important; }
+  body.in-app .mobile-bottom-bar { display: flex !important; }
   .mobile-bottom-btn.active { color: var(--accent-bg) !important; }
   .sidebar { padding-bottom: 56px; }
   .sidebar-header { padding: 16px 16px 10px; }
@@ -578,111 +578,94 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 </head>
 <body>
 
+<!-- Persistent mountain background — shared by landing, login, register -->
+<div id="mountain-bg" style="position:fixed;inset:0;z-index:0;pointer-events:none">
+  <img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=85&auto=format&fit=crop" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 40%;filter:grayscale(100%) contrast(1.05) brightness(0.85)" alt=""/>
+  <div style="position:absolute;inset:0;background:linear-gradient(175deg,#c8752a 0%,#7a4a1a 35%,#2a1a0a 65%,#0f0a05 100%);mix-blend-mode:multiply;opacity:0.82"></div>
+  <div style="position:absolute;inset:0;background:rgba(35,16,3,0.3)"></div>
+  <div style="position:absolute;bottom:0;left:0;right:0;height:70%;background:linear-gradient(to top,rgba(18,8,2,0.95) 0%,rgba(18,8,2,0.4) 50%,transparent 100%)"></div>
+</div>
+
 <!-- ═══ SCREENS ═══ -->
 
 <!-- LANDING -->
 <div id="screen-landing" style="display:block;position:fixed;top:0;right:0;bottom:0;left:0;z-index:900;overflow-y:auto;font-family:var(--font)">
 
-  <!-- Full-bleed duotone mountain background -->
-  <div style="position:fixed;inset:0;z-index:0">
-    <!-- Real mountain photo (Himalayas) -->
-    <img
-      src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1920&q=85&auto=format&fit=crop"
-      style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 40%;filter:grayscale(100%) contrast(1.05) brightness(0.9)"
-      alt=""
-    />
-    <!-- Split-tone: orange highlights, gray/charcoal shadows via multiply -->
-    <div style="position:absolute;inset:0;background:linear-gradient(175deg,#c8752a 0%,#7a4a1a 35%,#2a1a0a 65%,#0f0a05 100%);mix-blend-mode:multiply;opacity:0.82"></div>
-    <!-- Slight warm tint on top -->
-    <div style="position:absolute;inset:0;background:rgba(40,20,5,0.35)"></div>
-    <!-- Bottom fade to keep text readable -->
-    <div style="position:absolute;bottom:0;left:0;right:0;height:60%;background:linear-gradient(to top,rgba(20,10,3,0.92) 0%,rgba(20,10,3,0.4) 50%,transparent 100%)"></div>
+
+
+  <!-- Sticky nav -->
+  <div style="position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:flex-end;padding:20px 36px;background:linear-gradient(to bottom,rgba(18,8,2,0.6) 0%,transparent 100%);backdrop-filter:blur(0px)">
+    <div style="display:flex;gap:10px">
+      <button onclick="showScreen('login')" style="padding:9px 20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.18);border-radius:8px;font-family:var(--font);font-size:13px;color:rgba(255,255,255,0.85);cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.18)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">Sign in</button>
+      <button onclick="showScreen('register')" style="padding:9px 20px;background:#e8a838;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;color:#1a0d00;cursor:pointer" onmouseover="this.style.background='#f0b84a'" onmouseout="this.style.background='#e8a838'">Get started</button>
+    </div>
   </div>
 
-  <!-- Content: centered hero -->
-  <div style="position:relative;z-index:1;min-height:100vh;display:flex;flex-direction:column">
-
-    <!-- Nav -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:24px 40px;flex-shrink:0">
-      <div style="display:flex;align-items:center;gap:10px">
-        <div style="width:32px;height:32px;background:rgba(200,117,42,0.25);border:1px solid rgba(200,117,42,0.4);border-radius:8px;display:flex;align-items:center;justify-content:center">
-          <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M4 16V9l6-5 6 5v7H13v-5H7v5H4z" fill="#e8a838"/></svg>
-        </div>
-        <span style="font-size:15px;font-weight:600;color:#f2ead8;letter-spacing:-0.3px">Summit</span>
-      </div>
-      <div style="display:flex;gap:10px">
-        <button onclick="showScreen('login')" style="padding:8px 18px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:8px;font-family:var(--font);font-size:13px;color:rgba(255,255,255,0.85);cursor:pointer;backdrop-filter:blur(8px)" onmouseover="this.style.background='rgba(255,255,255,0.18)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">Sign in</button>
-        <button onclick="showScreen('register')" style="padding:8px 18px;background:#e8a838;border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:600;color:#1a0d00;cursor:pointer" onmouseover="this.style.background='#f0b84a'" onmouseout="this.style.background='#e8a838'">Get started</button>
-      </div>
-    </div>
+  <!-- Scrollable content -->
+  <div style="position:relative;z-index:1">
 
     <!-- Hero -->
-    <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 24px 40px">
-      <div style="font-size:11px;font-family:var(--mono);letter-spacing:3px;color:#e8a838;text-transform:uppercase;margin-bottom:20px;opacity:0.9">Job Application Tracker</div>
-      <h1 style="font-size:clamp(52px,8vw,88px);font-weight:800;color:#f2ead8;letter-spacing:-3px;line-height:0.95;margin:0 0 20px">Summit</h1>
-      <p style="font-size:clamp(15px,2vw,19px);color:rgba(242,234,216,0.65);max-width:480px;line-height:1.55;margin:0 0 40px">Track every application. Tailor every resume.<br>Land the role you deserve.</p>
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 24px 80px;min-height:80vh">
+      <h1 style="font-size:clamp(56px,9vw,96px);font-weight:800;color:#f2ead8;letter-spacing:-3px;line-height:0.92;margin:0 0 22px">Summit</h1>
+      <p style="font-size:clamp(15px,2vw,18px);color:rgba(242,234,216,0.6);max-width:420px;line-height:1.6;margin:0 0 44px">Track every application.<br>Tailor every resume. Land the role.</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
-        <button onclick="showScreen('register')" style="padding:14px 28px;background:#e8a838;border:none;border-radius:10px;font-family:var(--font);font-size:15px;font-weight:700;color:#1a0d00;cursor:pointer;box-shadow:0 0 40px rgba(232,168,56,0.3)" onmouseover="this.style.background='#f0b84a'" onmouseout="this.style.background='#e8a838'">Get started — it's free</button>
-        <button onclick="showScreen('login')" style="padding:14px 28px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:10px;font-family:var(--font);font-size:15px;color:rgba(255,255,255,0.85);cursor:pointer;backdrop-filter:blur(8px)" onmouseover="this.style.background='rgba(255,255,255,0.18)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">Sign in</button>
+        <button onclick="showScreen('register')" style="padding:14px 30px;background:#e8a838;border:none;border-radius:10px;font-family:var(--font);font-size:15px;font-weight:700;color:#1a0d00;cursor:pointer;box-shadow:0 0 48px rgba(232,168,56,0.28)" onmouseover="this.style.background='#f0b84a'" onmouseout="this.style.background='#e8a838'">Get started free</button>
+        <button onclick="showScreen('login')" style="padding:14px 30px;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.18);border-radius:10px;font-family:var(--font);font-size:15px;color:rgba(255,255,255,0.82);cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.16)'" onmouseout="this.style.background='rgba(255,255,255,0.09)'">Sign in</button>
       </div>
     </div>
 
-    <!-- Feature cards -->
-    <div style="position:relative;z-index:1;padding:0 24px 60px;max-width:1100px;margin:0 auto;width:100%">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+    <!-- Feature grid -->
+    <div style="padding:0 24px 80px;max-width:1040px;margin:0 auto">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
 
-        <div style="background:rgba(26,13,0,0.7);border:1px solid rgba(232,168,56,0.15);border-radius:14px;padding:22px;backdrop-filter:blur(12px)">
-          <div style="font-size:18px;margin-bottom:10px">📋</div>
+        <!-- Pipeline -->
+        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8a838" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M4 20V14M8 20V10M12 20V4M16 20V10M20 20V14"/></svg>
           <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Pipeline tracking</div>
-          <div style="font-size:12px;color:rgba(242,234,216,0.5);line-height:1.5">Kanban-style status from wishlist to offer. See your full funnel at a glance.</div>
-          <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">
-            <span style="padding:3px 8px;background:rgba(59,130,246,0.2);border-radius:4px;font-size:10px;color:#93c5fd;font-family:var(--mono)">applied</span>
-            <span style="padding:3px 8px;background:rgba(245,158,11,0.2);border-radius:4px;font-size:10px;color:#fcd34d;font-family:var(--mono)">interview</span>
-            <span style="padding:3px 8px;background:rgba(16,185,129,0.2);border-radius:4px;font-size:10px;color:#6ee7b7;font-family:var(--mono)">offer</span>
-          </div>
+          <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Kanban-style status from wishlist to offer. See your full funnel at a glance.</div>
         </div>
 
-        <div style="background:rgba(26,13,0,0.7);border:1px solid rgba(232,168,56,0.15);border-radius:14px;padding:22px;backdrop-filter:blur(12px)">
-          <div style="font-size:18px;margin-bottom:10px">✦</div>
+        <!-- AI tailoring -->
+        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8a838" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
           <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">AI resume tailoring</div>
-          <div style="font-size:12px;color:rgba(242,234,216,0.5);line-height:1.5">Instantly tailor your resume and cover letter to each role with AI.</div>
-          <div style="margin-top:12px;font-size:10px;color:rgba(232,168,56,0.7);font-family:var(--mono)">fastest available AI · auto-selected</div>
+          <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Instantly tailor your resume and cover letter to each role. Formatting preserved.</div>
         </div>
 
-        <div style="background:rgba(26,13,0,0.7);border:1px solid rgba(232,168,56,0.15);border-radius:14px;padding:22px;backdrop-filter:blur(12px)">
-          <div style="font-size:18px;margin-bottom:10px">🏢</div>
+        <!-- Company intel -->
+        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8a838" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Company intelligence</div>
-          <div style="font-size:12px;color:rgba(242,234,216,0.5);line-height:1.5">Glassdoor ratings, salary ranges, culture analysis, and news — one click.</div>
-          <div style="margin-top:12px;font-size:11px;color:rgba(242,234,216,0.6)">$62.95 · <span style="color:#6ee7b7">+1.2%</span> · 24.2B mkt cap</div>
+          <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Glassdoor ratings, salary ranges, culture and news — all in one click.</div>
         </div>
 
-        <div style="background:rgba(26,13,0,0.7);border:1px solid rgba(232,168,56,0.15);border-radius:14px;padding:22px;backdrop-filter:blur(12px)">
-          <div style="font-size:18px;margin-bottom:10px">🎤</div>
+        <!-- Interview -->
+        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8a838" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Interview prep</div>
-          <div style="font-size:12px;color:rgba(242,234,216,0.5);line-height:1.5">AI-generated role-specific questions. Track what you've practiced.</div>
-          <div style="margin-top:12px;font-size:11px;color:rgba(242,234,216,0.6)">12 / 15 practiced</div>
+          <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">AI-generated role-specific questions. Track what you've practiced.</div>
         </div>
 
-        <div style="background:rgba(26,13,0,0.7);border:1px solid rgba(232,168,56,0.15);border-radius:14px;padding:22px;backdrop-filter:blur(12px)">
-          <div style="font-size:18px;margin-bottom:10px">💰</div>
+        <!-- Salary -->
+        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8a838" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
           <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Salary intelligence</div>
-          <div style="font-size:12px;color:rgba(242,234,216,0.5);line-height:1.5">P25–P90 bands, total comp breakdown, equity details, negotiation signals.</div>
-          <div style="margin-top:12px;font-size:10px;color:rgba(242,234,216,0.5);font-family:var(--mono)">P25 $180k · median $240k · P90 $380k</div>
+          <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Market benchmarks, total comp breakdown, and negotiation signals.</div>
         </div>
 
-        <div style="background:rgba(26,13,0,0.7);border:1px solid rgba(232,168,56,0.15);border-radius:14px;padding:22px;backdrop-filter:blur(12px)">
-          <div style="font-size:18px;margin-bottom:10px">📚</div>
+        <!-- Documents -->
+        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8a838" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Document library</div>
-          <div style="font-size:12px;color:rgba(242,234,216,0.5);line-height:1.5">Store all your resumes and cover letters. Pick and tailor per application.</div>
-          <div style="margin-top:12px;font-size:10px;color:rgba(232,168,56,0.6);font-family:var(--mono)">encrypted · private · yours</div>
+          <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Store resumes and cover letters. Pick and tailor per application.</div>
         </div>
 
       </div>
 
-      <!-- Bottom CTA -->
-      <div style="text-align:center;margin-top:48px">
+      <!-- Footer CTA -->
+      <div style="text-align:center;margin-top:56px">
         <button onclick="showScreen('register')" style="padding:14px 32px;background:#e8a838;border:none;border-radius:10px;font-family:var(--font);font-size:15px;font-weight:700;color:#1a0d00;cursor:pointer" onmouseover="this.style.background='#f0b84a'" onmouseout="this.style.background='#e8a838'">Start tracking for free →</button>
-        <div style="margin-top:16px;font-size:11px;color:rgba(242,234,216,0.3);letter-spacing:0.5px">jobsummit.app · No credit card required</div>
+        <div style="margin-top:14px;font-size:11px;color:rgba(242,234,216,0.25);letter-spacing:0.5px">jobsummit.app · No credit card required</div>
       </div>
     </div>
 
@@ -1220,23 +1203,47 @@ window.addEventListener('resize', () => {
 
 window.addEventListener('DOMContentLoaded', () => {
   if (token && currentUser) { showApp(); loadJobs(); }
-  else showScreen('landing');
+  else {
+    const hash = location.hash.replace('#','');
+    const valid = ['login','register','forgot','recover'];
+    showScreen(valid.includes(hash) ? hash : 'landing', false);
+  }
 });
 
-function showScreen(n) {
+// Browser back/forward support for public screens
+window.addEventListener('popstate', e => {
+  if (token && currentUser) return;
+  const screen = (e.state && e.state.screen) || (location.hash ? location.hash.replace('#','') : 'landing');
+  showScreen(screen, false);
+});
+
+function showScreen(n, pushHistory=true) {
   ['login','register','app','recover','forgot','landing'].forEach(s => {
     const el = document.getElementById('screen-'+s);
     if (!el) return;
-    // landing uses block layout; auth/app screens use flex
-    el.style.display = s !== n ? 'none' : (s === 'landing' ? 'block' : 'flex');
+    const displayMap = {app:'',landing:'block',login:'flex',register:'flex',recover:'flex',forgot:'flex'};
+    el.style.display = s === n ? (displayMap[s] || 'block') : 'none';
   });
-  if (n==='login') setTimeout(()=>document.getElementById('login-username')?.focus(), 80);
-  if (n==='register') setTimeout(()=>document.getElementById('reg-username')?.focus(), 80);
-  if (n==='recover') setTimeout(()=>document.getElementById('recover-username')?.focus(), 80);
+  // Show/hide mountain background — visible on public screens, hidden in app
+  const bg = document.getElementById('mountain-bg');
+  if (bg) bg.style.display = n === 'app' ? 'none' : '';
+  // Show mobile bottom bar only inside the app
+  document.body.classList.toggle('in-app', n === 'app');
+
+  // Browser history for back-button support on public screens
+  if (pushHistory && ['landing','login','register','forgot','recover'].includes(n)) {
+    const hash = n === 'landing' ? '' : '#' + n;
+    if (location.hash !== hash && !(n === 'landing' && location.hash === '')) {
+      history.pushState({screen: n}, '', hash || '/');
+    }
+  }
+  if (n === 'recover') setTimeout(()=>document.getElementById('recover-username')?.focus(), 80);
 }
+
 
 function showApp() {
   showScreen('app');
+  const bg = document.getElementById('mountain-bg'); if(bg) bg.style.display='none';
   setTimeout(_initMobileNav, 50);
   document.getElementById('user-avatar').textContent = (currentUser||'?').slice(0,2).toUpperCase();
   document.getElementById('user-name-display').textContent = currentUser;
@@ -1643,6 +1650,7 @@ function checkWarningBoxes() {
 }
 
 function doLogout() {
+  const bg = document.getElementById('mountain-bg'); if(bg) bg.style.display='';
   token=null; currentUser=null; jobs={}; currentJobId=null;
   dataKey=null; isEncrypted=false; // Zero-knowledge: clear key from memory
   localStorage.removeItem('applied_token');

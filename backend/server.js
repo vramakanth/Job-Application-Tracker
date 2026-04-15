@@ -35,6 +35,26 @@ for (const d of [DATA_DIR, JOBS_DIR, DOCS_DIR]) {
   if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
 }
 
+// ── Auto-migrate users: rename 'password' field to 'passwordHash' ──
+// Old server stored bcrypt hash as 'password', new server uses 'passwordHash'
+try {
+  if (fs.existsSync(USERS_FILE)) {
+    const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf8'));
+    let migrated = 0;
+    for (const [k, v] of Object.entries(users)) {
+      if (v.password && !v.passwordHash) {
+        v.passwordHash = v.password;
+        delete v.password;
+        migrated++;
+      }
+    }
+    if (migrated > 0) {
+      fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+      console.log(`✓ Migrated ${migrated} user(s): password → passwordHash`);
+    }
+  }
+} catch(e) { console.warn('Migration warning:', e.message); }
+
 // ── Crypto helpers ───────────────────────────────────────────────────────────
 const CIPHER = 'aes-256-gcm';
 
