@@ -1956,6 +1956,9 @@ function getFilteredJobs() {
     .sort((a,b) => b.createdAt - a.createdAt);
 }
 
+let bulkSelected = new Set();
+let bulkMode = false;
+
 function renderJobList() {
   const list = document.getElementById('job-list');
   const filtered = getFilteredJobs();
