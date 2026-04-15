@@ -1311,6 +1311,24 @@ Return ONLY a valid JSON object with these exact fields (no markdown, no backtic
     },
     "benchmarkSources": ["Levels.fyi", "Glassdoor", "LinkedIn Salary"]
   },
+  "workforce": {
+    "headcount": "e.g. ~12,000 (2024)",
+    "headcountTrend": "growing (choose: growing, stable, shrinking)",
+    "headcountHistory": [{"year":2021,"count":8000},{"year":2022,"count":10000},{"year":2023,"count":12000},{"year":2024,"count":11500}],
+    "recentLayoffs": "Describe any layoffs in past 2 years or null if none. Include year, % affected, reason.",
+    "fullTimePct": 85,
+    "contractorPct": 15,
+    "remoteRatio": 40,
+    "avgTenure": "2.8 years (Glassdoor)",
+    "visaSponsorship": "yes (choose: yes, limited, no)",
+    "visaNote": "1 sentence: H-1B sponsorship history, typical roles sponsored, LCA filings if notable",
+    "genderSplit": {"male": 62, "female": 35, "other": 3},
+    "ethnicityMix": {"white": 45, "asian": 28, "hispanic": 12, "black": 8, "other": 7},
+    "glassdoorDiversity": 3.9,
+    "topLocations": ["San Diego, CA", "San Jose, CA", "Remote"],
+    "internationalPct": 30,
+    "note": "1-2 sentences on overall workforce culture, diversity initiatives, or notable workforce facts"
+  },
   "news": [
     {"headline": "Real recent headline", "source": "Source name", "date": "YYYY-MM-DD", "url": "https://real-url.com", "sentiment": "positive"},
     {"headline": "...", "source": "...", "date": "...", "url": "...", "sentiment": "negative"},

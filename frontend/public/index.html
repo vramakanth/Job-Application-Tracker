@@ -2340,7 +2340,7 @@ function renderInsightsTab(j) {
     <div class="insight-section">
       <div class="insight-section-header">
         <div class="insight-section-icon" style="background:var(--bg3)">📊</div>
-        <div class="insight-section-title">Financial data (Finnhub)</div>
+        <div class="insight-section-title">Stock &amp; financials</div>
         <span class="insight-section-badge">${hasFinnhub ? 'API key set' : 'API key required'}</span>
       </div>
       <div class="insight-section-body">
@@ -2367,10 +2367,16 @@ function renderInsightsTab(j) {
       ${ins.overview ? renderOverviewCards(ins.overview) : ''}
     </div>
 
+
+
+
+
+
+
     <div class="insight-section">
       <div class="insight-section-header">
-        <div class="insight-section-icon" style="background:rgba(37,99,235,0.1)">🏢</div>
-        <div class="insight-section-title">Company overview</div>
+        <div class="insight-section-icon" style="background:rgba(37,99,235,0.1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h6M15 9h6M3 15h6M15 15h6"/></svg></div>
+        <div class="insight-section-title">About the company</div>
         ${ins.generatedAt ? `<span class="insight-section-badge">${timeSince(ins.generatedAt)}</span>` : ''}
       </div>
       <div class="insight-section-body">
@@ -2380,40 +2386,44 @@ function renderInsightsTab(j) {
 
     <div class="insight-section">
       <div class="insight-section-header">
-        <div class="insight-section-icon" style="background:rgba(22,163,74,0.1)">⭐</div>
-        <div class="insight-section-title">Culture &amp; employee sentiment</div>
-      </div>
-      <div class="insight-section-body">
-        ${ins.culture ? renderCultureSection(ins.culture) : '<div class="insight-ai-text">No culture data available.</div>'}
-      </div>
-    </div>
-
-    <div class="insight-section">
-      <div class="insight-section-header">
-        <div class="insight-section-icon" style="background:rgba(168,85,247,0.1)">🎯</div>
-        <div class="insight-section-title">Role intelligence</div>
+        <div class="insight-section-icon" style="background:rgba(168,85,247,0.1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg></div>
+        <div class="insight-section-title">About this role</div>
       </div>
       <div class="insight-section-body">
         <div class="insight-ai-text">${formatAiText(ins.roleIntel || '')}</div>
       </div>
     </div>
 
+
+    ${ins.compensation ? renderCompensationSection(ins.compensation, ins) : ''}
+
     <div class="insight-section">
       <div class="insight-section-header">
-        <div class="insight-section-icon" style="background:rgba(234,179,8,0.1)">🚨</div>
-        <div class="insight-section-title">Red &amp; green flags</div>
+        <div class="insight-section-icon" style="background:rgba(22,163,74,0.1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+        <div class="insight-section-title">Culture &amp; ratings</div>
+      </div>
+      <div class="insight-section-body">
+        ${ins.culture ? renderCultureSection(ins.culture) : '<div class="insight-ai-text">No culture data available.</div>'}
+      </div>
+    </div>
+
+
+    ${ins.workforce ? renderWorkforceSection(ins.workforce) : ''}
+
+    <div class="insight-section">
+      <div class="insight-section-header">
+        <div class="insight-section-icon" style="background:rgba(234,179,8,0.1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div class="insight-section-title">Signals</div>
       </div>
       <div class="insight-section-body">
         ${ins.flags ? renderFlags(ins.flags) : ''}
       </div>
     </div>
 
-    ${ins.compensation ? renderCompensationSection(ins.compensation, ins) : ''}
-
     <div class="insight-section">
       <div class="insight-section-header">
-        <div class="insight-section-icon" style="background:rgba(239,68,68,0.1)">📰</div>
-        <div class="insight-section-title">Recent news</div>
+        <div class="insight-section-icon" style="background:rgba(239,68,68,0.1)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg></div>
+        <div class="insight-section-title">Latest news</div>
       </div>
       <div class="insight-section-body no-pad">
         ${ins.news && ins.news.length ? renderNews(ins.news) : '<div style="padding:16px;font-size:13px;color:var(--text3)">No recent news found.</div>'}
@@ -2510,6 +2520,154 @@ function renderFlags(flags) {
   </div>`;
 }
 
+
+function renderWorkforceSection(wf) {
+  if (!wf) return '';
+
+  // Headcount sparkline (SVG)
+  const hist = wf.headcountHistory || [];
+  let sparkline = '';
+  if (hist.length >= 2) {
+    const counts = hist.map(h => h.count);
+    const maxC = Math.max(...counts), minC = Math.min(...counts);
+    const span = maxC - minC || 1;
+    const W = 120, H = 28;
+    const pts = hist.map((h, i) => {
+      const x = Math.round((i / (hist.length - 1)) * W);
+      const y = Math.round(H - ((h.count - minC) / span) * H);
+      return `${x},${y}`;
+    }).join(' ');
+    // Color: green if last > first, red if shrinking
+    const trend = hist[hist.length-1].count >= hist[0].count ? 'var(--green)' : 'var(--red)';
+    sparkline = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="overflow:visible">
+      <polyline points="${pts}" fill="none" stroke="${trend}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${hist.map((h, i) => {
+        const x = Math.round((i / (hist.length - 1)) * W);
+        const y = Math.round(H - ((h.count - minC) / span) * H);
+        return `<circle cx="${x}" cy="${y}" r="3" fill="${trend}"/>`;
+      }).join('')}
+    </svg>`;
+  }
+
+  // Gender / ethnicity bars
+  const genderBar = (label, pct, color) =>
+    `<div style="margin-bottom:5px">
+       <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px">
+         <span>${label}</span><span style="font-family:var(--mono)">${pct}%</span>
+       </div>
+       <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
+         <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;transition:width .4s ease"></div>
+       </div>
+     </div>`;
+
+  // Visa badge
+  const visaColor = { yes: 'var(--green)', limited: 'var(--amber)', no: 'var(--red)' }[wf.visaSponsorship] || 'var(--text3)';
+  const visaLabel = { yes: '✓ Sponsors visas', limited: '~ Limited sponsorship', no: '✗ No sponsorship' }[wf.visaSponsorship] || 'Unknown';
+
+  // Trend arrow
+  const trendIcon = { growing: '↑', stable: '→', shrinking: '↓' }[wf.headcountTrend] || '';
+  const trendColor = { growing: 'var(--green)', stable: 'var(--text3)', shrinking: 'var(--red)' }[wf.headcountTrend] || 'var(--text3)';
+
+  const gender = wf.genderSplit || {};
+  const ethnicity = wf.ethnicityMix || {};
+
+  return `<div class="insight-section">
+    <div class="insight-section-header">
+      <div class="insight-section-icon" style="background:rgba(99,102,241,0.12)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+      </div>
+      <div class="insight-section-title">People &amp; diversity</div>
+      ${wf.headcountTrend ? `<span class="insight-section-badge" style="color:${trendColor};border-color:${trendColor}">${trendIcon} ${wf.headcountTrend}</span>` : ''}
+    </div>
+    <div class="insight-section-body">
+
+      <!-- Top row: headcount + trend sparkline -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+
+        <!-- Headcount card -->
+        <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px 14px">
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;margin-bottom:4px">HEADCOUNT</div>
+          <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:2px">${esc(wf.headcount || '—')}</div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3)">
+            ${wf.avgTenure ? `<span>Avg tenure: ${esc(wf.avgTenure)}</span>` : ''}
+          </div>
+          ${hist.length >= 2 ? `<div style="margin-top:8px">${sparkline}</div>` : ''}
+          ${hist.length >= 2 ? `<div style="display:flex;justify-content:space-between;font-size:9px;font-family:var(--mono);color:var(--text3);margin-top:3px">
+            <span>${hist[0].year}</span><span>${hist[hist.length-1].year}</span>
+          </div>` : ''}
+        </div>
+
+        <!-- Work type + visa -->
+        <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:12px 14px">
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;margin-bottom:10px">WORK COMPOSITION</div>
+          ${wf.fullTimePct ? `<div style="margin-bottom:5px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px"><span>Full-time</span><span style="font-family:var(--mono)">${wf.fullTimePct}%</span></div>
+            <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden"><div style="width:${wf.fullTimePct}%;height:100%;background:var(--blue);border-radius:3px"></div></div>
+          </div>` : ''}
+          ${wf.contractorPct ? `<div style="margin-bottom:5px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px"><span>Contractor / temp</span><span style="font-family:var(--mono)">${wf.contractorPct}%</span></div>
+            <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden"><div style="width:${wf.contractorPct}%;height:100%;background:var(--amber);border-radius:3px;opacity:0.7"></div></div>
+          </div>` : ''}
+          ${wf.remoteRatio !== undefined ? `<div style="margin-bottom:5px">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px"><span>Remote workers</span><span style="font-family:var(--mono)">${wf.remoteRatio}%</span></div>
+            <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden"><div style="width:${wf.remoteRatio}%;height:100%;background:var(--purple);border-radius:3px;opacity:0.7"></div></div>
+          </div>` : ''}
+          <!-- Visa pill -->
+          <div style="margin-top:10px;display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;font-size:11px;font-family:var(--mono);font-weight:500;color:${visaColor};background:${visaColor}18;border:1px solid ${visaColor}40">${visaLabel}</div>
+        </div>
+      </div>
+
+      <!-- Layoffs alert -->
+      ${wf.recentLayoffs && wf.recentLayoffs !== 'null' && wf.recentLayoffs !== 'None' ? `<div style="margin-bottom:16px;padding:10px 14px;background:rgba(184,50,37,0.07);border:1px solid rgba(184,50,37,0.2);border-radius:var(--radius-sm);display:flex;gap:10px;align-items:flex-start">
+        <span style="font-size:16px;flex-shrink:0">⚠</span>
+        <div>
+          <div style="font-size:11px;font-weight:600;color:var(--red);font-family:var(--mono);margin-bottom:3px">RECENT LAYOFFS</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.5">${esc(wf.recentLayoffs)}</div>
+        </div>
+      </div>` : `<div style="margin-bottom:16px;padding:8px 14px;background:rgba(26,102,64,0.07);border:1px solid rgba(26,102,64,0.2);border-radius:var(--radius-sm);display:flex;gap:8px;align-items:center">
+        <span style="color:var(--green);font-size:14px">✓</span>
+        <span style="font-size:12px;color:var(--text2)">No major layoffs reported in the past 2 years</span>
+      </div>`}
+
+      <!-- Gender & ethnicity -->
+      ${(gender.male || gender.female || ethnicity.white || ethnicity.asian) ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <!-- Gender -->
+        ${gender.male || gender.female ? `<div>
+          <div style="font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px;margin-bottom:10px">GENDER SPLIT</div>
+          ${gender.female ? genderBar('Women', gender.female, 'var(--purple)') : ''}
+          ${gender.male ? genderBar('Men', gender.male, 'var(--blue)') : ''}
+          ${gender.other ? genderBar('Non-binary / other', gender.other, 'var(--green)') : ''}
+          ${wf.glassdoorDiversity ? `<div style="font-size:11px;color:var(--text3);margin-top:6px">Diversity rating: <strong style="color:var(--text)">${wf.glassdoorDiversity}/5</strong></div>` : ''}
+        </div>` : ''}
+        <!-- Ethnicity -->
+        ${ethnicity.white || ethnicity.asian ? `<div>
+          <div style="font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px;margin-bottom:10px">ETHNICITY</div>
+          ${ethnicity.asian ? genderBar('Asian', ethnicity.asian, '#7c3aed') : ''}
+          ${ethnicity.white ? genderBar('White', ethnicity.white, '#2563eb') : ''}
+          ${ethnicity.hispanic ? genderBar('Hispanic / Latino', ethnicity.hispanic, '#d97706') : ''}
+          ${ethnicity.black ? genderBar('Black / African Amer.', ethnicity.black, '#059669') : ''}
+        </div>` : ''}
+      </div>` : ''}
+
+      <!-- Visa detail + top locations -->
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        ${wf.visaNote ? `<div style="flex:1;min-width:200px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius-sm)">
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;margin-bottom:4px">VISA SPONSORSHIP</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.5">${esc(wf.visaNote)}</div>
+        </div>` : ''}
+        ${wf.topLocations?.length ? `<div style="flex:1;min-width:140px;padding:10px 12px;background:var(--bg3);border-radius:var(--radius-sm)">
+          <div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;margin-bottom:6px">TOP OFFICES</div>
+          ${wf.topLocations.map(l => `<div style="font-size:12px;color:var(--text2);margin-bottom:2px">📍 ${esc(l)}</div>`).join('')}
+        </div>` : ''}
+      </div>
+
+      <!-- Summary note -->
+      ${wf.note ? `<div style="margin-top:14px;font-size:12px;color:var(--text2);line-height:1.6;padding-top:12px;border-top:1px solid var(--border)">${esc(wf.note)}</div>` : ''}
+
+    </div>
+  </div>`;
+}
+
 function renderCompensationSection(comp, ins) {
   if (!comp) return '';
   const fmt = n => !n ? '—' : n >= 1000 ? '$' + Math.round(n / 1000) + 'k' : '$' + n;
@@ -2521,14 +2679,13 @@ function renderCompensationSection(comp, ins) {
   const neg = comp.negotiationContext || {};
   const breakdown = tc.breakdown || {};
 
-  // Salary bar chart — p25/p50/p75/p90
-  const bars = [
-    { label: '25th', val: sr.p25, color: 'var(--text3)' },
-    { label: 'Median', val: sr.p50, color: 'var(--text)' },
-    { label: '75th', val: sr.p75, color: 'var(--accent-bg)' },
-    { label: '90th', val: sr.p90, color: 'var(--green)' },
-  ].filter(b => b.val);
-  const maxVal = Math.max(...bars.map(b => b.val), 1);
+  // Salary RANGE BAR (bullet chart) — p25 to p90 with median tick
+  const p25 = sr.p25 || 0, p50 = sr.p50 || 0, p75 = sr.p75 || 0, p90 = sr.p90 || 0;
+  const rangeMin = p25, rangeMax = p90 || p75;
+  const rangeSpan = rangeMax - rangeMin || 1;
+  const iqrLeftPct  = 0; // IQR starts at p25 (left edge of bar)
+  const iqrWidthPct = rangeMax > rangeMin ? Math.round(((p75 - p25) / rangeSpan) * 100) : 60;
+  const medianPct   = rangeMax > rangeMin ? Math.round(((p50 - rangeMin) / rangeSpan) * 100) : 50;
 
   // Total comp donut — CSS-only segmented ring
   const hasBreakdown = breakdown.basePct || breakdown.equityPct;
@@ -2542,8 +2699,7 @@ function renderCompensationSection(comp, ins) {
   // Build conic gradient for donut
   let conicStops = '', pctSoFar = 0;
   segments.forEach((s, i) => {
-    const clr = s.color.startsWith('var(') ? s.color : s.color;
-    conicStops += (i ? ', ' : '') + clr + ' ' + pctSoFar + '% ' + (pctSoFar + s.pct) + '%';
+    conicStops += (i ? ', ' : '') + s.color + ' ' + pctSoFar + '% ' + (pctSoFar + s.pct) + '%';
     pctSoFar += s.pct;
   });
 
@@ -2559,28 +2715,46 @@ function renderCompensationSection(comp, ins) {
   return `<div class="insight-section">
     <div class="insight-section-header">
       <div class="insight-section-icon" style="background:rgba(16,185,129,0.12)">💰</div>
-      <div class="insight-section-title">Compensation intelligence</div>
+      <div class="insight-section-title">Pay &amp; equity</div>
       ${tier.label ? `<span class="insight-section-badge" style="color:${tierColor};border-color:${tierColor};background:transparent">${esc(tier.label)}</span>` : ''}
     </div>
     <div class="insight-section-body">
 
-      <!-- Salary histogram -->
-      <div style="margin-bottom:20px">
-        <div style="font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.6px;margin-bottom:12px">BASE SALARY RANGE — ${esc(ins.overview?.hq || geo.description?.split(' ')[0] || 'Market')}</div>
-        <div style="display:flex;align-items:flex-end;gap:6px;height:72px;margin-bottom:8px">
-          ${bars.map(b => {
-            const h = Math.round((b.val / maxVal) * 68);
-            return `<div style="display:flex;flex-direction:column;align-items:center;gap:4px;flex:1">
-              <div style="font-size:10px;font-family:var(--mono);color:${b.color};font-weight:600">${fmt(b.val)}</div>
-              <div style="width:100%;height:${h}px;background:${b.color};border-radius:3px 3px 0 0;opacity:${b.label === 'Median' ? '1' : '0.65'};min-height:8px;transition:height .4s ease"></div>
-            </div>`;
-          }).join('')}
+      <!-- Salary range bar (bullet chart) -->
+      ${(p25 || p50 || p75) ? `<div style="margin-bottom:24px">
+        <div style="font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.6px;margin-bottom:14px">BASE SALARY — ${esc(ins.overview?.hq || geo.description?.split(' ')[0] || 'Market')}</div>
+
+        <!-- Endpoint labels -->
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+          <span style="font-size:11px;font-family:var(--mono);color:var(--text3)">${fmt(p25)}</span>
+          <span style="font-size:11px;font-family:var(--mono);color:var(--text3)">${fmt(rangeMax)}</span>
         </div>
-        <div style="display:flex;gap:6px">
-          ${bars.map(b => `<div style="flex:1;text-align:center;font-size:9px;font-family:var(--mono);color:var(--text3)">${b.label}</div>`).join('')}
+
+        <!-- Range bar track -->
+        <div style="position:relative;height:10px;background:var(--bg4);border-radius:5px;margin-bottom:6px">
+          <!-- IQR fill (p25→p75) -->
+          <div style="position:absolute;left:${iqrLeftPct}%;width:${iqrWidthPct}%;height:100%;background:var(--blue);border-radius:5px;opacity:0.5"></div>
+          <!-- Median tick -->
+          <div style="position:absolute;left:${medianPct}%;transform:translateX(-50%);width:3px;height:100%;background:var(--accent-bg);border-radius:2px"></div>
+          <!-- Median diamond -->
+          <div style="position:absolute;left:${medianPct}%;transform:translateX(-50%) translateY(-4px);width:10px;height:10px;background:var(--accent-bg);border-radius:2px;rotate:45deg;top:1px"></div>
         </div>
+
+        <!-- Legend -->
+        <div style="display:flex;gap:14px;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)">
+            <div style="width:12px;height:6px;background:var(--blue);opacity:0.5;border-radius:2px"></div>
+            <span>25th–75th percentile</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)">
+            <div style="width:10px;height:10px;background:var(--accent-bg);border-radius:2px;rotate:45deg;flex-shrink:0"></div>
+            <span>Median <strong style="color:var(--accent-bg)">${fmt(p50)}</strong></span>
+          </div>
+          ${p90 ? `<div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-left:auto">90th: ${fmt(p90)}</div>` : ''}
+        </div>
+
         ${sr.note ? `<div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5">${esc(sr.note)}</div>` : ''}
-      </div>
+      </div>` : ''}
 
       <!-- Total comp + donut -->
       ${tc.p50 ? `<div style="display:flex;align-items:center;gap:20px;margin-bottom:20px;padding:14px;background:var(--bg3);border-radius:var(--radius-sm)">
@@ -3514,15 +3688,6 @@ function openTailoringOverlay(jobId, jobDoc, j) {
         <div style="font-size:15px;font-weight:700;color:var(--text)">✦ Tailor ${label}</div>
         <div style="font-size:11px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(jobDoc.name)} → ${esc(j.title)} at ${esc(j.company)}</div>
       </div>
-      <!-- Inline settings toggles (hidden on mobile - use Settings instead) -->
-      <label class="tailor-toggle-label" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:100px;font-size:11px;color:var(--text2);white-space:nowrap" title="Auto-save every version to Document Library">
-        <input type="checkbox" id="to-autosave-chk" ${s.autoSave?'checked':''} onchange="setTailorSetting('tailor_autosave',this.checked)">
-        Auto-save
-      </label>
-      <label class="tailor-toggle-label" style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:100px;font-size:11px;color:var(--text2);white-space:nowrap" title="On exit keep only the final version, delete intermediates">
-        <input type="checkbox" id="to-cleanup-chk" ${s.cleanupOnExit?'checked':''} onchange="setTailorSetting('tailor_cleanup_exit',this.checked)">
-        Clean up
-      </label>
       <button onclick="closeTailoringOverlay('${jobId}','${jobDoc.id}')" style="width:32px;height:32px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:18px;color:var(--text2);flex-shrink:0" title="Close (Esc)">×</button>
     </div>
 
@@ -3541,9 +3706,14 @@ function openTailoringOverlay(jobId, jobDoc, j) {
                 <option value="resume"${jobDoc.type==='resume'?' selected':''}>Resume</option>
                 <option value="cover"${jobDoc.type==='cover'?' selected':''}>Cover Letter</option>
               </select>
-              <span style="font-size:10px;color:${j.postingText?'var(--green)':'var(--amber)'}">
-                ${j.postingText ? '✓ posting cached' : '⚠ no posting cached'}
-              </span>
+              ${j.postingText
+                ? `<span title="Job posting is cached — used for tailoring context" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:rgba(26,102,64,0.15);cursor:default;flex-shrink:0" aria-label="Posting cached">
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 6 5 9 10 3"/></svg>
+                  </span>`
+                : `<span title="No job posting cached — paste the posting in the Job Posting tab for better results" style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:rgba(160,96,16,0.12);cursor:default;flex-shrink:0" aria-label="No posting cached">
+                    <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="var(--amber)" stroke-width="1.8" stroke-linecap="round"><line x1="6" y1="3" x2="6" y2="7"/><circle cx="6" cy="9.5" r="0.5" fill="var(--amber)"/></svg>
+                  </span>`
+              }
             </div>
           </div>
         </div>
@@ -3557,6 +3727,8 @@ function openTailoringOverlay(jobId, jobDoc, j) {
           <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1l1.3 3 3 .5-2.2 2.1.5 3L6.5 8.3l-2.8 1.3.5-3L2 4.5l3-.5L6.5 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
           Tailor ${label}
         </button>
+
+        <div id="to-ai-hint" style="text-align:center;margin-top:6px;font-size:10px;font-family:var(--mono);color:var(--text3)">fastest available AI · auto-selected</div>
 
         <div id="to-stream"></div>
 
@@ -3684,7 +3856,10 @@ async function runDocTailorOverlay(jobId, docId) {
     const providerLabel = { groq: 'Groq', openrouter: 'OpenRouter', google: 'Google' }[providerName] || providerName;
     // Shorten model name: strip org prefix and ":free" suffix
     const modelShort = modelName.replace(/^[^/]+\//, '').replace(/:free$/, '').replace(/-instruct$/, '');
-    resultArea.innerHTML = '<div style="max-width:720px;margin:0 auto;padding:0 0 24px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap"><div style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px">VERSION ' + versionNum + ' · TAILORED ' + label.toUpperCase() + '</div><div style="display:flex;align-items:center;gap:8px"><span id="to-save-indicator" style="font-size:11px;font-family:var(--mono);color:var(--text3)">' + (s.autoSave ? '⟳ saving...' : '') + '</span><span title="AI model used for this version" style="padding:2px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:100px;font-size:10px;font-family:var(--mono);color:var(--text3);white-space:nowrap">via ' + providerLabel + ' · ' + modelShort + '</span></div></div><div id="to-result-editor" contenteditable="true" style="min-height:400px;padding:24px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);font-size:14px;line-height:1.9;color:var(--text);outline:none;white-space:pre-wrap;font-family:var(--font)"></div></div>';
+    // Update the "fastest available AI" hint with the actual model used
+    const hintEl = document.getElementById('to-ai-hint');
+    if (hintEl) hintEl.textContent = providerLabel + ' · ' + modelShort;
+    resultArea.innerHTML = '<div style="max-width:720px;margin:0 auto;padding:0 0 24px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap"><div style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px">VERSION ' + versionNum + ' · TAILORED ' + label.toUpperCase() + '</div><div style="display:flex;align-items:center;gap:8px"><span id="to-save-indicator" style="font-size:11px;font-family:var(--mono);color:var(--text3)">' + (s.autoSave ? '⟳ saving...' : '') + '</span><span title="AI model used for this version" style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--bg3);border:1px solid var(--border2);border-radius:100px;font-size:11px;font-family:var(--mono);color:var(--text2);white-space:nowrap"><svg width=\'10\' height=\'10\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\'><circle cx=\'12\' cy=\'12\' r=\'10\'/><path d=\'M12 8v4l3 3\'/></svg>' + providerLabel + ' · ' + modelShort + '</span></div></div><div id="to-result-editor" contenteditable="true" style="min-height:400px;padding:24px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);font-size:14px;line-height:1.9;color:var(--text);outline:none;white-space:pre-wrap;font-family:var(--font)"></div></div>';
       const editor = document.getElementById('to-result-editor');
       if (editor) editor.innerText = tailored;
     }
@@ -5010,6 +5185,12 @@ function openSettings(section) {
   ['pw-status','finnhub-status','export-status','delete-status'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.className = 'settings-status'; el.textContent = ''; }
   });
+  // Sync tailoring settings checkboxes
+  const s = getTailorSettings();
+  const autosaveEl = document.getElementById('st-autosave');
+  const cleanupEl  = document.getElementById('st-cleanup');
+  if (autosaveEl) autosaveEl.checked = s.autoSave;
+  if (cleanupEl)  cleanupEl.checked  = s.cleanupOnExit;
   showSettingsSection(section || 'account');
   _setMobileActiveBtn('settings');
   _mobileSection = 'settings';
