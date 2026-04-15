@@ -1,39 +1,35 @@
-const CACHE_NAME = 'applied-v5';
-const SHELL_ASSETS = [
-  '/',
-  '/index.html',
+const CACHE_NAME = 'applied-v6';
+const STATIC_ASSETS = [
   '/manifest.json',
   '/apple-touch-icon.png',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
-  'https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,400&display=swap',
 ];
 
-// Install: cache the app shell
+// Install: only cache true static assets (NOT index.html)
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(SHELL_ASSETS))
+    caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS))
   );
   self.skipWaiting();
 });
 
-// Activate: clean up old caches
+// Activate: claim all clients immediately and wipe old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
-    )
+    Promise.all([
+      caches.keys().then(keys =>
+        Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+      ),
+      self.clients.claim(),
+    ])
   );
-  self.clients.claim();
 });
 
-// Fetch strategy:
-// - API calls (/api/*) and Anthropic/Finnhub → network only, never cache
-// - App shell (HTML, icons, fonts) → cache first, fall back to network
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // Never cache API calls or external services
+  // Network-only: API calls and external services
   if (
     url.pathname.startsWith('/api/') ||
     url.hostname.includes('anthropic.com') ||
@@ -45,32 +41,42 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // For Google Fonts — stale-while-revalidate
-  if (url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com')) {
+  // HTML pages: ALWAYS network-first so updated CSS/JS deploys instantly
+  if (event.request.mode === 'navigate' ||
+      url.pathname === '/' ||
+      url.pathname.endsWith('.html')) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/index.html'))
+    );
+    return;
+  }
+
+  // Fonts: stale-while-revalidate
+  if (url.hostname.includes('fonts.googleapis.com') ||
+      url.hostname.includes('fonts.gstatic.com')) {
     event.respondWith(
       caches.open(CACHE_NAME).then(async cache => {
         const cached = await cache.match(event.request);
-        const networkFetch = fetch(event.request).then(res => {
-          cache.put(event.request, res.clone());
+        const fresh = fetch(event.request).then(res => {
+          if (res.ok) cache.put(event.request, res.clone());
           return res;
         }).catch(() => cached);
-        return cached || networkFetch;
+        return cached || fresh;
       })
     );
     return;
   }
 
-  // App shell: cache first
+  // Static assets (icons, manifest): cache-first
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;
       return fetch(event.request).then(res => {
         if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          caches.open(CACHE_NAME).then(c => c.put(event.request, res.clone()));
         }
         return res;
       });
-    }).catch(() => caches.match('/index.html'))
+    })
   );
 });
