@@ -1528,7 +1528,9 @@ window.addEventListener('DOMContentLoaded', () => {
 function showScreen(n) {
   ['login','register','app','recover','forgot','landing'].forEach(s => {
     const el = document.getElementById('screen-'+s);
-    if (el) el.style.display = s===n ? 'flex' : 'none';
+    if (!el) return;
+    // landing uses block layout; auth/app screens use flex
+    el.style.display = s !== n ? 'none' : (s === 'landing' ? 'block' : 'flex');
   });
   if (n==='login') setTimeout(()=>document.getElementById('login-username')?.focus(), 80);
   if (n==='register') setTimeout(()=>document.getElementById('reg-username')?.focus(), 80);
