@@ -1,156 +1,218 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pursuit — Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@0,400;0,500&display=swap">
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pursuit — Admin</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap">
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  :root{--bg:#1a1917;--bg2:#222220;--bg3:#2a2927;--bg4:#333330;--border:#3a3835;--border2:#555;--text:#e8e6e3;--text2:#b5b2ad;--text3:#8a8680;--accent:#a3e635;--accent-bg:#a3e635;--blue:#60a5fa;--green:#34d399;--red:#f87171;--amber:#fbbf24;--radius:10px;--radius-sm:6px;--font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;--mono:'SF Mono','Fira Code',monospace}
-  body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
-  a{color:var(--blue);text-decoration:none}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --font: 'DM Sans', -apple-system, sans-serif;
+  --mono: 'DM Mono', monospace;
+  --radius: 8px; --radius-sm: 5px;
+  --bg:#1a1714;--bg2:#222017;--bg3:#2c291f;--bg4:#38342a;
+  --border:rgba(255,235,180,0.10);--border2:rgba(255,235,180,0.20);
+  --text:#f2ead8;--text2:#b8a888;--text3:#7a6a50;
+  --accent-bg:#e8a838;--accent-bg2:#d4922a;
+  --green:#60c888;--red:#e86060;--amber:#e0a040;--blue:#70aaee;--purple:#b08ae0;
+}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;-webkit-font-smoothing:antialiased;}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
-  /* Auth */
-  #login-screen{flex:1;display:flex;align-items:center;justify-content:center}
-  .login-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:36px;width:360px}
-  .login-logo{display:flex;align-items:center;gap:10px;margin-bottom:24px}
-  .logo-mark{width:32px;height:32px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#1a1917;flex-shrink:0}
-  .login-title{font-size:18px;font-weight:600}
-  .login-sub{font-size:12px;color:var(--text3);margin-top:2px}
-  .field{margin-bottom:14px}
-  .field label{display:block;font-size:11px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;font-weight:600;margin-bottom:5px}
-  .field input{width:100%;padding:9px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border .15s}
-  .field input:focus{border-color:var(--border2)}
-  .btn{padding:9px 18px;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s}
-  .btn-primary{background:var(--accent-bg);color:#1a1917;width:100%}
-  .btn-primary:hover{background:#bef264}
-  .btn-primary:disabled{opacity:.5;cursor:not-allowed}
-  .error{color:var(--red);font-size:12px;margin-top:8px}
+/* LOGIN */
+#login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+  background-image:radial-gradient(ellipse at 20% 20%,rgba(232,168,56,0.07) 0%,transparent 50%),
+  radial-gradient(ellipse at 80% 80%,rgba(192,94,0,0.05) 0%,transparent 50%);}
+.login-card{width:100%;max-width:380px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  padding:36px;box-shadow:0 8px 40px rgba(0,0,0,.4);animation:fadeIn .3s ease;}
+.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
+.logo-mark{width:36px;height:36px;background:var(--accent-bg);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.login-name{font-size:16px;font-weight:600;color:var(--text);}
+.login-badge{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;margin-top:1px;}
+.login-heading{font-size:22px;font-weight:600;letter-spacing:-.3px;margin-bottom:4px;}
+.login-sub{font-size:13px;color:var(--text3);margin-bottom:24px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.6px;font-weight:600;margin-bottom:5px;}
+.field input{width:100%;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border-color .15s;}
+.field input:focus{border-color:var(--border2);}
+.field input::placeholder{color:var(--text3);}
+.field input[readonly]{opacity:.45;cursor:not-allowed;}
+.btn{padding:10px 18px;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;
+  cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:7px;}
+.btn-primary{background:var(--accent-bg);color:#1a1917;width:100%;margin-top:6px;}
+.btn-primary:hover{background:var(--accent-bg2);}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.error-msg{color:var(--red);font-size:12px;margin-top:10px;min-height:18px;}
 
-  /* App */
-  #app-screen{flex:1;display:none;flex-direction:column}
-  .topbar{height:52px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 24px;flex-shrink:0}
-  .topbar-logo{display:flex;align-items:center;gap:8px}
-  .topbar-title{font-size:14px;font-weight:600}
-  .topbar-badge{font-size:10px;padding:2px 7px;background:rgba(239,68,68,0.15);color:var(--red);border:1px solid rgba(239,68,68,.25);border-radius:100px;font-family:var(--mono);font-weight:600;letter-spacing:.5px}
-  .topbar-user{margin-left:auto;font-size:12px;color:var(--text3)}
-  .topbar-logout{background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text3);font-size:12px;font-family:var(--font);cursor:pointer;padding:5px 10px}
-  .topbar-logout:hover{color:var(--red);border-color:rgba(239,68,68,.3)}
+/* APP */
+#app-screen{display:none;flex-direction:column;min-height:100vh;}
+.topbar{height:54px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;
+  gap:12px;padding:0 24px;flex-shrink:0;position:sticky;top:0;z-index:100;}
+.topbar-brand{display:flex;align-items:center;gap:9px;}
+.topbar-name{font-size:14px;font-weight:600;color:var(--text);}
+.topbar-pill{font-size:9px;font-family:var(--mono);font-weight:600;letter-spacing:.8px;padding:2px 8px;
+  background:rgba(232,168,56,0.12);color:var(--amber);border:1px solid rgba(232,168,56,0.25);border-radius:100px;}
+.topbar-version{font-size:10px;font-family:var(--mono);color:var(--text3);}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.topbar-user{font-size:12px;color:var(--text3);font-family:var(--mono);}
+.topbar-btn{padding:5px 12px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text2);font-size:12px;font-family:var(--font);cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;gap:5px;}
+.topbar-btn:hover{color:var(--text);border-color:var(--border2);}
+.topbar-btn.logout:hover{color:var(--red);border-color:rgba(232,96,96,.3);}
 
-  .main{flex:1;padding:28px;overflow-y:auto;max-width:1100px;width:100%;margin:0 auto}
-  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
-  .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
-  .stat-label{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;font-weight:600;margin-bottom:6px}
-  .stat-value{font-size:26px;font-weight:700;letter-spacing:-1px}
+/* MAIN */
+.main{flex:1;padding:28px 32px;max-width:1100px;width:100%;margin:0 auto;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;}
+.stat-label{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.6px;font-weight:600;margin-bottom:8px;}
+.stat-value{font-size:28px;font-weight:700;letter-spacing:-1px;line-height:1;}
 
-  .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-  .section-title{font-size:14px;font-weight:600;color:var(--text)}
-  .search-input{padding:7px 11px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:13px;outline:none;width:220px}
-  .search-input:focus{border-color:var(--border2)}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;}
+.section-title{font-size:14px;font-weight:600;color:var(--text);}
+.search-wrap{position:relative;}
+.search-wrap svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);pointer-events:none;}
+.search-input{padding:7px 11px 7px 32px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);
+  color:var(--text);font-family:var(--font);font-size:13px;outline:none;width:240px;transition:border-color .15s;}
+.search-input:focus{border-color:var(--border2);}
+.search-input::placeholder{color:var(--text3);}
 
-  table{width:100%;border-collapse:collapse;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
-  thead{background:var(--bg3)}
-  th{padding:10px 14px;text-align:left;font-size:11px;font-family:var(--mono);color:var(--text3);font-weight:600;letter-spacing:.5px;border-bottom:1px solid var(--border)}
-  td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
-  tr:last-child td{border-bottom:none}
-  tr:hover td{background:rgba(255,255,255,.02)}
+/* TABLE */
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+table{width:100%;border-collapse:collapse;}
+thead{background:var(--bg3);}
+th{padding:10px 16px;text-align:left;font-size:10px;font-family:var(--mono);color:var(--text3);font-weight:600;
+  letter-spacing:.6px;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:12px 16px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,235,180,0.02);}
 
-  .badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:11px;font-family:var(--mono);font-weight:600}
-  .badge-active{background:rgba(52,211,153,.1);color:var(--green);border:1px solid rgba(52,211,153,.2)}
-  .badge-inactive{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.2)}
-  .badge-admin{background:rgba(163,230,53,.1);color:var(--accent);border:1px solid rgba(163,230,53,.2)}
+.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:100px;font-size:10px;font-family:var(--mono);font-weight:600;letter-spacing:.3px;}
+.badge-active{background:rgba(96,200,136,0.1);color:var(--green);border:1px solid rgba(96,200,136,0.2);}
+.badge-inactive{background:rgba(232,96,96,0.1);color:var(--red);border:1px solid rgba(232,96,96,0.2);}
+.badge-admin{background:rgba(232,168,56,0.12);color:var(--amber);border:1px solid rgba(232,168,56,0.25);}
 
-  .actions{display:flex;gap:6px;flex-wrap:wrap}
-  .act-btn{padding:4px 10px;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:all .12s}
-  .act-btn:hover{background:var(--bg4);color:var(--text)}
-  .act-btn.danger:hover{color:var(--red);border-color:rgba(239,68,68,.3)}
-  .act-btn.success:hover{color:var(--green);border-color:rgba(52,211,153,.3)}
-  .act-btn.warn:hover{color:var(--amber);border-color:rgba(251,191,36,.3)}
+.actions{display:flex;gap:5px;flex-wrap:wrap;}
+.act-btn{padding:4px 10px;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);cursor:pointer;
+  border:1px solid var(--border);background:var(--bg3);color:var(--text2);transition:all .12s;white-space:nowrap;}
+.act-btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border2);}
+.act-btn.danger:hover{color:var(--red);border-color:rgba(232,96,96,.4);background:rgba(232,96,96,.07);}
+.act-btn.success:hover{color:var(--green);border-color:rgba(96,200,136,.4);background:rgba(96,200,136,.07);}
+.act-btn.warn:hover{color:var(--amber);border-color:rgba(224,160,64,.4);background:rgba(224,160,64,.07);}
+.act-btn.purple{color:var(--purple);border-color:rgba(176,138,224,.3);background:rgba(176,138,224,.07);}
+.act-btn.purple:hover{background:rgba(176,138,224,.15);border-color:rgba(176,138,224,.5);}
 
-  /* Modal */
-  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;align-items:center;justify-content:center}
-  .modal-bg.open{display:flex}
-  .modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:min(440px,92vw);padding:28px;box-shadow:0 24px 64px rgba(0,0,0,.4)}
-  .modal-title{font-size:16px;font-weight:600;margin-bottom:6px}
-  .modal-sub{font-size:13px;color:var(--text3);margin-bottom:20px;line-height:1.5}
-  .modal-actions{display:flex;gap:8px;margin-top:20px}
-  .btn-ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border);flex:1}
-  .btn-ghost:hover{background:var(--bg4)}
-  .btn-danger{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);flex:1}
-  .btn-danger:hover{background:rgba(239,68,68,.25)}
-  .btn-success{background:var(--accent-bg);color:#1a1917;border:none;flex:1}
-  .btn-success:hover{background:#bef264}
-  .modal-status{font-size:12px;margin-top:8px;padding:6px 10px;border-radius:var(--radius-sm);display:none}
-  .modal-status.ok{background:rgba(52,211,153,.1);color:var(--green);display:block}
-  .modal-status.err{background:rgba(248,113,113,.1);color:var(--red);display:block}
-
-  .empty{text-align:center;padding:40px;color:var(--text3);font-size:13px}
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;
+  align-items:center;justify-content:center;backdrop-filter:blur(2px);}
+.modal-bg.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:min(440px,92vw);
+  padding:28px;box-shadow:0 24px 64px rgba(0,0,0,.5);animation:fadeIn .18s ease;}
+.modal-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:5px;}
+.modal-sub{font-size:13px;color:var(--text2);margin-bottom:20px;line-height:1.6;}
+.modal-actions{display:flex;gap:8px;margin-top:20px;}
+.btn-ghost{background:var(--bg3);color:var(--text2);border:1px solid var(--border);flex:1;padding:9px 16px;
+  border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;}
+.btn-ghost:hover{background:var(--bg4);color:var(--text);}
+.btn-danger{background:rgba(232,96,96,.12);color:var(--red);border:1px solid rgba(232,96,96,.3);flex:1;padding:9px 16px;
+  border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;}
+.btn-danger:hover{background:rgba(232,96,96,.22);}
+.btn-success{background:var(--accent-bg);color:#1a1917;border:none;flex:1;padding:9px 16px;
+  border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;}
+.btn-success:hover{background:var(--accent-bg2);}
+.modal-status{font-size:12px;margin-top:10px;padding:8px 12px;border-radius:var(--radius-sm);display:none;line-height:1.5;}
+.modal-status.ok{background:rgba(96,200,136,.1);color:var(--green);border:1px solid rgba(96,200,136,.2);display:block;}
+.modal-status.err{background:rgba(232,96,96,.08);color:var(--red);border:1px solid rgba(232,96,96,.2);display:block;}
+.empty{text-align:center;padding:48px;color:var(--text3);font-size:13px;}
 </style>
 </head>
 <body>
 
-<!-- Login -->
+<!-- LOGIN -->
 <div id="login-screen">
   <div class="login-card">
     <div class="login-logo">
-      <div class="logo-mark"><svg viewBox="0 0 16 16" fill="none"><path d="M3 13L13 3M13 3H7M13 3v6" stroke="#1a1917" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="logo-mark">
+        <svg viewBox="0 0 20 20" fill="none" width="20" height="20"><path d="M4 16V9l6-5 6 5v7H13v-5H7v5H4z" fill="#1a1917"/></svg>
+      </div>
       <div>
-        <div class="login-title">Pursuit Admin</div>
-        <div class="login-sub">Administrator access only</div>
+        <div class="login-name">Pursuit</div>
+        <div class="login-badge">ADMIN CONSOLE</div>
       </div>
     </div>
-    <div class="field"><label>USERNAME</label><input id="login-user" placeholder="Admin username" autocomplete="username"></div>
-    <div class="field"><label>PASSWORD</label><input id="login-pass" type="password" placeholder="Admin password" autocomplete="current-password"></div>
-    <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Sign in as Administrator</button>
-    <div class="error" id="login-error"></div>
+    <div class="login-heading">Administrator access</div>
+    <div class="login-sub">Sign in with your admin credentials to continue.</div>
+    <div class="field">
+      <label>USERNAME</label>
+      <input id="login-user" type="text" placeholder="Admin username" autocomplete="username"
+        onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+    </div>
+    <div class="field">
+      <label>PASSWORD</label>
+      <input id="login-pass" type="password" placeholder="Admin password" autocomplete="current-password"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary" id="login-btn" onclick="doLogin()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+      Sign in
+    </button>
+    <div class="error-msg" id="login-error"></div>
   </div>
 </div>
 
-<!-- App -->
+<!-- APP -->
 <div id="app-screen">
   <div class="topbar">
-    <div class="topbar-logo">
-      <div class="logo-mark" style="width:28px;height:28px;font-size:12px"><svg viewBox="0 0 16 16" fill="none"><path d="M3 13L13 3M13 3H7M13 3v6" stroke="#1a1917" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-      <div class="topbar-title">Pursuit Admin</div>
-      <div class="topbar-badge">ADMIN</div>
-      <div style="font-size:10px;font-family:monospace;color:#666;letter-spacing:0.02em">v1.4.0</div>
+    <div class="topbar-brand">
+      <div class="logo-mark" style="width:30px;height:30px">
+        <svg viewBox="0 0 20 20" fill="none" width="16" height="16"><path d="M4 16V9l6-5 6 5v7H13v-5H7v5H4z" fill="#1a1917"/></svg>
+      </div>
+      <span class="topbar-name">Pursuit</span>
+      <span class="topbar-pill">ADMIN</span>
+      <span class="topbar-version" id="topbar-version">v1.4.0</span>
     </div>
-    <div class="topbar-user" id="topbar-user"></div>
-    <button class="topbar-logout" onclick="doLogout()">Sign out</button>
+    <div class="topbar-right">
+      <button class="topbar-btn" onclick="loadUsers()" id="refresh-btn" title="Refresh">
+        <svg id="refresh-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0115-6.7L21 8M3 22v-6h6"/><path d="M21 12a9 9 0 01-15 6.7L3 16"/></svg>
+        Refresh
+      </button>
+      <span class="topbar-user" id="topbar-user"></span>
+      <button class="topbar-btn logout" onclick="doLogout()">Sign out</button>
+    </div>
   </div>
+
   <div class="main">
     <div class="stats-row">
       <div class="stat-card"><div class="stat-label">TOTAL USERS</div><div class="stat-value" id="stat-total" style="color:var(--blue)">—</div></div>
       <div class="stat-card"><div class="stat-label">ACTIVE</div><div class="stat-value" id="stat-active" style="color:var(--green)">—</div></div>
       <div class="stat-card"><div class="stat-label">DEACTIVATED</div><div class="stat-value" id="stat-inactive" style="color:var(--red)">—</div></div>
-      <div class="stat-card"><div class="stat-label">TOTAL JOBS</div><div class="stat-value" id="stat-jobs" style="color:var(--amber)">—</div></div>
     </div>
 
     <div class="section-header">
       <div class="section-title">Users</div>
-      <input class="search-input" id="user-search" placeholder="Search by username or email..." oninput="renderTable()">
+      <div class="search-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <input class="search-input" id="user-search" placeholder="Search username or email…" oninput="renderTable()">
+      </div>
     </div>
-    <table>
-      <thead>
-        <tr>
-          <th>USER</th>
-          <th>EMAIL</th>
-          <th>JOBS</th>
-          <th>JOINED</th>
-          <th>LAST LOGIN</th>
-          <th>STATUS</th>
-          <th>ACTIONS</th>
-        </tr>
-      </thead>
-      <tbody id="user-tbody"></tbody>
-    </table>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>USER</th><th>EMAIL</th><th>JOINED</th><th>LAST LOGIN</th><th>STATUS</th><th>ACTIONS</th>
+        </tr></thead>
+        <tbody id="user-tbody"></tbody>
+      </table>
+    </div>
   </div>
 </div>
 
-<!-- Reset Password Modal -->
+<!-- MODALS -->
 <div class="modal-bg" id="modal-reset" onclick="if(event.target===this)closeModal('modal-reset')">
   <div class="modal">
     <div class="modal-title">Reset Password</div>
@@ -158,303 +220,257 @@
     <div class="field"><label>NEW PASSWORD</label><input id="modal-new-pw" type="password" placeholder="Min 6 characters"></div>
     <div class="modal-status" id="modal-reset-status"></div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-reset')">Cancel</button>
-      <button class="btn btn-success" onclick="submitReset()">Set Password &amp; Email User</button>
+      <button class="btn-ghost" onclick="closeModal('modal-reset')">Cancel</button>
+      <button class="btn-success" onclick="submitReset()">Set Password</button>
     </div>
   </div>
 </div>
 
-<!-- Send Reset Link Modal -->
 <div class="modal-bg" id="modal-link" onclick="if(event.target===this)closeModal('modal-link')">
   <div class="modal">
-    <div class="modal-title">Send Password Reset Link</div>
+    <div class="modal-title">Send Reset Link</div>
     <div class="modal-sub" id="modal-link-sub"></div>
     <div class="modal-status" id="modal-link-status"></div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-link')">Cancel</button>
-      <button class="btn btn-success" onclick="submitSendLink()">Send Reset Email</button>
+      <button class="btn-ghost" onclick="closeModal('modal-link')">Cancel</button>
+      <button class="btn-success" onclick="submitSendLink()">Send Email</button>
     </div>
   </div>
 </div>
 
-<!-- Deactivate Modal -->
 <div class="modal-bg" id="modal-deactivate" onclick="if(event.target===this)closeModal('modal-deactivate')">
   <div class="modal">
     <div class="modal-title" id="modal-deactivate-title"></div>
     <div class="modal-sub" id="modal-deactivate-sub"></div>
     <div class="modal-status" id="modal-deactivate-status"></div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-deactivate')">Cancel</button>
-      <button class="btn btn-danger" id="modal-deactivate-btn" onclick="submitDeactivate()">Confirm</button>
+      <button class="btn-ghost" onclick="closeModal('modal-deactivate')">Cancel</button>
+      <button id="modal-deactivate-btn" class="btn-danger" onclick="submitDeactivate()">Confirm</button>
     </div>
   </div>
 </div>
 
-<!-- Delete Modal -->
 <div class="modal-bg" id="modal-delete" onclick="if(event.target===this)closeModal('modal-delete')">
   <div class="modal">
-    <div class="modal-title" style="color:var(--red)">Delete User Account</div>
+    <div class="modal-title" style="color:var(--red)">Delete User</div>
     <div class="modal-sub" id="modal-delete-sub"></div>
     <div class="modal-status" id="modal-delete-status"></div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-delete')">Cancel</button>
-      <button class="btn btn-danger" onclick="submitDelete()">Permanently Delete</button>
+      <button class="btn-ghost" onclick="closeModal('modal-delete')">Cancel</button>
+      <button class="btn-danger" onclick="submitDelete()">Permanently Delete</button>
     </div>
   </div>
 </div>
 
-<!-- Edit User Modal -->
 <div class="modal-bg" id="modal-edit" onclick="if(event.target===this)closeModal('modal-edit')">
   <div class="modal">
     <div class="modal-title">Edit User</div>
     <div class="modal-sub" id="modal-edit-sub"></div>
     <div class="field"><label>EMAIL</label><input type="email" id="modal-edit-email" placeholder="user@example.com"></div>
-    <div class="field"><label>USERNAME (read-only)</label><input id="modal-edit-username" readonly style="opacity:.5;cursor:not-allowed"></div>
+    <div class="field"><label>USERNAME <span style="color:var(--text3);font-weight:400">(read-only)</span></label><input id="modal-edit-username" readonly></div>
     <div class="modal-status" id="modal-edit-status"></div>
     <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('modal-edit')">Cancel</button>
-      <button class="btn btn-success" onclick="submitEdit()">Save Changes</button>
+      <button class="btn-ghost" onclick="closeModal('modal-edit')">Cancel</button>
+      <button class="btn-success" onclick="submitEdit()">Save Changes</button>
     </div>
   </div>
 </div>
 
 <script>
-const API = '';
-const APP_VERSION = '1.4.0';
-let token = sessionStorage.getItem('admin_token');
-let adminUser = sessionStorage.getItem('admin_user');
-let users = [];
-let selectedUser = null;
-let deactivateAction = null; // 'deactivate' or 'reactivate'
+const API='', APP_VERSION='1.4.0';
+let token=sessionStorage.getItem('admin_token');
+let adminUser=sessionStorage.getItem('admin_user');
+let users=[],selectedUser=null,deactivateAction=null;
 
-// ── INIT ──
-window.addEventListener('DOMContentLoaded', () => {
-  if (token) { showApp(); loadUsers(); }
-  else { showLogin(); }
-  document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+window.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('topbar-version').textContent='v'+APP_VERSION;
+  if(token){showApp();loadUsers();}else showLogin();
+  document.getElementById('login-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 });
 
-function showLogin() { document.getElementById('login-screen').style.display='flex'; document.getElementById('app-screen').style.display='none'; }
-function showApp() { document.getElementById('login-screen').style.display='none'; document.getElementById('app-screen').style.display='flex'; document.getElementById('topbar-user').textContent=adminUser||''; }
+function showLogin(){document.getElementById('login-screen').style.display='flex';document.getElementById('app-screen').style.display='none';}
+function showApp(){document.getElementById('login-screen').style.display='none';document.getElementById('app-screen').style.display='flex';document.getElementById('topbar-user').textContent=adminUser||'';}
 
-async function doLogin() {
-  const u = document.getElementById('login-user').value.trim();
-  const p = document.getElementById('login-pass').value;
-  const btn = document.getElementById('login-btn');
-  const err = document.getElementById('login-error');
-  err.textContent=''; btn.disabled=true; btn.textContent='Signing in...';
-  try {
-    const res = await fetch(API+'/api/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u,password:p}) });
-    const data = await res.json();
-    if (!res.ok) { err.textContent = data.error || 'Login failed'; return; }
-    if (!data.isAdmin) { err.textContent = 'This account does not have admin access.'; return; }
-    token = data.token; adminUser = data.username;
-    sessionStorage.setItem('admin_token', token);
-    sessionStorage.setItem('admin_user', adminUser);
-    showApp(); loadUsers();
-  } catch(e) { err.textContent = 'Connection error: '+e.message; }
-  finally { btn.disabled=false; btn.textContent='Sign in as Administrator'; }
+async function doLogin(){
+  const u=document.getElementById('login-user').value.trim();
+  const p=document.getElementById('login-pass').value;
+  const btn=document.getElementById('login-btn');
+  const err=document.getElementById('login-error');
+  err.textContent='';btn.disabled=true;
+  btn.innerHTML='<svg width="12" height="12" viewBox="0 0 12 12" style="animation:spin .7s linear infinite" fill="none"><circle cx="6" cy="6" r="4.5" stroke="rgba(26,25,23,0.3)" stroke-width="1.5"/><path d="M6 1.5A4.5 4.5 0 0110.5 6" stroke="#1a1917" stroke-width="1.5" stroke-linecap="round"/></svg> Signing in\u2026';
+  try{
+    const res=await fetch(API+'/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:u,password:p})});
+    const data=await res.json();
+    if(!res.ok){err.textContent=data.error||'Login failed';return;}
+    if(!data.isAdmin){err.textContent='This account does not have admin access.';return;}
+    token=data.token;adminUser=data.username;
+    sessionStorage.setItem('admin_token',token);
+    sessionStorage.setItem('admin_user',adminUser);
+    showApp();loadUsers();
+  }catch(e){err.textContent='Connection error: '+e.message;}
+  finally{
+    btn.disabled=false;
+    btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Sign in';
+  }
 }
 
-function doLogout() { sessionStorage.clear(); token=null; adminUser=null; users=[]; showLogin(); }
+function doLogout(){sessionStorage.clear();token=null;adminUser=null;users=[];showLogin();}
 
-// ── LOAD USERS ──
-async function loadUsers() {
-  try {
-    const res = await fetch(API+'/api/admin/users', { headers:{ Authorization:'Bearer '+token } });
-    if (res.status===401||res.status===403) { doLogout(); return; }
-    users = await res.json();
-    updateStats(); renderTable();
-  } catch(e) { console.error(e); }
+async function loadUsers(){
+  const icon=document.getElementById('refresh-icon');
+  if(icon)icon.style.animation='spin .7s linear infinite';
+  try{
+    const res=await fetch(API+'/api/admin/users',{headers:{Authorization:'Bearer '+token}});
+    if(res.status===401||res.status===403){doLogout();return;}
+    users=await res.json();
+    updateStats();renderTable();
+  }catch(e){console.error(e);}
+  finally{if(icon)icon.style.animation='';}
 }
 
-function updateStats() {
-  const active = users.filter(u=>u.isActive).length;
-  document.getElementById('stat-total').textContent = users.length;
-  document.getElementById('stat-active').textContent = active;
-  document.getElementById('stat-inactive').textContent = users.length - active;
-  document.getElementById('stat-jobs').textContent = users.reduce((s,u)=>s+u.jobCount,0);
+function updateStats(){
+  const active=users.filter(u=>u.isActive).length;
+  document.getElementById('stat-total').textContent=users.length;
+  document.getElementById('stat-active').textContent=active;
+  document.getElementById('stat-inactive').textContent=users.length-active;
 }
 
-function renderTable() {
-  const q = document.getElementById('user-search').value.toLowerCase();
-  const filtered = users.filter(u => !q || u.username.toLowerCase().includes(q) || (u.email||'').toLowerCase().includes(q));
-  const tbody = document.getElementById('user-tbody');
-  if (!filtered.length) { tbody.innerHTML='<tr><td colspan="7" class="empty">No users found</td></tr>'; return; }
-  tbody.innerHTML = filtered.map(u => `
+function renderTable(){
+  const q=(document.getElementById('user-search').value||'').toLowerCase();
+  const filtered=users.filter(u=>!q||u.username.toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q));
+  const tbody=document.getElementById('user-tbody');
+  if(!filtered.length){tbody.innerHTML='<tr><td colspan="6" class="empty">No users found</td></tr>';return;}
+  tbody.innerHTML=filtered.map(u=>`
     <tr>
       <td>
-        <div style="font-weight:500">${esc(u.username)}</div>
-        ${u.isAdmin ? '<div><span class="badge badge-admin" style="font-size:10px">ADMIN</span></div>' : ''}
+        <div style="font-weight:500;color:var(--text)">${esc(u.username)}</div>
+        ${u.isAdmin?'<span class="badge badge-admin" style="margin-top:3px;display:inline-block">ADMIN</span>':''}
       </td>
-      <td style="color:var(--text3);font-size:12px;font-family:var(--mono)">${esc(u.email||'—')}</td>
-      <td style="font-family:var(--mono);color:var(--text2)">${u.jobCount}</td>
-      <td style="font-size:12px;color:var(--text3)">${fmtDate(u.createdAt)}</td>
-      <td style="font-size:12px;color:var(--text3)">${u.lastLogin ? fmtDate(u.lastLogin) : '—'}</td>
+      <td style="color:var(--text2);font-size:12px;font-family:var(--mono)">${esc(u.email||'\u2014')}</td>
+      <td style="font-size:12px;color:var(--text3);white-space:nowrap">${fmtDate(u.createdAt)}</td>
+      <td style="font-size:12px;color:var(--text3);white-space:nowrap">${u.lastLogin?fmtDate(u.lastLogin):'\u2014'}</td>
       <td><span class="badge ${u.isActive?'badge-active':'badge-inactive'}">${u.isActive?'Active':'Inactive'}</span></td>
-      <td>
-        <div class="actions">
-          ${!u.isAdmin ? `
+      <td>${u.isAdmin
+        ?'<span style="font-size:12px;color:var(--text3)">Admin account</span>'
+        :`<div class="actions">
           <button class="act-btn" onclick="openEdit('${esc(u.username)}','${esc(u.email||'')}')">Edit</button>
-          <button class="act-btn ${u.isActive?'danger':'success'}" onclick="openDeactivate('${esc(u.username)}',${!u.isActive})">
-            ${u.isActive?'Deactivate':'Reactivate'}
-          </button>
+          <button class="act-btn ${u.isActive?'danger':'success'}" onclick="openDeactivate('${esc(u.username)}',${!u.isActive})">${u.isActive?'Deactivate':'Reactivate'}</button>
           <button class="act-btn warn" onclick="openReset('${esc(u.username)}','${esc(u.email||'')}')">Reset PW</button>
-          <button class="act-btn" title="Generate new recovery codes for user" onclick="adminResetRecoveryCodes('${esc(u.username)}')" style="background:rgba(139,92,246,0.1);color:#8b5cf6;border-color:rgba(139,92,246,0.3)">Recovery Codes</button>
-          <button class="act-btn" onclick="openSendLink('${esc(u.username)}','${esc(u.email||'')}')">Send Link</button>
+          <button class="act-btn purple" onclick="adminResetRecoveryCodes('${esc(u.username)}')">Rec. codes</button>
+          <button class="act-btn" onclick="openSendLink('${esc(u.username)}','${esc(u.email||'')}')">Send link</button>
           <button class="act-btn danger" onclick="openDelete('${esc(u.username)}')">Delete</button>
-          ` : '<span style="font-size:12px;color:var(--text3)">Admin account</span>'}
-        </div>
+        </div>`}
       </td>
     </tr>`).join('');
 }
 
-// ── MODAL HELPERS ──
-function openModal(id) { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); clearModalStatus(id); }
-function clearModalStatus(id) {
-  const s = document.querySelector('#'+id+' .modal-status');
-  if (s) { s.className='modal-status'; s.textContent=''; }
-}
-function setModalStatus(id, type, msg) {
-  const s = document.querySelector('#'+id+' .modal-status');
-  if (s) { s.className='modal-status '+(type==='ok'?'ok':'err'); s.textContent=msg; }
-}
+function openModal(id){document.getElementById(id).classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');clearModalStatus(id);}
+function clearModalStatus(id){const s=document.querySelector('#'+id+' .modal-status');if(s){s.className='modal-status';s.textContent='';}}
+function setModalStatus(id,type,msg){const s=document.querySelector('#'+id+' .modal-status');if(s){s.className='modal-status '+(type==='ok'?'ok':'err');s.textContent=msg;}}
 
-// ── DEACTIVATE ──
-function openDeactivate(username, makeActive) {
-  selectedUser = username;
-  deactivateAction = makeActive;
-  document.getElementById('modal-deactivate-title').textContent = makeActive ? 'Reactivate Account' : 'Deactivate Account';
-  document.getElementById('modal-deactivate-sub').textContent = makeActive
-    ? `Reactivate ${username}'s account? They will be able to log in again.`
-    : `Deactivate ${username}'s account? They will not be able to log in and will receive an email notification.`;
-  document.getElementById('modal-deactivate-btn').textContent = makeActive ? 'Reactivate' : 'Deactivate';
+function openDeactivate(username,makeActive){
+  selectedUser=username;deactivateAction=makeActive;
+  document.getElementById('modal-deactivate-title').textContent=makeActive?'Reactivate Account':'Deactivate Account';
+  document.getElementById('modal-deactivate-sub').textContent=makeActive
+    ?`Reactivate ${username}'s account? They will be able to sign in again.`
+    :`Deactivate ${username}'s account? They will not be able to sign in.`;
+  const btn=document.getElementById('modal-deactivate-btn');
+  btn.textContent=makeActive?'Reactivate':'Deactivate';
+  btn.className=makeActive?'btn-success':'btn-danger';
   openModal('modal-deactivate');
 }
-async function submitDeactivate() {
-  try {
-    const res = await fetch(API+'/api/admin/deactivate', {
-      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body:JSON.stringify({username:selectedUser, active:deactivateAction}),
-    });
-    const data = await res.json();
-    if (!res.ok) { setModalStatus('modal-deactivate','err',data.error); return; }
-    setModalStatus('modal-deactivate','ok', deactivateAction ? 'Account reactivated.' : 'Account deactivated. Email sent.');
-    await loadUsers();
-    setTimeout(() => closeModal('modal-deactivate'), 1500);
-  } catch(e) { setModalStatus('modal-deactivate','err',e.message); }
+async function submitDeactivate(){
+  try{
+    const res=await fetch(API+'/api/admin/deactivate',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({username:selectedUser,active:deactivateAction})});
+    const data=await res.json();
+    if(!res.ok){setModalStatus('modal-deactivate','err',data.error);return;}
+    setModalStatus('modal-deactivate','ok',deactivateAction?'Account reactivated.':'Account deactivated.');
+    await loadUsers();setTimeout(()=>closeModal('modal-deactivate'),1500);
+  }catch(e){setModalStatus('modal-deactivate','err',e.message);}
 }
 
-// ── RESET PASSWORD ──
-function openReset(username, email) {
-  selectedUser = username;
-  document.getElementById('modal-reset-sub').textContent = `Set a new password for ${username}${email?' ('+email+')':''}. The new password will be emailed to the user.`;
-  document.getElementById('modal-new-pw').value = '';
-  openModal('modal-reset');
+function openReset(username,email){
+  selectedUser=username;
+  document.getElementById('modal-reset-sub').textContent=`Set a new password for ${username}${email?' \u00b7 '+email:''}. An email will be sent if an address is on file.`;
+  document.getElementById('modal-new-pw').value='';
+  openModal('modal-reset');setTimeout(()=>document.getElementById('modal-new-pw').focus(),80);
 }
-async function submitReset() {
-  const pw = document.getElementById('modal-new-pw').value;
-  if (pw.length < 6) { setModalStatus('modal-reset','err','Password must be at least 6 characters'); return; }
-  try {
-    const res = await fetch(API+'/api/admin/reset-password', {
-      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body:JSON.stringify({username:selectedUser, newPassword:pw}),
-    });
-    const data = await res.json();
-    if (!res.ok) { setModalStatus('modal-reset','err',data.error); return; }
-    setModalStatus('modal-reset','ok','Password updated. Email sent to user.');
-    setTimeout(() => closeModal('modal-reset'), 1800);
-  } catch(e) { setModalStatus('modal-reset','err',e.message); }
+async function submitReset(){
+  const pw=document.getElementById('modal-new-pw').value;
+  if(pw.length<6){setModalStatus('modal-reset','err','Password must be at least 6 characters');return;}
+  try{
+    const res=await fetch(API+'/api/admin/reset-password',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({username:selectedUser,newPassword:pw})});
+    const data=await res.json();
+    if(!res.ok){setModalStatus('modal-reset','err',data.error);return;}
+    setModalStatus('modal-reset','ok','Password updated successfully.');
+    setTimeout(()=>closeModal('modal-reset'),1800);
+  }catch(e){setModalStatus('modal-reset','err',e.message);}
 }
 
-// ── SEND RESET LINK ──
-function openSendLink(username, email) {
-  selectedUser = username;
-  if (!email) { alert('No email on file for this user.'); return; }
-  document.getElementById('modal-link-sub').textContent = `Send a self-service password reset link to ${username} at ${email}. The link expires in 1 hour.`;
+function openSendLink(username,email){
+  selectedUser=username;
+  if(!email){alert('No email address on file for this user.');return;}
+  document.getElementById('modal-link-sub').textContent=`Send a self-service password reset link to ${username} at ${email}. The link expires in 1 hour.`;
   openModal('modal-link');
 }
-async function submitSendLink() {
-  try {
-    const res = await fetch(API+'/api/admin/send-reset-link', {
-      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
-      body:JSON.stringify({username:selectedUser}),
-    });
-    const data = await res.json();
-    if (!res.ok||!data.ok) { setModalStatus('modal-link','err',data.error||'Failed to send'); return; }
-    setModalStatus('modal-link','ok','Reset link emailed successfully.');
-    setTimeout(() => closeModal('modal-link'), 1800);
-  } catch(e) { setModalStatus('modal-link','err',e.message); }
+async function submitSendLink(){
+  try{
+    const res=await fetch(API+'/api/admin/send-reset-link',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({username:selectedUser})});
+    const data=await res.json();
+    if(!res.ok||!data.ok){setModalStatus('modal-link','err',data.error||'Failed to send');return;}
+    setModalStatus('modal-link','ok','Reset link sent successfully.');
+    setTimeout(()=>closeModal('modal-link'),1800);
+  }catch(e){setModalStatus('modal-link','err',e.message);}
 }
 
-// ── DELETE ──
-function openDelete(username) {
-  selectedUser = username;
-  document.getElementById('modal-delete-sub').textContent = `Permanently delete ${username}'s account and all their data (jobs, documents, notes). This cannot be undone.`;
+function openDelete(username){
+  selectedUser=username;
+  document.getElementById('modal-delete-sub').textContent=`Permanently delete ${username}'s account. All data will be removed. This cannot be undone.`;
   openModal('modal-delete');
 }
-async function submitDelete() {
-  try {
-    const res = await fetch(API+'/api/admin/users/'+encodeURIComponent(selectedUser), {
-      method:'DELETE', headers:{'Authorization':'Bearer '+token},
-    });
-    const data = await res.json();
-    if (!res.ok) { setModalStatus('modal-delete','err',data.error); return; }
+async function submitDelete(){
+  try{
+    const res=await fetch(API+'/api/admin/users/'+encodeURIComponent(selectedUser),{method:'DELETE',headers:{Authorization:'Bearer '+token}});
+    const data=await res.json();
+    if(!res.ok){setModalStatus('modal-delete','err',data.error);return;}
     setModalStatus('modal-delete','ok','User deleted.');
-    await loadUsers();
-    setTimeout(() => closeModal('modal-delete'), 1500);
-  } catch(e) { setModalStatus('modal-delete','err',e.message); }
+    await loadUsers();setTimeout(()=>closeModal('modal-delete'),1500);
+  }catch(e){setModalStatus('modal-delete','err',e.message);}
 }
 
-// ── EDIT USER ──
-function openEdit(username, email) {
-  selectedUser = username;
-  document.getElementById('modal-edit-sub').textContent = `Update profile for ${username}`;
-  document.getElementById('modal-edit-username').value = username;
-  document.getElementById('modal-edit-email').value = email || '';
-  openModal('modal-edit');
-  setTimeout(() => document.getElementById('modal-edit-email').focus(), 100);
+function openEdit(username,email){
+  selectedUser=username;
+  document.getElementById('modal-edit-sub').textContent=`Update profile for ${username}`;
+  document.getElementById('modal-edit-username').value=username;
+  document.getElementById('modal-edit-email').value=email||'';
+  openModal('modal-edit');setTimeout(()=>document.getElementById('modal-edit-email').focus(),80);
+}
+async function submitEdit(){
+  const email=document.getElementById('modal-edit-email').value.trim();
+  if(!email||!email.includes('@')){setModalStatus('modal-edit','err','Enter a valid email address');return;}
+  try{
+    const res=await fetch(API+'/api/admin/update-user',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({username:selectedUser,email})});
+    const data=await res.json();
+    if(!res.ok){setModalStatus('modal-edit','err',data.error||'Failed');return;}
+    setModalStatus('modal-edit','ok','Saved.');
+    await loadUsers();setTimeout(()=>closeModal('modal-edit'),1200);
+  }catch(e){setModalStatus('modal-edit','err',e.message);}
 }
 
-async function submitEdit() {
-  const email = document.getElementById('modal-edit-email').value.trim();
-  if (!email || !email.includes('@')) {
-    setModalStatus('modal-edit', 'err', 'Please enter a valid email address');
-    return;
-  }
-  try {
-    const res = await fetch(API + '/api/admin/update-user', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ username: selectedUser, email }),
-    });
-    const data = await res.json();
-    if (!res.ok) { setModalStatus('modal-edit', 'err', data.error || 'Failed'); return; }
-    setModalStatus('modal-edit', 'ok', 'Saved successfully');
-    await loadUsers();
-    setTimeout(() => closeModal('modal-edit'), 1200);
-  } catch(e) { setModalStatus('modal-edit', 'err', e.message); }
+async function adminResetRecoveryCodes(username){
+  if(!confirm(`Generate new recovery codes for ${username}?\n\nThis will invalidate all existing codes.`))return;
+  try{
+    const res=await fetch(API+'/api/admin/reset-recovery-codes',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({username})});
+    const data=await res.json();
+    if(!res.ok){alert('Error: '+(data.error||'Failed'));return;}
+    const codes=(data.recoveryCodes||[]).join('\n');
+    alert(`New recovery codes for ${username}:\n\n${codes}\n\nSave these \u2014 they won\u2019t be shown again.`+(data.emailed?'\n\nEmail sent to user.':'\n(No email on file \u2014 share manually.)'));
+  }catch(e){alert('Could not connect to server.');}
 }
 
-// ── UTILS ──
-async function adminResetRecoveryCodes(username) {
-  if (!confirm(`Generate new recovery codes for ${username}?\n\nThis will invalidate all their existing codes and email them the new ones if they have an email on file.`)) return;
-  try {
-    const res = await fetch(API + '/api/admin/reset-recovery-codes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-      body: JSON.stringify({ username }),
-    });
-    const data = await res.json();
-    if (!res.ok) { alert('Error: ' + (data.error || 'Failed')); return; }
-    const codes = data.recoveryCodes.join('\n');
-    alert(`New recovery codes for ${username}:\n\n${codes}\n\nCopy these now — they won't be shown again.\n${data.emailed ? '\nAn email has been sent to the user.' : '\n(No email on file — share these manually.)'}`);
-  } catch(e) { alert('Could not connect to server.'); }
-}
-
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function fmtDate(ts){ return new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtDate(ts){if(!ts)return '\u2014';return new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
 </script>
 </body>
 </html>

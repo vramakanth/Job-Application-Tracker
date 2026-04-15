@@ -2342,7 +2342,19 @@ app.post('/api/recovery-codes/regenerate', authMiddleware, async (req, res) => {
   const user = users[req.user.username.toLowerCase()];
   if (!user) return res.status(404).json({ error: 'User not found' });
 
-  const ok = await bcrypt.compare(password, user.password);
+  // Handle both bcrypt and pre-encryption plain-text passwords
+  const isBcrypt = user.password?.startsWith('$2b$') || user.password?.startsWith('$2a$');
+  let ok = false;
+  if (isBcrypt) {
+    ok = await bcrypt.compare(password, user.password);
+  } else {
+    // Legacy account: direct comparison, then upgrade password to bcrypt
+    ok = (user.password === password);
+    if (ok) {
+      user.password = await bcrypt.hash(password, 10);
+      saveUsers(users);
+    }
+  }
   if (!ok) return res.status(400).json({ error: 'Incorrect password' });
 
   // Generate 8 new codes (plaintext returned once, bcrypt hashes stored)
