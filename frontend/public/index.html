@@ -4270,36 +4270,41 @@ function copyTailoredText() {
   });
 }
 
-async function downloadTailoredDocx(jobId, docId) {
+function downloadTailoredDocx(jobId, docId) {
   const editor = document.getElementById('to-result-editor');
   if (!editor) return;
   const j = jobs[jobId];
   const jobDoc = (j?.documents||[]).find(d => d.id === docId);
   const label = jobDoc?.type === 'resume' ? 'Resume' : 'Cover Letter';
   const filename = (j ? j.company + ' - ' + j.title + ' Tailored ' + label : 'tailored-document').replace(/[^a-zA-Z0-9 \-]/g, '');
+  const html = editor.innerHTML || '';
   const text = editor.innerText || editor.textContent || '';
 
-  try {
-    const res = await fetch(API + '/api/download-docx', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ text, filename }),
-    });
-    if (!res.ok) throw new Error('Server error');
-    const blob = await res.blob();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename + '.docx';
-    a.click(); URL.revokeObjectURL(a.href);
-  } catch(e) {
-    // Fallback: download as txt
-    const blob = new Blob([text], {type:'text/plain'});
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename + '.txt';
-    a.click();
-    alert('DOCX generation failed — downloaded as .txt instead.');
-  }
+  // Generate a Word-compatible HTML document (opens in Word with formatting)
+  const wordHtml = `<!DOCTYPE html>
+<html xmlns:o="urn:schemas-microsoft-com:office:office"
+      xmlns:w="urn:schemas-microsoft-com:office:word"
+      xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8">
+<style>
+  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; line-height: 1.5; margin: 1in; color: #000; }
+  h1 { font-size: 16pt; font-weight: bold; margin: 0 0 6pt; }
+  h2 { font-size: 13pt; font-weight: bold; margin: 14pt 0 4pt; border-bottom: 1px solid #999; padding-bottom: 2pt; }
+  h3 { font-size: 11pt; font-weight: bold; margin: 10pt 0 2pt; }
+  p { margin: 3pt 0; }
+  ul, ol { margin: 4pt 0 4pt 20pt; }
+  li { margin-bottom: 2pt; }
+  strong { font-weight: bold; }
+  em { font-style: italic; }
+</style></head>
+<body>${html || text.split('\n').map(l => `<p>${l}</p>`).join('')}</body></html>`;
+
+  const blob = new Blob([wordHtml], { type: 'application/msword' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename + '.doc';
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 function changeTailorDocType(jobId, docId, newType) {

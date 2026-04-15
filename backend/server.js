@@ -23,7 +23,6 @@ const app = express();
 // Documents: OpenRouter (free) → fallback Groq → fallback Anthropic
 const GROQ_API_KEY = process.env.GROQ_API_KEY || '';
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
-const ANTHROPIC_API_KEY_ENV = process.env.ANTHROPIC_API_KEY || '';
 
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
 const GOOGLE_MODEL = process.env.GOOGLE_MODEL || 'gemini-2.0-flash';
@@ -1510,56 +1509,6 @@ app.post('/api/docs/upload', authMiddleware, upload.single('file'), async (req, 
   res.json(doc);
 });
 
-// ── Download tailored doc as DOCX ──
-app.post('/api/download-docx', authMiddleware, async (req, res) => {
-  const { html, text, filename } = req.body;
-  if (!html && !text) return res.status(400).json({ error: 'No content provided' });
-  try {
-    const HTMLtoDOCX = require('html-to-docx');
-    const htmlContent = html || `<html><body>${(text||'').split('\n').map(l => `<p>${l}</p>`).join('')}</body></html>`;
-    const docxBuffer = await HTMLtoDOCX(htmlContent, null, {
-      table: { row: { cantSplit: true } },
-      footer: false,
-      pageNumber: false,
-    });
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="${(filename || 'document').replace(/[^a-z0-9_-]/gi, '_')}.docx"`);
-    res.send(docxBuffer);
-  } catch(e) {
-    console.error('DOCX generation error:', e);
-    res.status(500).json({ error: 'Failed to generate DOCX: ' + e.message });
-  }
-});
-
-// ── Download tailored doc as DOCX ──
-app.post('/api/download-docx', authMiddleware, async (req, res) => {
-  const { content: htmlContent, filename = 'tailored-document' } = req.body;
-  if (!htmlContent) return res.status(400).json({ error: 'No content provided' });
-
-  try {
-    const HTMLtoDOCX = require('html-to-docx');
-    // Wrap in a full HTML structure if not already
-    const fullHtml = htmlContent.trim().startsWith('<!DOCTYPE') ? htmlContent :
-      `<!DOCTYPE html><html><body>${htmlContent}</body></html>`;
-
-    const docxBuffer = await HTMLtoDOCX(fullHtml, null, {
-      table: { row: { cantSplit: true } },
-      footer: false,
-      pageNumber: false,
-    });
-
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}.docx"`);
-    res.send(Buffer.from(docxBuffer));
-  } catch(e) {
-    console.error('Download DOCX error:', e.message);
-    // Fallback: send as plain text
-    const text = htmlContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    res.setHeader('Content-Type', 'text/plain');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}.txt"`);
-    res.send(text);
-  }
-});
 
 // ── Check if job posting is still active ──
 app.post('/api/check-posting', authMiddleware, async (req, res) => {
@@ -1733,56 +1682,6 @@ app.post('/api/tailor-docx', authMiddleware, async (req, res) => {
   }
 });
 
-// ── Download tailored doc as DOCX ──
-app.post('/api/download-docx', authMiddleware, async (req, res) => {
-  const { html, text, filename } = req.body;
-  if (!html && !text) return res.status(400).json({ error: 'No content provided' });
-  try {
-    const HTMLtoDOCX = require('html-to-docx');
-    const htmlContent = html || `<html><body>${(text||'').split('\n').map(l => `<p>${l}</p>`).join('')}</body></html>`;
-    const docxBuffer = await HTMLtoDOCX(htmlContent, null, {
-      table: { row: { cantSplit: true } },
-      footer: false,
-      pageNumber: false,
-    });
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="${(filename || 'document').replace(/[^a-z0-9_-]/gi, '_')}.docx"`);
-    res.send(docxBuffer);
-  } catch(e) {
-    console.error('DOCX generation error:', e);
-    res.status(500).json({ error: 'Failed to generate DOCX: ' + e.message });
-  }
-});
-
-// ── Download tailored doc as DOCX ──
-app.post('/api/download-docx', authMiddleware, async (req, res) => {
-  const { content: htmlContent, filename = 'tailored-document' } = req.body;
-  if (!htmlContent) return res.status(400).json({ error: 'No content provided' });
-
-  try {
-    const HTMLtoDOCX = require('html-to-docx');
-    // Wrap in a full HTML structure if not already
-    const fullHtml = htmlContent.trim().startsWith('<!DOCTYPE') ? htmlContent :
-      `<!DOCTYPE html><html><body>${htmlContent}</body></html>`;
-
-    const docxBuffer = await HTMLtoDOCX(fullHtml, null, {
-      table: { row: { cantSplit: true } },
-      footer: false,
-      pageNumber: false,
-    });
-
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}.docx"`);
-    res.send(Buffer.from(docxBuffer));
-  } catch(e) {
-    console.error('Download DOCX error:', e.message);
-    // Fallback: send as plain text
-    const text = htmlContent.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-    res.setHeader('Content-Type', 'text/plain');
-    res.setHeader('Content-Disposition', `attachment; filename="${filename}.txt"`);
-    res.send(text);
-  }
-});
 
 // ── Check if job posting is still active ──
 app.post('/api/check-posting', authMiddleware, async (req, res) => {
