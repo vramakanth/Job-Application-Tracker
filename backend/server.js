@@ -8,6 +8,49 @@ const crypto = require('crypto');
 // The server stores opaque ciphertext and never sees plaintext job data or keys.
 // encryptedDataKey: browser-generated, wrapped with PBKDF2(password) key — server stores only
 // recoveryKeySlots: encryptedDataKey wrapped with each recovery code key — for code-based recovery
+
+// ── Server-side AES-256-GCM helpers (used for job data at-rest encryption) ──
+const CIPHER = 'aes-256-gcm';
+const KDF_ITERATIONS = 100000;
+const KDF_KEYLEN = 32;
+
+function encryptData(plaintext, keyHex) {
+  const key = Buffer.from(keyHex, 'hex');
+  const iv = require('crypto').randomBytes(12);
+  const cipher = require('crypto').createCipheriv(CIPHER, key, iv);
+  const enc = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  return iv.toString('hex') + ':' + tag.toString('hex') + ':' + enc.toString('hex');
+}
+
+function decryptData(ciphertext, keyHex) {
+  const parts = ciphertext.split(':');
+  if (parts.length !== 3) throw new Error('Invalid ciphertext format');
+  const [ivHex, tagHex, dataHex] = parts;
+  const key = Buffer.from(keyHex, 'hex');
+  const iv = Buffer.from(ivHex, 'hex');
+  const tag = Buffer.from(tagHex, 'hex');
+  const enc = Buffer.from(dataHex, 'hex');
+  const decipher = require('crypto').createDecipheriv(CIPHER, key, iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8');
+}
+
+function wrapDataKey(dataKeyHex) {
+  const secret = (process.env.JWT_SECRET || 'change-this').slice(0, 32).padEnd(32, '0');
+  return encryptData(dataKeyHex, Buffer.from(secret).toString('hex'));
+}
+
+function unwrapDataKey(wrappedKey) {
+  const secret = (process.env.JWT_SECRET || 'change-this').slice(0, 32).padEnd(32, '0');
+  return decryptData(wrappedKey, Buffer.from(secret).toString('hex'));
+}
+
+// ── Password reset token store (in-memory, ephemeral) ──
+const resetTokens = {};
+
+function loadTokens() { return resetTokens; }
+function saveTokens(tokens) { /* in-memory only, no-op */ }
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
@@ -33,10 +76,6 @@ const ADMIN_USERNAME = process.env.ADMIN_USERNAME || '';
 const APP_URL       = process.env.APP_URL || 'https://job-application-tracker-hf1f.onrender.com';
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const FROM_EMAIL    = process.env.FROM_EMAIL || 'Applied <noreply@applied.app>';
-const resetTokens   = {};
-
-
-
 // ── RECOVERY CODES ──
 // Generate 8 groups of 4 chars (e.g. A3X9-K2M1-PQ7R-B5N2-...)
 function generateRecoveryCodes(count = 8) {
@@ -271,7 +310,6 @@ const upload = multer({
   }
 });
 
-app.use(cors());
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 // Serve static files with PWA-appropriate cache headers
