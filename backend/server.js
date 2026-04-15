@@ -1683,140 +1683,8 @@ app.post('/api/tailor-docx', authMiddleware, async (req, res) => {
 });
 
 
-// ── Check if job posting is still active ──
-app.post('/api/check-posting', authMiddleware, async (req, res) => {
-  const { url } = req.body;
-  if (!url) return res.status(400).json({ error: 'URL required' });
-
-  try {
-    // Fetch the page with a realistic user agent
-    const pageRes = await fetchWithTimeout(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      }
-    }, 15000);
-
-    if (!pageRes.ok) {
-      // 404 = definitely gone
-      if (pageRes.status === 404) return res.json({ expired: true, reason: '404 Not Found' });
-      // 403/429 = blocked but likely still exists
-      return res.json({ expired: false, reason: `HTTP ${pageRes.status}` });
-    }
-
-    const html = await pageRes.text();
-    const lowerHtml = html.toLowerCase();
-
-    // Common signals that a job is closed/expired
-    const expiredSignals = [
-      'this job is no longer available',
-      'this job has expired',
-      'job no longer available',
-      'position has been filled',
-      'posting has expired',
-      'this position is no longer',
-      'no longer accepting applications',
-      'job listing has been removed',
-      'this listing is expired',
-      'requisition is closed',
-      'position is closed',
-      'job is closed',
-    ];
-
-    const expired = expiredSignals.some(s => lowerHtml.includes(s));
-    res.json({ expired, reason: expired ? 'Expired signals found' : 'Active' });
-  } catch(e) {
-    // Network error - can't determine
-    res.json({ expired: false, reason: 'Could not reach URL: ' + e.message });
-  }
-});
 
 // ── Template injection: tailor DOCX preserving all formatting ──
-// Receives original DOCX as base64, replaces text content via XML patching
-app.post('/api/tailor-docx', authMiddleware, async (req, res) => {
-  const { docxBase64, company, title, location, salary, postingText, docType, context } = req.body;
-  if (!docxBase64) return res.status(400).json({ error: 'DOCX data required' });
-
-  try {
-    const AdmZip = require('adm-zip');
-    const docxBuffer = Buffer.from(docxBase64, 'base64');
-    const zip = new AdmZip(docxBuffer);
-
-    // Extract text from document.xml for AI to work with
-    const docXmlEntry = zip.getEntry('word/document.xml');
-    if (!docXmlEntry) return res.status(422).json({ error: 'Invalid DOCX file' });
-    const docXml = docXmlEntry.getData().toString('utf8');
-
-    // Extract readable text from XML (strip tags)
-    const rawText = docXml
-      .replace(/<w:br[^/]*/g, '\n')
-      .replace(/<w:p[ >]/g, '\n')
-      .replace(/<[^>]+>/g, '')
-      .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
-      .replace(/\n\n+/g, '\n').trim();
-
-    const jobCtx = postingText ? '\nJob posting:\n' + postingText.slice(0, 2000) : '';
-    const docLabel = docType === 'resume' ? 'resume' : 'cover letter';
-    const systemPrompt = 'You are a professional career coach. You will receive a document as plain text with section markers. Rewrite it to be tailored for the job, keeping the exact same structure and sections. Return ONLY the rewritten plain text - same sections, same order, nothing added or removed.';
-    const userPrompt = `Tailor this ${docLabel} for:\nCompany: ${company}\nRole: ${title}\n${location?'Location: '+location:''}\n${salary?'Salary: '+salary:''}\n${context?'Notes: '+context:''}${jobCtx}\n\nDOCUMENT TO TAILOR:\n${rawText}`;
-
-    const { text: tailoredText } = await callAIFast(systemPrompt, userPrompt, 3000);
-
-    // Now do a paragraph-level replacement in the XML
-    // Split both texts into lines for mapping
-    const origLines = rawText.split('\n').filter(l => l.trim());
-    const newLines = tailoredText.split('\n').filter(l => l.trim());
-
-    // Simple approach: replace all text runs with tailored content
-    // Find all <w:t> elements and rebuild with new content proportionally
-    let modifiedXml = docXml;
-
-    // Extract all text runs
-    const runRegex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
-    const runs = [];
-    let m;
-    while ((m = runRegex.exec(docXml)) !== null) {
-      runs.push({ match: m[0], text: m[1], index: m.index });
-    }
-
-    // Get all non-empty text from original
-    const origWords = rawText.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
-    const newWords = tailoredText.replace(/\s+/g, ' ').trim().split(' ').filter(Boolean);
-
-    // Map proportionally: each run gets its proportional share of new words
-    const totalChars = origWords.join(' ').length || 1;
-    let usedNewChars = 0;
-    let runIndex = 0;
-
-    for (const run of runs) {
-      if (!run.text.trim()) continue;
-      const proportion = run.text.length / totalChars;
-      const newWordsCount = Math.max(1, Math.round(proportion * newWords.length));
-      const start = Math.round((run.index / totalChars) * newWords.length);
-      const slice = newWords.slice(
-        Math.min(start, newWords.length - 1),
-        Math.min(start + newWordsCount, newWords.length)
-      ).join(' ');
-      if (slice) {
-        const escapedSlice = slice.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        const newRun = run.match.replace(/>([^<]*)<\/w:t>/, '>' + escapedSlice + '</w:t>');
-        modifiedXml = modifiedXml.replace(run.match, newRun);
-      }
-      runIndex++;
-    }
-
-    // Update the zip with modified XML
-    zip.updateFile('word/document.xml', Buffer.from(modifiedXml, 'utf8'));
-    const outputBuffer = zip.toBuffer();
-
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-    res.setHeader('Content-Disposition', `attachment; filename="tailored-${docType}.docx"`);
-    res.send(outputBuffer);
-  } catch(e) {
-    console.error('DOCX template injection error:', e);
-    res.status(500).json({ error: e.message });
-  }
-});
 
 // ── ADMIN ROUTES ──
 
@@ -2066,66 +1934,8 @@ app.get('/api/admin/users', adminMiddleware, (req, res) => {
   res.json(userList);
 });
 
-// POST /api/admin/deactivate — toggle user active status
-app.post('/api/admin/deactivate', adminMiddleware, (req, res) => {
-  const { username, active } = req.body;
-  const users = loadUsers();
-  const key = username.toLowerCase();
-  if (!users[key]) return res.status(404).json({ error: 'User not found' });
-  if (users[key].isAdmin) return res.status(400).json({ error: 'Cannot deactivate admin account' });
-  users[key].isActive = !!active;
-  saveUsers(users);
-  // Optionally notify the user
-  if (!active && users[key].email) {
-    sendEmail(
-      users[key].email,
-      'Your Applied account has been deactivated',
-      `<p>Hi ${users[key].username},</p><p>Your Pursuit Job Tracker account has been deactivated. Please contact the administrator if you believe this is an error.</p>`
-    );
-  }
-  res.json({ ok: true, isActive: !!active });
-});
 
-// POST /api/admin/reset-password — force set a new password
-app.post('/api/admin/reset-password', adminMiddleware, async (req, res) => {
-  const { username, newPassword } = req.body;
-  if (!newPassword || newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
-  const users = loadUsers();
-  const key = username.toLowerCase();
-  if (!users[key]) return res.status(404).json({ error: 'User not found' });
-  users[key].password = await bcrypt.hash(newPassword, 12);
-  saveUsers(users);
-  // Email the user
-  if (users[key].email) {
-    await sendEmail(
-      users[key].email,
-      'Your Applied password has been reset',
-      `<p>Hi ${users[key].username},</p><p>Your Pursuit Job Tracker password has been reset by an administrator.</p><p>Your new temporary password is: <strong>${newPassword}</strong></p><p>Please log in and change your password immediately.</p><p><a href="${APP_URL}">Open Pursuit</a></p>`
-    );
-  }
-  res.json({ ok: true });
-});
 
-// POST /api/admin/send-reset-link — email a self-service reset link
-app.post('/api/admin/send-reset-link', adminMiddleware, async (req, res) => {
-  const { username } = req.body;
-  const users = loadUsers();
-  const key = username.toLowerCase();
-  if (!users[key]) return res.status(404).json({ error: 'User not found' });
-  if (!users[key].email) return res.status(400).json({ error: 'No email on file for this user' });
-
-  const crypto = require('crypto');
-  const token = crypto.randomBytes(32).toString('hex');
-  resetTokens[token] = { username: key, expires: Date.now() + 60 * 60 * 1000 }; // 1 hour
-
-  const resetUrl = `${APP_URL}/reset-password?token=${token}`;
-  const result = await sendEmail(
-    users[key].email,
-    'Reset your Applied password',
-    `<p>Hi ${users[key].username},</p><p>Click the link below to reset your Pursuit Job Tracker password. This link expires in 1 hour.</p><p><a href="${resetUrl}" style="display:inline-block;padding:10px 20px;background:#a3e635;color:#1a1917;text-decoration:none;border-radius:6px;font-weight:600">Reset Password</a></p><p>Or copy this URL: ${resetUrl}</p><p>If you didn't request this, ignore this email.</p>`
-  );
-  res.json({ ok: result.ok, error: result.error });
-});
 
 // POST /api/admin/delete-user — permanently delete a user
 app.delete('/api/admin/users/:username', adminMiddleware, (req, res) => {
@@ -2150,20 +1960,6 @@ app.get('/api/reset-password-check', (req, res) => {
   res.json({ valid: true, username: entry.username });
 });
 
-// POST /api/reset-password — apply new password from reset link
-app.post('/api/reset-password', async (req, res) => {
-  const { token, newPassword } = req.body;
-  const entry = resetTokens[token];
-  if (!entry || entry.expires < Date.now()) return res.status(400).json({ error: 'Invalid or expired reset link' });
-  if (!newPassword || newPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
-  const users = loadUsers();
-  const user = users[entry.username];
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  user.password = await bcrypt.hash(newPassword, 12);
-  saveUsers(users);
-  delete resetTokens[token];
-  res.json({ ok: true });
-});
 
 // Track last login
 app.use((req, res, next) => {
@@ -2179,13 +1975,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get('/admin', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/public/admin.html'));
-});
 
-app.get('/reset-password', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/public/reset-password.html'));
-});
 
 // ── Account recovery with recovery code ──
 app.post('/api/recover', async (req, res) => {
