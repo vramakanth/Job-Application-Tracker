@@ -736,7 +736,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       </div>
       <span style="font-family:'DM Sans',sans-serif;font-size:17px;font-weight:600;color:#f5f0e8;letter-spacing:-0.3px">Pursuit</span>
     </div>
-    <button class="ld-signin-btn" onclick="showScreen('login')">Sign in</button>
+    <button class="ld-signin-btn" onclick="showScreen('login')">Sign in →</button>
   </nav>
 
   <!-- Hero -->
@@ -751,7 +751,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     </h1>
 
     <p class="ld-sub ld-fade" style="animation-delay:.25s">
-      Track applications, research companies with AI, tailor documents, and understand your compensation — all in one private, focused tool.
+      Track every application. Research companies with AI. Tailor your resume automatically. Know your salary before you negotiate.
     </p>
 
     <div class="ld-ctas ld-fade" style="animation-delay:.35s">
@@ -825,39 +825,58 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
   <!-- Features -->
   <section class="ld-features">
-    <div class="ld-section-label ld-fade" style="animation-delay:.05s">EVERYTHING YOU NEED</div>
-    <h2 class="ld-h2 ld-fade" style="animation-delay:.1s">Built for the modern job search.</h2>
+    <div class="ld-section-label ld-fade" style="animation-delay:.05s">WHAT YOU GET</div>
+    <h2 class="ld-h2 ld-fade" style="animation-delay:.1s">Built for the whole search, not just the apply.</h2>
     <div class="ld-feat-grid">
+
       <div class="ld-feat ld-fade" style="animation-delay:.05s">
-        <div class="ld-feat-icon">📊</div>
-        <div class="ld-feat-title">Application tracking</div>
-        <div class="ld-feat-body">Every application in one place — status pipeline, follow-up nudges, search, bulk actions, and an analytics dashboard showing your response rate and velocity.</div>
+        <div class="ld-feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 17.5h7M17.5 14v7"/></svg>
+        </div>
+        <div class="ld-feat-title">Track every application</div>
+        <div class="ld-feat-body">One pipeline for all your roles — status tracking, follow-up reminders, search, and an analytics dashboard showing where you actually stand.</div>
       </div>
+
       <div class="ld-feat ld-fade" style="animation-delay:.1s">
-        <div class="ld-feat-icon">🔬</div>
+        <div class="ld-feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/><path d="M11 8v6M8 11h6"/></svg>
+        </div>
         <div class="ld-feat-title">AI company research</div>
-        <div class="ld-feat-body">One click gets you Glassdoor culture ratings, recent news, red and green flags, and role intelligence — synthesised by AI for the specific role you applied to.</div>
+        <div class="ld-feat-body">One click delivers culture ratings, recent news, hiring signals, and green and red flags — synthesised by AI around the specific role, not just the company.</div>
       </div>
+
       <div class="ld-feat ld-fade" style="animation-delay:.15s">
-        <div class="ld-feat-icon">✦</div>
-        <div class="ld-feat-title">Document tailoring</div>
-        <div class="ld-feat-body">Upload your resume or cover letter. AI rewrites it for the exact role with versioning and auto-save. Download as .docx ready to submit.</div>
+        <div class="ld-feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M9 13l2 2 4-4"/></svg>
+        </div>
+        <div class="ld-feat-title">Tailored documents</div>
+        <div class="ld-feat-body">Upload your resume. AI rewrites it for the exact role and saves each version automatically. Download as a formatted .docx when you're ready to apply.</div>
       </div>
+
       <div class="ld-feat ld-fade" style="animation-delay:.2s">
-        <div class="ld-feat-icon">💰</div>
-        <div class="ld-feat-title">Compensation intelligence</div>
-        <div class="ld-feat-body">Salary histogram, total comp breakdown, equity details, and geo-adjusted market data for every role. Know your leverage before you negotiate.</div>
+        <div class="ld-feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        </div>
+        <div class="ld-feat-title">Salary intelligence</div>
+        <div class="ld-feat-body">Market salary ranges, total comp breakdowns, equity context, and negotiation leverage — specific to the role, level, and city. Know your number before the call.</div>
       </div>
+
       <div class="ld-feat ld-fade" style="animation-delay:.25s">
-        <div class="ld-feat-icon">🔒</div>
-        <div class="ld-feat-title">Zero-knowledge privacy</div>
-        <div class="ld-feat-body">Optional end-to-end encryption — only you can read your data. The server stores ciphertext. Your key never leaves your browser, with 8 recovery codes.</div>
+        <div class="ld-feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        </div>
+        <div class="ld-feat-title">Private by design</div>
+        <div class="ld-feat-body">Your job search is personal. Optional encryption means your data is unreadable to anyone but you — on the server and in transit. No ads, no selling your data.</div>
       </div>
+
       <div class="ld-feat ld-fade" style="animation-delay:.3s">
-        <div class="ld-feat-icon">📱</div>
-        <div class="ld-feat-title">Mobile PWA + extension</div>
-        <div class="ld-feat-body">Install to your home screen. Every feature works on mobile with native bottom-bar navigation. Browser extension lets you add jobs in one click from any job site.</div>
+        <div class="ld-feat-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/><path d="M9 7h6M9 11h4"/></svg>
+        </div>
+        <div class="ld-feat-title">Works everywhere</div>
+        <div class="ld-feat-body">Full PWA you can install from any browser. Optimised for mobile with a native feel. Browser extension lets you save any job listing in a single click.</div>
       </div>
+
     </div>
   </section>
 
@@ -865,8 +884,8 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
   <section class="ld-cta-section ld-fade" style="animation-delay:.1s">
     <div class="ld-section-label" style="margin-bottom:18px;opacity:.35">START TODAY</div>
     <h2 class="ld-h2" style="margin-bottom:12px">Ready to take control?</h2>
-    <p style="font-family:'DM Sans',sans-serif;font-size:16px;color:rgba(245,240,232,.4);margin-bottom:36px">Free forever. No credit card. No noise.</p>
-    <button class="ld-btn-primary" style="font-size:16px;padding:16px 44px" onclick="showScreen('register')">Create your free account →</button>
+    <p style="font-family:'DM Sans',sans-serif;font-size:15px;color:rgba(245,240,232,.35);margin-bottom:36px;letter-spacing:.01em">Free. No credit card. Takes 30 seconds.</p>
+    <button class="ld-btn-primary" style="font-size:15px;padding:14px 40px" onclick="showScreen('register')">Get started free →</button>
     <div style="margin-top:18px;font-family:'DM Sans',sans-serif;font-size:13px;color:rgba(245,240,232,.25)">
       Already have an account? <a onclick="showScreen('login')" style="color:rgba(232,168,56,.65);cursor:pointer" onmouseover="this.style.color='#e8a838'" onmouseout="this.style.color='rgba(232,168,56,.65)'">Sign in</a>
     </div>
@@ -1010,14 +1029,16 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
   display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:2px;
 }
 .ld-feat {
-  padding:30px;background:rgba(245,240,232,.03);
-  border:1px solid rgba(245,240,232,.06);transition:all .22s;
+  padding:32px 28px;background:rgba(245,240,232,.025);
+  border:1px solid rgba(245,240,232,.07);transition:all .25s;
+  border-radius:1px;
 }
-.ld-feat:hover { background:rgba(245,240,232,.055);border-color:rgba(232,168,56,.18); }
-.ld-feat:hover .ld-feat-icon { transform:scale(1.15); }
-.ld-feat-icon { font-size:26px;margin-bottom:13px;display:block;transition:transform .22s; }
-.ld-feat-title { font-size:15px;font-weight:600;color:#f5f0e8;margin-bottom:9px;letter-spacing:-.01em; }
-.ld-feat-body { font-size:13px;color:rgba(245,240,232,.42);line-height:1.65; }
+.ld-feat:hover { background:rgba(245,240,232,.05);border-color:rgba(232,168,56,.22); }
+.ld-feat:hover .ld-feat-icon { transform:translateY(-2px);color:rgba(232,168,56,0.75); }
+.ld-feat-icon { width:28px;height:28px;margin-bottom:16px;display:block;transition:transform .22s;color:rgba(245,240,232,0.45); }
+.ld-feat-icon svg { width:100%;height:100%; }
+.ld-feat-title { font-size:14px;font-weight:600;color:rgba(245,240,232,.9);margin-bottom:8px;letter-spacing:-.01em; }
+.ld-feat-body { font-size:13px;color:rgba(245,240,232,.38);line-height:1.7; }
 
 /* CTA section */
 .ld-cta-section {
@@ -1505,7 +1526,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function showScreen(n) {
-  ['login','register','app','recover','forgot'].forEach(s => {
+  ['login','register','app','recover','forgot','landing'].forEach(s => {
     const el = document.getElementById('screen-'+s);
     if (el) el.style.display = s===n ? 'flex' : 'none';
   });
