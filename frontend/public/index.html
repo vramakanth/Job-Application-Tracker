@@ -27,58 +27,60 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=JetBrains+Mono:ital,wght@0,400;0,500;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap">
 
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 /* ── LIGHT THEME (default) ── */
 :root {
-  --font: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --radius: 10px;
-  --radius-sm: 6px;
+  --font: 'Geist', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'Geist Mono', 'DM Mono', monospace;
+  --radius: 8px;
+  --radius-sm: 5px;
   --safe-top:    env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --bg:      #f4f3f0;
-  --bg2:     #ffffff;
-  --bg3:     #eeece8;
-  --bg4:     #e4e2dd;
-  --border:  rgba(0,0,0,0.09);
-  --border2: rgba(0,0,0,0.18);
-  --text:    #1a1917;
-  --text2:   #6b6863;
-  --text3:   #a8a49f;
-  --accent:       #4a7200;
-  --accent-bg:    #c8f060;
-  --accent-bg2:   #aed84a;
-  --red:    #c0392b;
-  --blue:   #1d4ed8;
-  --amber:  #92400e;
-  --green:  #14532d;
-  --purple: #5b21b6;
+
+  /* Light — warm parchment */
+  --bg:      #f7f4ef;
+  --bg2:     #fdfcf9;
+  --bg3:     #f0ece4;
+  --bg4:     #e6e0d4;
+  --border:  rgba(60,45,20,0.10);
+  --border2: rgba(60,45,20,0.22);
+  --text:    #1c1611;
+  --text2:   #6b5f4e;
+  --text3:   #a8997f;
+  --accent:       #c05e00;
+  --accent-bg:    #e8a838;
+  --accent-bg2:   #d4922a;
+  --red:    #b83225;
+  --blue:   #1a56a0;
+  --amber:  #a06010;
+  --green:  #1a6640;
+  --purple: #6030a0;
 }
 
-/* ── DARK THEME ── */
+/* ── DARK THEME — warm charcoal, not void black ── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg:      #111113;
-    --bg2:     #18181a;
-    --bg3:     #1f1f21;
-    --bg4:     #272729;
-    --border:  rgba(255,255,255,0.06);
-    --border2: rgba(255,255,255,0.12);
-    --text:    #f0ede8;
-    --text2:   #9c9894;
-    --text3:   #5c5a57;
-    --accent:       #c8f060;
-    --accent-bg:    #c8f060;
-    --accent-bg2:   #aed84a;
-    --red:    #ff6b6b;
-    --blue:   #6ba3ff;
-    --amber:  #ffb347;
-    --green:  #6bffb3;
-    --purple: #b47fff;
+    --bg:      #1a1714;
+    --bg2:     #222017;
+    --bg3:     #2c291f;
+    --bg4:     #38342a;
+    --border:  rgba(255,235,180,0.10);
+    --border2: rgba(255,235,180,0.20);
+    --text:    #f2ead8;
+    --text2:   #b8a888;
+    --text3:   #7a6a50;
+    --accent:       #e8a838;
+    --accent-bg:    #e8a838;
+    --accent-bg2:   #d4922a;
+    --red:    #e86060;
+    --blue:   #70aaee;
+    --amber:  #e0a040;
+    --green:  #60c888;
+    --purple: #b08ae0;
   }
 }
 
@@ -402,7 +404,7 @@ html, body { height: 100%; font-family: var(--font); background: var(--bg); colo
 .tailor-toggle.active { background: var(--bg3); border-color: var(--accent); color: var(--accent); font-weight: 500; }
 .tailor-context { width: 100%; padding: 10px; background: var(--bg3); border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; color: var(--text); resize: none; min-height: 70px; outline: none; margin-bottom: 12px; line-height: 1.6; }
 .tailor-context::placeholder { color: var(--text3); }
-.tailor-btn { padding: 8px 18px; background: var(--accent-bg); color: #1a1917; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.15s; }
+.tailor-btn { padding: 9px 18px; background: var(--accent-bg); color: #1a1917; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.15s; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
 .tailor-btn:hover { background: var(--accent-bg2); }
 .tailor-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .ai-result { margin-top: 16px; background: transparent; border: none; border-radius: 0; padding: 0; }
@@ -513,6 +515,164 @@ input[type="file"] { display: none; }
 .mobile-bottom-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: var(--text3); font-family: var(--font); font-size: 10px; cursor: pointer; padding: 8px 12px; border-radius: var(--radius-sm); transition: color 0.15s; min-width: 60px; }
 .mobile-bottom-btn:hover, .mobile-bottom-btn.active { color: var(--accent); }
 .mobile-bottom-btn svg { width: 20px; height: 20px; }
+
+::selection { background: rgba(232,168,56,0.25); color: var(--text); }
+.modal-overlay { backdrop-filter: blur(2px); }
+.snav-btn.active { border-left: 2px solid var(--accent-bg) !important; padding-left: 12px !important; color: var(--accent-bg) !important; }
+
+/* ═══════════════════════════════════════════
+   APPLIED — DESIGN REFRESH
+   Warm Charcoal Dark · Parchment Light
+   ═══════════════════════════════════════════ */
+
+/* Font */
+:root {
+  --font: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono: 'DM Mono', 'JetBrains Mono', monospace;
+}
+
+/* Selection */
+::selection { background: rgba(232,168,56,0.28); color: var(--text); }
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg4); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* Active job indicator strip */
+.job-item { position: relative; }
+.job-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 4px; bottom: 4px;
+  width: 3px;
+  background: var(--accent-bg);
+  border-radius: 0 3px 3px 0;
+}
+
+/* Pill search */
+.search-input { border-radius: 20px !important; }
+.search-input:focus { border-color: var(--accent-bg) !important; box-shadow: 0 0 0 3px rgba(232,168,56,0.12) !important; outline: none; }
+
+/* Status pill */
+.status-select { border-radius: 20px !important; font-weight: 500 !important; }
+
+/* Modal blur */
+.modal-overlay { backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); }
+.modal { box-shadow: 0 12px 48px rgba(0,0,0,0.22), 0 2px 8px rgba(0,0,0,0.1) !important; border-radius: 12px !important; border-color: var(--border2) !important; }
+
+/* Settings nav active */
+.snav-btn { border-left: 2px solid transparent; }
+.snav-btn:hover { color: var(--text) !important; background: var(--bg3) !important; }
+.snav-btn.active { border-left-color: var(--accent-bg) !important; color: var(--accent-bg) !important; background: var(--bg3) !important; padding-left: 12px !important; }
+
+/* Tab active color */
+.tab.active { color: var(--accent-bg) !important; border-bottom-color: var(--accent-bg) !important; font-weight: 600 !important; }
+
+/* Focus rings */
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--accent-bg) !important;
+  box-shadow: 0 0 0 3px rgba(232,168,56,0.12);
+}
+
+/* Auth card */
+.auth-card {
+  box-shadow: 0 4px 32px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06) !important;
+  border-radius: 14px !important;
+}
+.auth-btn {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  letter-spacing: 0.01em;
+}
+.auth-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.15); }
+.auth-btn:active { transform: none; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+/* Add button pulse */
+.add-btn { box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+.add-btn:hover { box-shadow: 0 3px 10px rgba(232,168,56,0.25); transform: translateY(-1px); }
+.add-btn:active { transform: none; }
+
+/* Tailor button */
+.tailor-btn { box-shadow: 0 1px 3px rgba(0,0,0,0.10); }
+.tailor-btn:hover { transform: translateY(-1px); box-shadow: 0 3px 8px rgba(232,168,56,0.2); }
+.tailor-btn:active { transform: none; }
+
+/* Settings sections */
+.settings-section { border-radius: 8px !important; }
+.settings-section-title { letter-spacing: 0.6px !important; }
+
+/* Insight section */
+.insight-section { border-radius: 8px !important; overflow: hidden; transition: box-shadow 0.15s; }
+.insight-section:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+/* Detail title */
+.detail-title { font-weight: 700 !important; letter-spacing: -0.4px !important; }
+
+/* Logo mark color fix */
+.logo-mark svg, .auth-logo-mark svg { color: #1a1917; }
+
+/* Empty state */
+.empty-state h2 { font-weight: 700; letter-spacing: -0.4px; }
+
+/* Analytics overlay */
+#analytics-overlay { background: var(--bg) !important; }
+
+/* Docs overlay */
+.docs-overlay { background: var(--bg) !important; }
+
+/* Warm auth background pattern */
+.auth-wrap {
+  background-image:
+    radial-gradient(ellipse at 15% 15%, rgba(232,168,56,0.07) 0%, transparent 40%),
+    radial-gradient(ellipse at 85% 85%, rgba(192,94,0,0.05) 0%, transparent 40%) !important;
+}
+
+/* ── POLISH: Keyboard shortcut kbd tags ── */
+kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px; padding:2px 8px; font-family:var(--mono); font-size:11px; color:var(--text); box-shadow:0 1px 0 var(--border2); }
+
+/* ── POLISH: Tab strip scrollable on mobile ── */
+.detail-tabs { overflow-x:auto; scrollbar-width:none; }
+.detail-tabs::-webkit-scrollbar { display:none; }
+
+/* ── POLISH: Bulk mode job item ── */
+.job-item input[type="checkbox"] { accent-color:var(--accent-bg); }
+
+/* ── POLISH: Watchlist star hover ── */
+.detail-title-row button:hover { transform:scale(1.15); }
+
+/* ── POLISH: Analytics KPI card hover ── */
+.insight-card, [style*="insight-card"] { cursor:default; }
+
+/* ── POLISH: Sidebar button hover state ── */
+[style*="sidebar"] button[onmouseover] { border-radius:var(--radius-sm); }
+
+/* ── POLISH: File slot hover ── */
+.file-slot:hover { border-color:var(--border2) !important; }
+
+/* ── POLISH: Tag chips ── */
+.tag-chip { display:inline-flex; align-items:center; padding:2px 8px; border-radius:100px; font-size:11px; font-family:var(--mono); font-weight:500; border:1px solid; }
+.tag-chip-green  { background:rgba(26,102,64,0.1);  border-color:rgba(26,102,64,0.25);  color:var(--green); }
+.tag-chip-red    { background:rgba(184,50,37,0.1);  border-color:rgba(184,50,37,0.25);  color:var(--red); }
+.tag-chip-amber  { background:rgba(160,96,16,0.1);  border-color:rgba(160,96,16,0.25);  color:var(--amber); }
+.tag-chip-blue   { background:rgba(26,86,160,0.1);  border-color:rgba(26,86,160,0.25);  color:var(--blue); }
+
+/* ── POLISH: Loading spinner ── */
+@keyframes spin { to { transform:rotate(360deg); } }
+.spinner { width:16px; height:16px; border:2px solid var(--bg4); border-top-color:var(--accent-bg); border-radius:50%; animation:spin .7s linear infinite; display:inline-block; }
+
+/* ── POLISH: Empty state ── */
+.empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; height:100%; color:var(--text3); padding:40px; text-align:center; }
+.empty-state svg { opacity:.25; }
+
+/* ── POLISH: Sidebar section divider ── */
+.sidebar-section-label { padding:8px 14px 4px; font-size:10px; font-family:var(--mono); color:var(--text3); letter-spacing:0.8px; font-weight:600; text-transform:uppercase; }
+
+/* ── POLISH: Smooth tab pane transition ── */
+.tab-pane { animation:fadeIn .15s ease; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+/* ── POLISH: Better scrollbar in job list ── */
+.job-list { overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--bg4) transparent; }
 </style>
 </head>
 <body>
@@ -521,7 +681,7 @@ input[type="file"] { display: none; }
 <div id="screen-login" class="auth-wrap">
   <div class="auth-card">
     <div class="auth-logo">
-      <div class="auth-logo-mark"><svg viewBox="0 0 20 20" fill="none"><path d="M4 16V9l6-5 6 5v7H13v-5H7v5H4z" fill="#1a1917"/></svg></div>
+      <div class="auth-logo-mark"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.5" stroke="currentColor" stroke-width="2"/><circle cx="10" cy="10" r="3" fill="currentColor"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
       <div><div class="auth-logo-text">Pursuit</div><div class="auth-logo-sub">job tracker</div></div>
     </div>
     <div class="auth-heading">Welcome back</div>
@@ -532,6 +692,7 @@ input[type="file"] { display: none; }
     <button class="auth-btn" id="login-btn" onclick="doLogin()">Sign in</button>
     <div class="auth-switch">No account? <a onclick="showScreen('register')">Create one →</a></div>
     <div class="auth-switch" style="margin-top:6px"><a onclick="showScreen('forgot')" style="color:var(--text3);font-size:12px">Forgot username or password?</a></div>
+    <div class="auth-switch" style="margin-top:4px"><a onclick="showScreen('recover')" style="color:var(--text3);font-size:12px">Lost email access? Use a recovery code</a></div>
   </div>
 </div>
 
@@ -560,7 +721,7 @@ input[type="file"] { display: none; }
     <div class="sidebar-header">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div class="logo" style="margin-bottom:0">
-          <div class="logo-mark"><svg viewBox="0 0 16 16" fill="none"><path d="M3 13L13 3M13 3H7M13 3v6" stroke="#1a1917" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="logo-mark"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="1.5"/><circle cx="8" cy="8" r="2.5" fill="currentColor"/><path d="M8 2v1.5M8 12.5V14M2 8h1.5M12.5 8H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
           <div><div class="logo-text">Pursuit</div><div class="logo-sub">job tracker</div></div>
         </div>
         <button id="mobile-avatar-btn" onclick="openSettings('account')" title="Account & Settings" style="display:none;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:4px">
@@ -585,16 +746,55 @@ input[type="file"] { display: none; }
       <div class="filter-tab" onclick="setFilter('rejected',this)">rejected</div>
       <div class="filter-tab" onclick="setFilter('expired',this)" style="color:#f97316">expired</div>
     </div>
+    <div id="stale-nudge" style="display:none"></div>
+    <div id="bulk-action-bar" style="display:none;align-items:center;gap:6px;padding:6px 10px;background:var(--bg3);border-bottom:1px solid var(--border);flex-shrink:0">
+      <span class="bulk-count" style="font-size:12px;color:var(--text2);flex:1"></span>
+      <select onchange="if(this.value){bulkChangeStatus(this.value);this.value=''}" style="padding:4px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:11px;color:var(--text);cursor:pointer">
+        <option value="">Set status…</option>
+        <option value="applied">Applied</option><option value="screening">Screening</option>
+        <option value="interviewing">Interviewing</option><option value="offer">Offer</option>
+        <option value="rejected">Rejected</option><option value="ghosted">Ghosted</option>
+        <option value="withdrawn">Withdrawn</option>
+      </select>
+      <button onclick="bulkExport()" style="padding:4px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:11px;color:var(--text2);cursor:pointer;font-family:var(--font)">Export</button>
+      <button onclick="bulkDelete()" style="padding:4px 8px;background:rgba(184,50,37,0.1);border:1px solid rgba(184,50,37,0.3);border-radius:var(--radius-sm);font-size:11px;color:var(--red);cursor:pointer;font-family:var(--font)">Delete</button>
+    </div>
     <div class="job-list" id="job-list"></div>
     <div class="sidebar-nav-btns" style="padding:8px 12px 4px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px">
       <button onclick="openEmailTemplates()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="9" rx="2" stroke="currentColor" stroke-width="1.3"/><path d="M1 5l6 4 6-4" stroke="currentColor" stroke-width="1.3"/></svg>
         Email Templates
       </button>
+      <button onclick="showReferralPipeline()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="4" cy="7" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="10" cy="3" r="2" stroke="currentColor" stroke-width="1.3"/><circle cx="10" cy="11" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M6 6l2.5-2M6 8l2.5 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        Referral Pipeline
+      </button>
+      <div class="sidebar-section-label">TOOLS</div>
       <button onclick="showDocumentsPage()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 2h6l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v4h4" stroke="currentColor" stroke-width="1.3"/></svg>
         Document Library
       </button>
+      <button onclick="showWatchlist()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1.5C4 1.5 1.5 4 1.5 7S4 12.5 7 12.5 12.5 10 12.5 7 10 1.5 7 1.5z" stroke="currentColor" stroke-width="1.3"/><circle cx="7" cy="7" r="2" stroke="currentColor" stroke-width="1.3"/></svg>
+        Watchlist
+      </button>
+      <button onclick="showOfferComparison()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M5 4l-3 3 3 3M9 4l3 3-3 3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Compare Offers
+      </button>
+      <button onclick="showStatusPageSettings()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="5" r="2.5" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 12c0-2.5 2.5-4 5.5-4s5.5 1.5 5.5 4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        Status Page
+      </button>
+      <button id="bulk-mode-btn" onclick="toggleBulkMode()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="1.5" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="8.5" y="1.5" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="1.5" y="8.5" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="8.5" y="8.5" width="4" height="4" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
+        ⊡ Select multiple
+      </button>
+      <button onclick="showKeyboardShortcuts()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1" y="3" width="12" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M3.5 7h1M6.5 7h1M9.5 7h1M5 9.5h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        Keyboard shortcuts
+      </button>
+      <div class="sidebar-section-label" style="margin-top:6px">INSIGHTS</div>
       <button onclick="showAnalytics()" style="width:100%;padding:7px 10px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background='transparent'">
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1" y="8" width="3" height="5" rx="1" fill="currentColor" opacity=".6"/><rect x="5.5" y="5" width="3" height="8" rx="1" fill="currentColor" opacity=".8"/><rect x="10" y="2" width="3" height="11" rx="1" fill="currentColor"/></svg>
         Analytics
@@ -613,6 +813,36 @@ input[type="file"] { display: none; }
       </button>
     </div>
   </div>
+  <!-- Recovery screen -->
+  <div id="screen-recover" class="auth-wrap" style="display:none">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="auth-logo-mark"><svg viewBox="0 0 20 20" fill="none"><path d="M10 2a8 8 0 100 16A8 8 0 0010 2z" stroke="currentColor" stroke-width="1.5"/><path d="M10 7v4l2.5 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        <div><div class="auth-logo-name">Applied</div><div class="auth-logo-sub">Account recovery</div></div>
+      </div>
+      <div class="auth-field">
+        <label>USERNAME</label>
+        <input type="text" id="recover-username" placeholder="Your username" autocomplete="username">
+      </div>
+      <div class="auth-field">
+        <label>RECOVERY CODE</label>
+        <input type="text" id="recover-code" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" style="font-family:var(--mono);letter-spacing:2px">
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">Enter one of the 8 codes you saved when you registered. Each code can only be used once.</div>
+      </div>
+      <div class="auth-field">
+        <label>NEW PASSWORD</label>
+        <input type="password" id="recover-newpw" placeholder="New password (min 6 chars)" autocomplete="new-password">
+      </div>
+      <div class="auth-field">
+        <label>CONFIRM NEW PASSWORD</label>
+        <input type="password" id="recover-confirmpw" placeholder="Confirm new password" autocomplete="new-password">
+      </div>
+      <div class="auth-error" id="recover-error"></div>
+      <button class="auth-btn" id="recover-btn" onclick="doRecover()">Reset password</button>
+      <div class="auth-switch"><a onclick="showScreen('login')">← Back to sign in</a></div>
+    </div>
+  </div>
+
   <div class="main">
     <div class="empty-state" id="empty-state">
       <svg viewBox="0 0 64 64" fill="none"><rect x="8" y="12" width="48" height="40" rx="4" stroke="currentColor" stroke-width="2"/><path d="M20 24h24M20 32h16M20 40h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -743,6 +973,90 @@ let sessionTailoredResume = null, sessionTailoredCover = null;
 let sessionTailoredResumeHtml = null, sessionTailoredCoverHtml = null;
 let activeTailorDoc = 'resume'; // which doc type is selected in tailoring UI
 let pendingHtml = null, pendingText = null;
+// ══════════════════════════════════════════════════════════════════
+// ZERO-KNOWLEDGE CRYPTO ENGINE — all key operations stay in browser
+// Server never sees plaintext data keys or job content
+// ══════════════════════════════════════════════════════════════════
+const CryptoEngine = {
+  // Derive an AES-256-GCM key from a password + salt using PBKDF2
+  // Used to wrap/unwrap the dataKey — never used directly on data
+  async deriveKey(password, salt) {
+    const enc = new TextEncoder();
+    const raw = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey(
+      { name: 'PBKDF2', salt: enc.encode(salt.toLowerCase()), iterations: 100000, hash: 'SHA-256' },
+      raw,
+      { name: 'AES-GCM', length: 256 },
+      true,
+      ['encrypt', 'decrypt']
+    );
+  },
+
+  // Generate a random 256-bit data key (used to encrypt all user data)
+  async generateDataKey() {
+    return crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+  },
+
+  // Export a CryptoKey to base64 string
+  async exportKey(key) {
+    const raw = await crypto.subtle.exportKey('raw', key);
+    return btoa(String.fromCharCode(...new Uint8Array(raw)));
+  },
+
+  // Import a base64 string as AES-GCM CryptoKey
+  async importKey(b64) {
+    const raw = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+  },
+
+  // Wrap (encrypt) a dataKey with a wrapping key — returns base64 ciphertext
+  async wrapKey(dataKey, wrappingKey) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const rawKey = await crypto.subtle.exportKey('raw', dataKey);
+    const encrypted = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, wrappingKey, rawKey);
+    const combined = new Uint8Array(12 + encrypted.byteLength);
+    combined.set(iv);
+    combined.set(new Uint8Array(encrypted), 12);
+    return btoa(String.fromCharCode(...combined));
+  },
+
+  // Unwrap (decrypt) an encryptedDataKey blob using a wrapping key — returns dataKey CryptoKey
+  async unwrapKey(b64, wrappingKey) {
+    const combined = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const iv = combined.slice(0, 12);
+    const data = combined.slice(12);
+    const rawKey = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, wrappingKey, data);
+    return crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+  },
+
+  // Encrypt a JSON-serialisable value — returns base64 ciphertext
+  async encrypt(dataKey, value) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const enc = new TextEncoder();
+    const plaintext = typeof value === 'string' ? value : JSON.stringify(value);
+    const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, dataKey, enc.encode(plaintext));
+    const combined = new Uint8Array(12 + ciphertext.byteLength);
+    combined.set(iv);
+    combined.set(new Uint8Array(ciphertext), 12);
+    return btoa(String.fromCharCode(...combined));
+  },
+
+  // Decrypt a base64 ciphertext — returns parsed JSON or string
+  async decrypt(dataKey, b64) {
+    const combined = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+    const iv = combined.slice(0, 12);
+    const data = combined.slice(12);
+    const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, dataKey, data);
+    const str = new TextDecoder().decode(plaintext);
+    try { return JSON.parse(str); } catch { return str; }
+  },
+};
+
+// Active data key — lives in memory only, cleared on logout/reload
+// Never written to localStorage, sessionStorage, or sent to server
+let dataKey = null;
+let isEncrypted = false; // true for zero-knowledge accounts
+
 const STATUSES = ['to apply','applied','screening','interviewing','offer','rejected','ghosted','withdrawn','expired'];
 
 // ── UTILITIES ──
@@ -775,9 +1089,13 @@ function formatBytes(n) {
 // ── INIT ──
 // Reset mobile panels on resize
 window.addEventListener('resize', () => {
+  const mabtn = document.getElementById('mobile-avatar-btn');
   if (window.innerWidth > 680) {
     document.querySelector('.sidebar')?.classList.remove('hidden-mobile');
     document.querySelector('.main')?.classList.remove('visible-mobile');
+    if (mabtn) mabtn.style.display = 'none';
+  } else {
+    if (mabtn && currentUser) mabtn.style.display = 'flex';
   }
 });
 
@@ -787,11 +1105,13 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function showScreen(n) {
-  ['login','register','app'].forEach(s => {
-    document.getElementById('screen-'+s).style.display = s===n ? 'flex' : 'none';
+  ['login','register','app','recover','forgot'].forEach(s => {
+    const el = document.getElementById('screen-'+s);
+    if (el) el.style.display = s===n ? 'flex' : 'none';
   });
-  if (n==='login') setTimeout(()=>document.getElementById('login-username').focus(), 80);
-  if (n==='register') setTimeout(()=>document.getElementById('reg-username').focus(), 80);
+  if (n==='login') setTimeout(()=>document.getElementById('login-username')?.focus(), 80);
+  if (n==='register') setTimeout(()=>document.getElementById('reg-username')?.focus(), 80);
+  if (n==='recover') setTimeout(()=>document.getElementById('recover-username')?.focus(), 80);
 }
 
 function showApp() {
@@ -806,7 +1126,7 @@ function showApp() {
   const mabtn = document.getElementById('mobile-avatar-btn');
   if (mav) mav.textContent = (currentUser||'?').slice(0,2).toUpperCase();
   if (mun) mun.textContent = currentUser || '';
-  if (mabtn) mabtn.style.display = 'flex';
+  if (mabtn) mabtn.style.display = window.innerWidth <= 680 ? 'flex' : 'none';
 }
 
 // ── AUTH ──
@@ -819,12 +1139,30 @@ async function doLogin() {
   if (!u||!p) { showErr(err,'Please fill in all fields.'); return; }
   btn.disabled=true; btn.textContent='Signing in...';
   try {
-    const res = await fetch(API+'/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u,password:p,email:(document.getElementById('reg-email')?.value?.trim()||'')})});
+    const res = await fetch(API+'/api/login', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u, password:p})});
     const d = await res.json();
     if (!res.ok) { showErr(err, d.error||'Login failed'); return; }
     token=d.token; currentUser=d.username;
     localStorage.setItem('applied_token',token);
     localStorage.setItem('applied_user',currentUser);
+
+    // Zero-knowledge: derive dataKey from password in browser — never sent to server
+    if (d.encrypted && d.encryptedDataKey) {
+      btn.textContent = 'Decrypting...';
+      try {
+        const pwKey = await CryptoEngine.deriveKey(p, u);
+        dataKey = await CryptoEngine.unwrapKey(d.encryptedDataKey, pwKey);
+        isEncrypted = true;
+      } catch(cryptoErr) {
+        showErr(err, 'Could not decrypt your data. Check your password and try again.');
+        token=null; currentUser=null;
+        localStorage.removeItem('applied_token'); localStorage.removeItem('applied_user');
+        return;
+      }
+    } else {
+      dataKey = null; isEncrypted = false;
+    }
+
     showApp(); loadJobs();
   } catch(e) { showErr(err,'Could not connect to server.'); }
   finally { btn.disabled=false; btn.textContent='Sign in'; }
@@ -854,6 +1192,134 @@ async function doForgot() {
   finally { btn.disabled = false; btn.textContent = 'Send recovery email'; }
 }
 
+// ── RECOVERY CODE FUNCTIONS ──
+async function doRecover() {
+  const username = document.getElementById('recover-username').value.trim();
+  const code = document.getElementById('recover-code').value.trim();
+  const newpw = document.getElementById('recover-newpw').value;
+  const confirmpw = document.getElementById('recover-confirmpw').value;
+  const err = document.getElementById('recover-error');
+  const btn = document.getElementById('recover-btn');
+  err.classList.remove('show');
+
+  if (!username || !code || !newpw) { showErr(err, 'Please fill in all fields.'); return; }
+  if (newpw !== confirmpw) { showErr(err, 'Passwords do not match.'); return; }
+  if (newpw.length < 8) { showErr(err, 'Password must be at least 8 characters.'); return; }
+
+  btn.disabled = true; btn.textContent = 'Verifying code...';
+  try {
+    // Phase 1: verify code, get recovery slot
+    const res1 = await fetch(API + '/api/recover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, recoveryCode: code, newPassword: newpw }),
+    });
+    const d1 = await res1.json();
+    if (!res1.ok) { showErr(err, d1.error || 'Recovery failed'); return; }
+
+    let newEncryptedDataKey = null;
+
+    // Phase 2 (zero-knowledge accounts): decrypt dataKey with code, re-wrap with new password
+    if (d1.phase === 1 && d1.slot && d1.encrypted) {
+      btn.textContent = 'Decrypting keys...';
+      const cleanCode = code.replace(/-/g, '').toUpperCase();
+      const codeKey = await CryptoEngine.deriveKey(cleanCode, username);
+      const recoveredDataKey = await CryptoEngine.unwrapKey(d1.slot, codeKey);
+      const newPwKey = await CryptoEngine.deriveKey(newpw, username);
+      newEncryptedDataKey = await CryptoEngine.wrapKey(recoveredDataKey, newPwKey);
+
+      // Phase 2: send re-wrapped key to complete recovery
+      btn.textContent = 'Completing recovery...';
+      const res2 = await fetch(API + '/api/recover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, recoveryCode: code, newPassword: newpw, newEncryptedDataKey }),
+      });
+      const d2 = await res2.json();
+      if (!res2.ok) { showErr(err, d2.error || 'Recovery phase 2 failed'); return; }
+
+      token = d2.token; currentUser = d2.username;
+      dataKey = recoveredDataKey;
+      isEncrypted = true;
+      localStorage.setItem('applied_token', token);
+      localStorage.setItem('applied_user', currentUser);
+
+      ['recover-username','recover-code','recover-newpw','recover-confirmpw'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+      const remaining = d2.codesRemaining || 0;
+      alert('Recovery successful! You have ' + remaining + ' code' + (remaining===1?'':'s') + ' remaining. Visit Settings > Recovery Codes to generate a fresh set.');
+      showApp(); loadJobs();
+    } else if (d1.token) {
+      // Non-encrypted account recovery
+      token = d1.token; currentUser = d1.username;
+      dataKey = null; isEncrypted = false;
+      localStorage.setItem('applied_token', token);
+      localStorage.setItem('applied_user', currentUser);
+      ['recover-username','recover-code','recover-newpw','recover-confirmpw'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.value = '';
+      });
+      showApp(); loadJobs();
+    }
+  } catch(e) { showErr(err, 'Recovery failed: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Reset password'; }
+}
+
+function showRecoveryCodesModal(codes, onDone, isNewAccount = false) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:min(480px,100%);padding:28px;max-height:90vh;overflow-y:auto">
+      ${isNewAccount ? `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <span style="font-size:24px">🔐</span>
+        <div style="font-size:18px;font-weight:700;color:var(--text)">Save your recovery codes now</div>
+      </div>
+      <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;font-size:13px;color:#ef4444;font-weight:600">
+        ⚠ These codes are your ONLY backup. If you lose your password and these codes, your encrypted data is gone forever — even we can't recover it.
+      </div>` : `
+      <div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px">New recovery codes</div>`}
+      <div style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">
+        Each code works <strong>once only</strong>. Store them in a password manager, print them, or write them somewhere physically safe.
+        <strong style="color:var(--red)">You will not see these again.</strong>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          ${codes.map((c, i) => `<div style="font-family:var(--mono);font-size:14px;letter-spacing:2px;color:var(--text);padding:6px 10px;background:var(--bg2);border-radius:4px">${i+1}. ${c}</div>`).join('')}
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button onclick="navigator.clipboard.writeText(${JSON.stringify(codes.join('\n'))}).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy all',1500)})" style="flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer">Copy all</button>
+        <button onclick="printRecoveryCodes(${JSON.stringify(codes)})" style="flex:1;padding:8px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer">Print</button>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:16px;cursor:pointer;font-size:13px;color:var(--text2)">
+        <input type="checkbox" id="codes-saved-confirm" onchange="document.getElementById('codes-done-btn').disabled=!this.checked">
+        I have saved these codes in a safe place
+      </label>
+      <button id="codes-done-btn" onclick="document.body.removeChild(this.closest('[style*=fixed]'));(${onDone.toString()})()" disabled style="width:100%;padding:10px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;opacity:0.5" onmouseenter="if(!this.disabled)this.style.opacity='1'" onmouseleave="if(!this.disabled)this.style.opacity=''">
+        I've saved my codes — continue to app →
+      </button>
+    </div>`;
+
+  // Enable button when checkbox ticked
+  document.body.appendChild(overlay);
+}
+
+function printRecoveryCodes(codes) {
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>Applied — Recovery Codes</title>
+    <style>body{font-family:monospace;padding:40px;max-width:400px;margin:0 auto}
+    h2{font-size:18px}p{font-size:13px;line-height:1.6}
+    .code{font-size:16px;letter-spacing:3px;padding:8px 0;border-bottom:1px solid #eee}</style>
+    </head><body>
+    <h2>Applied — Recovery Codes</h2>
+    <p>Each code can only be used once. Store this page somewhere safe.</p>
+    <p>Generated: ${new Date().toLocaleString()}</p>
+    ${codes.map((c,i) => `<div class="code">${i+1}. ${c}</div>`).join('')}
+    </body></html>`);
+  win.print();
+}
+
 async function doRegister() {
   const u = document.getElementById('reg-username').value.trim();
   const e = document.getElementById('reg-email')?.value.trim() || '';
@@ -862,24 +1328,125 @@ async function doRegister() {
   const err = document.getElementById('register-error');
   const btn = document.getElementById('register-btn');
   err.classList.remove('show');
-  if (!u||!p) { showErr(err,'Please fill in all fields.'); return; }
-  if (!e||!e.includes('@')) { showErr(err,'Please enter a valid email address.'); return; }
+  if (!u||!p||!e) { showErr(err,'Please fill in all fields.'); return; }
+  if (!e.includes('@')) { showErr(err,'Please enter a valid email address.'); return; }
+  if (p.length < 8) { showErr(err,'Password must be at least 8 characters.'); return; }
   if (p!==c) { showErr(err,'Passwords do not match.'); return; }
-  btn.disabled=true; btn.textContent='Creating account...';
+
+  // Show security warning BEFORE creating account
+  const confirmed = await showEncryptionWarning(u);
+  if (!confirmed) return;
+
+  btn.disabled=true; btn.textContent='Generating encryption keys...';
   try {
-    const res = await fetch(API+'/api/register', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({username:u,email:e,password:p})});
+    // Zero-knowledge setup — all happens in browser before server sees anything
+    const genDataKey = await CryptoEngine.generateDataKey();
+    const pwKey = await CryptoEngine.deriveKey(p, u);
+    const encryptedDataKey = await CryptoEngine.wrapKey(genDataKey, pwKey);
+
+    // Generate recovery key slots — dataKey wrapped with each code's derived key
+    const rawCodes = Array.from({length: 8}, () => {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      return Array.from({length: 4}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+    });
+    const formattedCodes = rawCodes.map(c => c.match(/.{1,4}/g).join('-'));
+    const recoveryKeySlots = await Promise.all(rawCodes.map(async (code, i) => {
+      const codeKey = await CryptoEngine.deriveKey(code, u);
+      return { index: i, slot: await CryptoEngine.wrapKey(genDataKey, codeKey) };
+    }));
+
+    btn.textContent='Creating account...';
+    const res = await fetch(API+'/api/register', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ username:u, email:e, password:p, encryptedDataKey, recoveryKeySlots })
+    });
     const d = await res.json();
     if (!res.ok) { showErr(err, d.error||'Registration failed'); return; }
+
     token=d.token; currentUser=d.username;
+    dataKey = genDataKey;
+    isEncrypted = true;
     localStorage.setItem('applied_token',token);
     localStorage.setItem('applied_user',currentUser);
-    showApp(); loadJobs();
-  } catch(e) { showErr(err,'Could not connect to server.'); }
+
+    // Show recovery codes — must be saved before entering app
+    showRecoveryCodesModal(formattedCodes, () => { showApp(); loadJobs(); }, true);
+  } catch(ex) { showErr(err, 'Could not create account: ' + ex.message); }
   finally { btn.disabled=false; btn.textContent='Create account'; }
+}
+
+// Strong security warning shown before account creation
+function showEncryptionWarning(username) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.innerHTML = `
+      <div style="background:var(--bg2);border:2px solid rgba(239,68,68,0.4);border-radius:var(--radius);width:min(520px,100%);padding:32px;max-height:90vh;overflow-y:auto">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+          <div style="width:40px;height:40px;background:rgba(239,68,68,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px">🔐</div>
+          <div>
+            <div style="font-size:18px;font-weight:700;color:var(--text)">Your data is end-to-end encrypted</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px">Read this carefully before continuing</div>
+          </div>
+        </div>
+
+        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px">
+          <div style="font-size:13px;font-weight:600;color:#ef4444;margin-bottom:10px">⚠ If you lose your password AND all recovery codes, your data is PERMANENTLY UNRECOVERABLE</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.8">
+            • Your job data is encrypted with a key <strong>derived from your password</strong> — only you know it<br>
+            • The server stores only encrypted ciphertext — <strong>not even the admin can read your data</strong><br>
+            • If you forget your password, you can use a recovery code to regain access<br>
+            • If you lose your password <strong>AND</strong> all 8 recovery codes, there is <strong>no way to recover your data — ever</strong><br>
+            • Your <strong>email address</strong> is stored in plaintext for account management only
+          </div>
+        </div>
+
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:20px">
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">What to do right now:</div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.8">
+            1. Use a <strong>strong, unique password</strong> (8+ characters, mix of letters, numbers, symbols)<br>
+            2. On the next screen, you'll receive <strong>8 recovery codes</strong> — save them in a password manager, print them, or write them somewhere physically safe<br>
+            3. Each code works once — they're your only backup if you forget your password
+          </div>
+        </div>
+
+        <div style="font-size:12px;color:var(--text3);margin-bottom:20px;padding:10px;border-left:3px solid var(--border2)">
+          Creating account for: <strong style="color:var(--text)">${username}</strong>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text2)">
+            <input type="checkbox" id="warn-cb1" style="margin-top:2px;flex-shrink:0" onchange="checkWarningBoxes()">
+            I understand that losing my password AND all recovery codes means my data is permanently gone
+          </label>
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text2)">
+            <input type="checkbox" id="warn-cb2" style="margin-top:2px;flex-shrink:0" onchange="checkWarningBoxes()">
+            I will save my recovery codes in a safe place on the next screen
+          </label>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:20px">
+          <button onclick="this.closest('[style*=fixed]').remove();window.__warnResolve(false)" style="flex:1;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer">Cancel</button>
+          <button id="warn-proceed-btn" onclick="this.closest('[style*=fixed]').remove();window.__warnResolve(true)" disabled style="flex:2;padding:10px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;opacity:0.4">
+            I understand — create my encrypted account →
+          </button>
+        </div>
+      </div>`;
+    window.__warnResolve = resolve;
+    document.body.appendChild(overlay);
+  });
+}
+
+function checkWarningBoxes() {
+  const both = document.getElementById('warn-cb1')?.checked && document.getElementById('warn-cb2')?.checked;
+  const btn = document.getElementById('warn-proceed-btn');
+  if (btn) { btn.disabled = !both; btn.style.opacity = both ? '1' : '0.4'; }
 }
 
 function doLogout() {
   token=null; currentUser=null; jobs={}; currentJobId=null;
+  dataKey=null; isEncrypted=false; // Zero-knowledge: clear key from memory
   localStorage.removeItem('applied_token');
   localStorage.removeItem('applied_user');
   showScreen('login');
@@ -894,8 +1461,24 @@ async function loadJobs() {
   try {
     const res = await fetch(API+'/api/jobs', {headers:{Authorization:'Bearer '+token}});
     if (res.status===401) { doLogout(); return; }
-    jobs = await res.json();
-    // Migrate legacy: split combined "Remote - Location" into workType + location
+    const blob = await res.json();
+
+    // Zero-knowledge: decrypt if this is an encrypted account
+    if (blob.__enc === true && dataKey) {
+      try {
+        jobs = await CryptoEngine.decrypt(dataKey, blob.data);
+      } catch(e) {
+        console.error('Decryption failed:', e);
+        jobs = {};
+      }
+    } else if (blob.__enc === false && blob.data) {
+      jobs = blob.data; // Legacy plaintext
+    } else {
+      jobs = blob; // Very old format fallback
+    }
+    if (!jobs || typeof jobs !== 'object') jobs = {};
+
+    // Migrate legacy location strings
     Object.values(jobs).forEach(j => {
       if (j.location && !j.workType) {
         const m = j.location.match(/^(Remote|Hybrid|On-?site)\s*[-–]\s*(.+)$/i);
@@ -904,30 +1487,50 @@ async function loadJobs() {
           if (j.workType.toLowerCase() === 'onsite') j.workType = 'On-site';
           j.location = m[2].trim();
         } else if (/^(Remote|Hybrid|On-?site)$/i.test(j.location.trim())) {
-          j.workType = j.location.trim();
-          j.location = '';
+          j.workType = j.location.trim(); j.location = '';
         }
       }
-      // Remove workType prefix from location if still present (prevents double "Remote")
       if (j.location && j.workType) {
         const wt = j.workType.replace(/[-]/g, '[-]');
         j.location = j.location.replace(new RegExp('^' + wt + '\\s*[-\u2013]?\\s*', 'i'), '').trim();
       }
     });
-  } catch(e) { jobs={}; }
+  } catch(e) { console.error('loadJobs error:', e); jobs={}; }
   renderJobList();
+  renderStaleNudge();
+}
+
+// ── STATUS UPDATE ──
+function updateStatus(jobId, status) {
+  const j = jobs[jobId]; if (!j) return;
+  j.status = status;
+  j.updatedAt = Date.now();
+  scheduleSave();
+  renderJobList();
+  renderStaleNudge();
+  // Update the status select color inline
+  const sel = document.querySelector('.status-select');
+  if (sel) sel.style.color = statusColor(status);
 }
 
 function scheduleSave() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
+      let payload;
+      if (isEncrypted && dataKey) {
+        // Zero-knowledge: encrypt entire jobs object before sending — server sees only ciphertext
+        const ciphertext = await CryptoEngine.encrypt(dataKey, jobs);
+        payload = { __enc: true, data: ciphertext };
+      } else {
+        payload = { __enc: false, data: jobs };
+      }
       await fetch(API+'/api/jobs', {
         method:'PUT',
         headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
-        body: JSON.stringify(jobs)
+        body: JSON.stringify(payload)
       });
-    } catch(e){}
+    } catch(e){ console.error('Save error:', e); }
   }, 800);
 }
 
@@ -1095,6 +1698,7 @@ function addJob() {
     deadline:   document.getElementById('job-deadline')?.value || null,
     followUpDate: document.getElementById('job-followup')?.value || null,
     createdAt: Date.now(),
+    updatedAt: Date.now(),
     notes: [], contacts: [], interviews: [],
     resume: null, cover: null,
     tailoredResume: null, tailoredCover: null,
@@ -1142,7 +1746,8 @@ function renderJobList() {
     return;
   }
   list.innerHTML = filtered.map((j, i) => `
-    <div class="job-item${currentJobId===j.id?' active':''}" onclick="selectJob('${j.id}')">
+    <div class="job-item${currentJobId===j.id?' active':''}" onclick="bulkMode?toggleBulkSelect('${j.id}',event):selectJob('${j.id}')">
+      ${bulkMode ? `<input type="checkbox" ${bulkSelected.has(j.id)?'checked':''} onclick="toggleBulkSelect('${j.id}',event)" style="flex-shrink:0;margin-top:2px;accent-color:var(--accent-bg)">` : ''}
       <div class="job-num">${i+1}</div>
       <div class="job-item-body">
         <div class="job-item-company">${esc(j.company)}</div>
@@ -1211,7 +1816,12 @@ function renderDetail() {
           ${j.salary ? `<span style="color:var(--text3)">·</span><span style="font-size:11px;color:var(--accent);font-weight:500">${esc(j.salary)}</span>` : ''}
           ${j.url ? `<a href="${esc(j.url)}" target="_blank">↗ original posting</a>` : ''}
         </div>
-        <div class="detail-title">${esc(j.title)}</div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div class="detail-title">${esc(j.title)}</div>
+          <button onclick="toggleWatchlist('${j.id}')" title="${j.watchlist?'Remove from watchlist':'Add to watchlist'}" style="flex-shrink:0;padding:4px 8px;background:${j.watchlist?'rgba(232,168,56,0.15)':'var(--bg3)'};border:1px solid ${j.watchlist?'rgba(232,168,56,0.4)':'var(--border)'};border-radius:var(--radius-sm);cursor:pointer;font-size:14px;color:${j.watchlist?'var(--accent-bg)':'var(--text3)'};margin-top:2px;transition:all .15s">
+            ${j.watchlist ? '★' : '☆'}
+          </button>
+        </div>
         <div class="detail-meta">
           <select class="status-select" onchange="updateStatus('${j.id}',this.value)" style="color:${statusColor(j.status)}">
             ${STATUSES.map(s=>`<option value="${s}"${j.status===s?' selected':''}>${s}</option>`).join('')}
@@ -1233,6 +1843,9 @@ function renderDetail() {
       <div class="detail-tab${activeDetailTab==='documents'?' active':''}"  onclick="switchTab('documents')">Documents${j.documents?.length ? ` <span style="font-size:10px;padding:1px 5px;background:var(--bg3);border-radius:100px;border:1px solid var(--border)">${j.documents.length}</span>` : ''}</div>
       <div class="detail-tab${activeDetailTab==='contacts'?' active':''}"   onclick="switchTab('contacts')">Contacts${j.contacts?.length ? ` <span style="font-size:10px;padding:1px 5px;background:var(--bg3);border-radius:100px;border:1px solid var(--border)">${j.contacts.length}</span>` : ''}</div>
       <div class="detail-tab${activeDetailTab==='interview'?' active':''}"  onclick="switchTab('interview')">Interview Prep</div>
+      <div class="detail-tab${activeDetailTab==='files'?' active':''}" onclick="switchTab('files')">
+        Files & Tailoring${(j.resume||j.cover) ? ' <span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;vertical-align:middle;margin-left:3px"></span>' : ''}
+      </div>
     </div>
     ${activeDetailTab === 'posting'
       ? renderPostingTab(j)
@@ -1507,6 +2120,14 @@ function renderFilesTab(j) {
         ${isGenerating ? 'Tailoring...' : `Tailor ${label} for this role`}
       </button>
       <div id="ai-stream-output" style="margin-top:10px"></div>
+
+      <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;padding-top:12px;border-top:1px solid var(--border)">
+        <button id="gap-analysis-btn" onclick="runKeywordGap()" style="padding:6px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:5px">🔍 Keyword gap</button>
+        <button id="salary-benchmark-btn" onclick="runSalaryBenchmark('${j.id}')" style="padding:6px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:5px">📊 Salary benchmark</button>
+        <button onclick="showEmailTemplates('${j.id}')" style="padding:6px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:5px">✉ Email templates</button>
+      </div>
+      <div id="gap-analysis-output"></div>
+      <div id="salary-benchmark-output"></div>
     </div>
 
     ${tailored || tailoredHtml ? `
@@ -2241,6 +2862,7 @@ let docsFilter = 'all';
 let allDocs = [];
 let editingDoc = null;
 
+function openDocsPage() { showDocumentsPage(); } // mobile nav alias
 async function showDocumentsPage() {
   // Load docs
   try {
@@ -2519,6 +3141,7 @@ function renderAnalytics(overlay) {
   const responseRate = total ? Math.round((((bySt.screening||0) + (bySt.interviewing||0) + (bySt.offer||0)) / total) * 100) : 0;
   const offerRate = total ? Math.round(((bySt.offer||0) / total) * 100) : 0;
   const activeCount = all.filter(j => !['rejected','ghosted','withdrawn','expired'].includes(j.status)).length;
+  const velocity = computeVelocity();
 
   const statusColors = {
     'to apply':'#64748b', applied:'#3b82f6', screening:'#8b5cf6', interviewing:'#f59e0b',
@@ -2553,11 +3176,14 @@ function renderAnalytics(overlay) {
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px">
         ${[
           {label:'Total applications', value:total, color:'var(--blue)'},
-          {label:'Active pipeline', value:activeCount, color:'var(--accent)'},
+          {label:'Active pipeline', value:activeCount, color:'var(--accent-bg)'},
           {label:'Response rate', value:responseRate+'%', color:'var(--purple)'},
           {label:'Offer rate', value:offerRate+'%', color:'var(--green)'},
-          {label:'Interviews', value:bySt.interviewing||0, color:'#f59e0b'},
+          {label:'Interviews', value:bySt.interviewing||0, color:'var(--amber)'},
           {label:'Offers received', value:bySt.offer||0, color:'var(--green)'},
+          {label:'Last 7 days', value:(velocity?.last7||0)+' apps', color:'var(--text2)'},
+          {label:'Last 30 days', value:(velocity?.last30||0)+' apps', color:'var(--text2)'},
+          ...(velocity?.avgDaysToResponse ? [{label:'Avg days to response', value:velocity.avgDaysToResponse+'d', color:'var(--text2)'}] : []),
           {label:'Expired postings', value:bySt.expired||0, color:'#f97316'},
         ].map(k => `
           <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px">
@@ -2845,8 +3471,8 @@ async function uploadAndTailor(event, jobId) {
     j.documents.unshift(jobDoc);
     scheduleSave();
 
-    // Open tailor workflow with this doc
-    openTailorWorkflow(jobId, jobDoc, j);
+    // Open tailor overlay with this doc
+    openTailoringOverlay(jobId, jobDoc, j);
   } catch(e) {
     if (area) area.innerHTML = `<div style="font-size:13px;color:var(--red)">Upload failed: ${esc(e.message)}</div>`;
   }
@@ -2883,51 +3509,339 @@ async function openTailorForDoc(jobId, docId) {
     try {
       const res = await fetch(API + '/api/docs/' + jobDoc.docLibId, { headers: { Authorization: 'Bearer ' + token } });
       if (res.ok) {
-      const d = await res.json();
-      const raw = d.content || '';
-      // Strip HTML if content field contains markup
-      jobDoc._content = (raw.includes('<') && raw.includes('>')) ? stripHtml(raw) : raw;
-      jobDoc._html = d.html || null;
-    }
+        const d = await res.json();
+        const raw = d.content || '';
+        jobDoc._content = (raw.includes('<') && raw.includes('>')) ? stripHtml(raw) : raw;
+        jobDoc._html = d.html || null;
+      }
     } catch(e) {}
   }
-  openTailorWorkflow(jobId, jobDoc, j);
+  // Launch as full-screen overlay instead of inline
+  openTailoringOverlay(jobId, jobDoc, j);
 }
 
-// ── The main tailor workflow UI ──
-function openTailorWorkflow(jobId, jobDoc, j) {
-  const area = document.getElementById('tailor-work-area-' + jobId);
-  if (!area) return;
-  area.style.display = 'block';
+// ═══════════════════════════════════════════════════════════════
+// TAILORING OVERLAY — full-screen, focused workflow
+// ═══════════════════════════════════════════════════════════════
 
+// Per-session version tracking: sessionKey → [{docLibId, name}]
+const tailorSessionDocs = {};
+
+function getTailorSettings() {
+  return {
+    autoSave:      localStorage.getItem('tailor_autosave')      !== 'false',
+    cleanupOnExit: localStorage.getItem('tailor_cleanup_exit')  !== 'false',
+  };
+}
+
+function setTailorSetting(key, val) {
+  localStorage.setItem(key, val ? 'true' : 'false');
+}
+
+function openTailoringOverlay(jobId, jobDoc, j) {
+  document.getElementById('tailor-overlay')?.remove();
+  const s = getTailorSettings();
   const label = jobDoc.type === 'resume' ? 'Resume' : 'Cover Letter';
+  const sessionKey = jobId + '_' + jobDoc.id;
+  if (!tailorSessionDocs[sessionKey]) tailorSessionDocs[sessionKey] = [];
 
-  area.innerHTML = `
-    <div style="background:var(--bg3);border-radius:var(--radius);padding:16px;margin-bottom:4px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <span style="font-size:18px">${jobDoc.type === 'resume' ? '📄' : '✉️'}</span>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(jobDoc.name)}</div>
-          <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">${label} · Tailoring for ${esc(j.title)} at ${esc(j.company)}</div>
+  const overlay = document.createElement('div');
+  overlay.id = 'tailor-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:700;display:flex;flex-direction:column;overflow:hidden;animation:fadeIn .18s ease';
+
+  overlay.innerHTML = `
+    <!-- Header bar -->
+    <div style="display:flex;align-items:center;gap:14px;padding:14px 24px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:700;color:var(--text)">✦ Tailor ${label}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(jobDoc.name)} → ${esc(j.title)} at ${esc(j.company)}</div>
+      </div>
+      <!-- Inline settings toggles -->
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:100px;font-size:11px;color:var(--text2);white-space:nowrap" title="Auto-save every version to Document Library">
+        <input type="checkbox" id="to-autosave-chk" ${s.autoSave?'checked':''} onchange="setTailorSetting('tailor_autosave',this.checked)">
+        Auto-save
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:5px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:100px;font-size:11px;color:var(--text2);white-space:nowrap" title="On exit keep only the final version, delete intermediates">
+        <input type="checkbox" id="to-cleanup-chk" ${s.cleanupOnExit?'checked':''} onchange="setTailorSetting('tailor_cleanup_exit',this.checked)">
+        Clean up
+      </label>
+      <button onclick="closeTailoringOverlay('${jobId}','${jobDoc.id}')" style="width:32px;height:32px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:18px;color:var(--text2);flex-shrink:0" title="Close (Esc)">×</button>
+    </div>
+
+    <!-- Body: sidebar + result -->
+    <div style="flex:1;display:flex;overflow:hidden">
+
+      <!-- LEFT: controls -->
+      <div style="width:300px;flex-shrink:0;border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px;gap:14px;overflow-y:auto;background:var(--bg2)">
+
+        <div>
+          <div style="font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.6px;margin-bottom:7px">DOCUMENT</div>
+          <div style="padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm)">
+            <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(jobDoc.name)}</div>
+            <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+              <select id="to-doc-type" onchange="changeTailorDocType('${jobId}','${jobDoc.id}',this.value)" style="padding:3px 8px;background:var(--bg2);border:1px solid var(--border);border-radius:4px;font-size:11px;font-family:var(--font);color:var(--text2);cursor:pointer;outline:none">
+                <option value="resume"${jobDoc.type==='resume'?' selected':''}>Resume</option>
+                <option value="cover"${jobDoc.type==='cover'?' selected':''}>Cover Letter</option>
+              </select>
+              <span style="font-size:10px;color:${j.postingText?'var(--green)':'var(--amber)'}">
+                ${j.postingText ? '✓ posting cached' : '⚠ no posting cached'}
+              </span>
+            </div>
+          </div>
         </div>
-        <div style="display:flex;gap:6px">
-          <select id="tailor-doc-type-${jobDoc.id}" onchange="changeTailorDocType('${jobId}','${jobDoc.id}',this.value)" style="padding:4px 8px;background:var(--bg2);border:none;border-radius:var(--radius-sm);font-size:12px;font-family:var(--font);color:var(--text2);cursor:pointer">
-            <option value="resume"${jobDoc.type==='resume'?' selected':''}>Resume</option>
-            <option value="cover"${jobDoc.type==='cover'?' selected':''}>Cover Letter</option>
-          </select>
-          <button onclick="closeTailorArea('${jobId}')" style="padding:4px 10px;background:transparent;border:none;font-size:18px;color:var(--text3);cursor:pointer;line-height:1">×</button>
+
+        <div>
+          <div style="font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.6px;margin-bottom:7px">GUIDANCE <span style="font-weight:400;opacity:.6">(optional)</span></div>
+          <textarea id="to-context" placeholder="Keywords, requirements, focus areas, tone..." rows="4" style="width:100%;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;resize:vertical;line-height:1.5;box-sizing:border-box"></textarea>
+        </div>
+
+        <button onclick="runDocTailorOverlay('${jobId}','${jobDoc.id}')" id="to-tailor-btn" style="width:100%;padding:12px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s">
+          <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1l1.3 3 3 .5-2.2 2.1.5 3L6.5 8.3l-2.8 1.3.5-3L2 4.5l3-.5L6.5 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
+          Tailor ${label}
+        </button>
+
+        <div id="to-stream"></div>
+
+        <!-- Session versions list -->
+        <div id="to-versions-wrap" style="display:none;border-top:1px solid var(--border);padding-top:14px">
+          <div style="font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.6px;margin-bottom:8px">THIS SESSION</div>
+          <div id="to-versions-list"></div>
+          <div id="to-cleanup-note" style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5"></div>
         </div>
       </div>
-      <textarea id="tailor-ctx-${jobDoc.id}" placeholder="Optional: add keywords, requirements, or notes to guide the AI..." rows="2" style="width:100%;padding:8px;background:var(--bg2);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;resize:none;line-height:1.5;margin-bottom:10px"></textarea>
-      <button onclick="runDocTailor('${jobId}','${jobDoc.id}')" id="tailor-doc-btn-${jobDoc.id}" style="width:100%;padding:10px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1l1.3 3 3 .5-2.2 2.1.5 3L6.5 8.3l-2.8 1.3.5-3L2 4.5l3-.5L6.5 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
-        Tailor ${label} for this role
-      </button>
-      <div id="tailor-doc-stream-${jobDoc.id}" style="margin-top:10px"></div>
-    </div>
-    <div id="tailor-doc-result-${jobDoc.id}" style="display:none"></div>`;
 
-  area.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      <!-- RIGHT: result -->
+      <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
+        <div id="to-result-area" style="flex:1;overflow-y:auto;padding:32px;display:flex;align-items:center;justify-content:center">
+          <div style="text-align:center;color:var(--text3)">
+            <div style="font-size:48px;margin-bottom:16px;opacity:.2">✦</div>
+            <div style="font-size:15px;font-weight:600;color:var(--text2);margin-bottom:6px">Ready to tailor</div>
+            <div style="font-size:13px;line-height:1.7;max-width:280px">Add any guidance in the panel, then click <strong style="color:var(--text)">Tailor ${label}</strong></div>
+          </div>
+        </div>
+        <div id="to-toolbar" style="display:none;padding:12px 24px;border-top:1px solid var(--border);background:var(--bg2);flex-shrink:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap"></div>
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  // Esc closes overlay
+  overlay._escHandler = e => { if (e.key === 'Escape') closeTailoringOverlay(jobId, jobDoc.id); };
+  document.addEventListener('keydown', overlay._escHandler);
+  setTimeout(() => document.getElementById('to-context')?.focus(), 100);
+}
+
+async function closeTailoringOverlay(jobId, docId) {
+  const overlay = document.getElementById('tailor-overlay');
+  const s = getTailorSettings();
+  const sessionKey = jobId + '_' + docId;
+  const versions = tailorSessionDocs[sessionKey] || [];
+
+  // Cleanup: keep only the final version, delete intermediates
+  if (s.cleanupOnExit && versions.length > 1) {
+    const intermediates = versions.slice(0, -1);
+    for (const v of intermediates) {
+      try {
+        await fetch(API + '/api/docs/' + v.docLibId, {
+          method: 'DELETE', headers: { Authorization: 'Bearer ' + token },
+        });
+        const j = jobs[jobId];
+        if (j && j.documents) j.documents = j.documents.filter(d => d.docLibId !== v.docLibId);
+      } catch(e) { console.warn('Cleanup failed:', e); }
+    }
+    scheduleSave();
+  }
+
+  if (overlay?._escHandler) document.removeEventListener('keydown', overlay._escHandler);
+  delete tailorSessionDocs[sessionKey];
+  overlay?.remove();
+  renderDetail(); // refresh Documents tab to show saved versions
+}
+
+async function runDocTailorOverlay(jobId, docId) {
+  const j = jobs[jobId]; if (!j) return;
+  const jobDoc = (j.documents||[]).find(d => d.id === docId); if (!jobDoc) return;
+  const s = getTailorSettings();
+  const sessionKey = jobId + '_' + docId;
+  if (!tailorSessionDocs[sessionKey]) tailorSessionDocs[sessionKey] = [];
+
+  const btn       = document.getElementById('to-tailor-btn');
+  const stream    = document.getElementById('to-stream');
+  const resultArea = document.getElementById('to-result-area');
+  const toolbar   = document.getElementById('to-toolbar');
+  const ctx       = document.getElementById('to-context')?.value || '';
+  const label     = jobDoc.type === 'resume' ? 'Resume' : 'Cover Letter';
+
+  // Load content if needed
+  if (!jobDoc._content && jobDoc.docLibId) {
+    try {
+      const res = await fetch(API + '/api/docs/' + jobDoc.docLibId, { headers: { Authorization: 'Bearer ' + token } });
+      if (res.ok) {
+        const d = await res.json();
+        jobDoc._content = d.content || '';
+        jobDoc._html = d.html || null;
+      }
+    } catch(e) {}
+  }
+  if (!jobDoc._content) {
+    if (stream) stream.innerHTML = '<span style="color:var(--red);font-size:13px">No content found — try re-uploading the document.</span>';
+    return;
+  }
+
+  const versionNum = tailorSessionDocs[sessionKey].length + 1;
+  if (btn) { btn.disabled = true; btn.textContent = 'Tailoring v' + versionNum + '...'; }
+  if (stream) stream.innerHTML = '<span style="font-size:12px;color:var(--text3)">Generating...</span>';
+  if (toolbar) toolbar.style.display = 'none';
+  if (resultArea) resultArea.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;gap:12px;color:var(--text3);font-size:13px"><div class="spinner"></div> Tailoring your ' + label.toLowerCase() + '...</div>';
+
+  try {
+    const res = await fetch(API + '/api/tailor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        company: j.company, title: j.title, location: j.location || '', salary: j.salary || '',
+        postingText: j.postingText || '',
+        content: jobDoc._content, docType: jobDoc.type, context: ctx,
+      }),
+    });
+    if (!res.ok) throw new Error('Tailor request failed (' + res.status + ')');
+    const data = await res.json();
+    const tailored = data.result || data.text || '';
+    if (stream) stream.innerHTML = '';
+
+    // Show editable result
+    if (resultArea) {
+      resultArea.innerHTML = '<div style="max-width:720px;margin:0 auto;padding:0 0 24px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px"><div style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px">VERSION ' + versionNum + ' · TAILORED ' + label.toUpperCase() + '</div><div id="to-save-indicator" style="font-size:11px;font-family:var(--mono);color:var(--text3)">' + (s.autoSave ? '⟳ saving...' : '') + '</div></div><div id="to-result-editor" contenteditable="true" style="min-height:400px;padding:24px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);font-size:14px;line-height:1.9;color:var(--text);outline:none;white-space:pre-wrap;font-family:var(--font)"></div></div>';
+      const editor = document.getElementById('to-result-editor');
+      if (editor) editor.innerText = tailored;
+    }
+
+    // Show toolbar
+    if (toolbar) {
+      toolbar.style.display = 'flex';
+      toolbar.innerHTML = '';
+      const mkBtn = (text, primary, handler) => {
+        const b = document.createElement('button');
+        b.style.cssText = 'padding:8px 16px;background:' + (primary?'var(--accent-bg)':'var(--bg3)') + ';color:' + (primary?'#1a1917':'var(--text2)') + ';border:' + (primary?'none':'1px solid var(--border)') + ';border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:' + (primary?'600':'400') + ';cursor:pointer';
+        b.innerHTML = text; b.onclick = handler; return b;
+      };
+      toolbar.appendChild(mkBtn('<svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M1 10v1a2 2 0 002 2h8a2 2 0 002-2v-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Download .docx', true, () => downloadTailoredDocx(jobId, docId)));
+      toolbar.appendChild(mkBtn('Copy text', false, copyTailoredText));
+      toolbar.appendChild(mkBtn('<svg width="12" height="12" viewBox="0 0 13 13" fill="none"><path d="M6.5 1l1.3 3 3 .5-2.2 2.1.5 3L6.5 8.3l-2.8 1.3.5-3L2 4.5l3-.5L6.5 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg> Re-tailor', false, () => runDocTailorOverlay(jobId, docId)));
+      const sp = document.createElement('span'); sp.style.flex = '1'; toolbar.appendChild(sp);
+      toolbar.appendChild(mkBtn('Done ✓', false, () => closeTailoringOverlay(jobId, docId)));
+    }
+
+    jobDoc._tailored = tailored;
+
+    // Auto-save to vault
+    if (s.autoSave) {
+      await saveTailoredVersion(jobId, jobDoc, tailored, versionNum, sessionKey);
+    }
+
+    renderTailorVersionsSidebar(sessionKey, s.cleanupOnExit);
+
+  } catch(e) {
+    if (stream) stream.innerHTML = '<span style="color:var(--red);font-size:13px">Error: ' + esc(e.message) + '</span>';
+    if (resultArea) resultArea.innerHTML = '<div style="padding:32px;color:var(--red);font-size:13px">' + esc(e.message) + '</div>';
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M6.5 1l1.3 3 3 .5-2.2 2.1.5 3L6.5 8.3l-2.8 1.3.5-3L2 4.5l3-.5L6.5 1z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg> Re-tailor ' + label;
+  }
+}
+
+async function saveTailoredVersion(jobId, jobDoc, tailored, versionNum, sessionKey) {
+  const j = jobs[jobId]; if (!j) return;
+  const label = jobDoc.type === 'resume' ? 'Resume' : 'Cover Letter';
+  const ts = new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'});
+  const name = j.company + ' – ' + j.title + ' · Tailored ' + label + ' v' + versionNum + ' (' + ts + ')';
+
+  try {
+    const res = await fetch(API + '/api/docs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ name, type: jobDoc.type, content: tailored, html: null }),
+    });
+    if (!res.ok) throw new Error('Save failed');
+    const libDoc = await res.json();
+
+    tailorSessionDocs[sessionKey].push({ docLibId: libDoc.id, name });
+
+    if (!j.documents) j.documents = [];
+    j.documents.unshift({ id: genId(), name, type: jobDoc.type, docLibId: libDoc.id, source: 'tailored', sessionVersion: versionNum, createdAt: Date.now(), usedForApplication: false });
+    scheduleSave();
+
+    const ind = document.getElementById('to-save-indicator');
+    if (ind) ind.innerHTML = '<span style="color:var(--green)">✓ Saved to vault</span>';
+
+  } catch(e) {
+    const ind = document.getElementById('to-save-indicator');
+    if (ind) ind.innerHTML = '<span style="color:var(--red)">✗ Save failed</span>';
+    console.warn('Auto-save failed:', e);
+  }
+}
+
+function renderTailorVersionsSidebar(sessionKey, cleanupOnExit) {
+  const versions = tailorSessionDocs[sessionKey] || [];
+  const wrap = document.getElementById('to-versions-wrap');
+  const list = document.getElementById('to-versions-list');
+  const note = document.getElementById('to-cleanup-note');
+  if (!wrap || !list) return;
+
+  wrap.style.display = versions.length ? 'block' : 'none';
+  list.innerHTML = versions.map((v, i) => {
+    const isFinal = i === versions.length - 1;
+    return '<div style="padding:8px 10px;border-radius:var(--radius-sm);margin-bottom:4px;border:1px solid ' + (isFinal ? 'var(--accent-bg)' : 'var(--border)') + ';background:' + (isFinal ? 'rgba(232,168,56,0.06)' : 'var(--bg3)') + '">' +
+      '<div style="font-size:11px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(v.name) + '</div>' +
+      '<div style="font-size:10px;margin-top:2px;font-family:var(--mono);color:' + (isFinal ? 'var(--accent-bg)' : 'var(--text3)') + '">' + (isFinal ? '← current' : 'intermediate') + '</div>' +
+      '</div>';
+  }).join('');
+
+  if (note) note.textContent = cleanupOnExit && versions.length > 1 ? 'On exit: intermediates will be deleted, only the final version kept.' : '';
+}
+
+function copyTailoredText() {
+  const editor = document.getElementById('to-result-editor');
+  if (!editor) return;
+  navigator.clipboard.writeText(editor.innerText || '').then(() => {
+    // Find copy button and update it
+    const toolbar = document.getElementById('to-toolbar');
+    const btns = toolbar?.querySelectorAll('button');
+    btns?.forEach(b => { if (b.textContent.includes('Copy text')) { b.textContent = 'Copied!'; setTimeout(() => b.textContent = 'Copy text', 1500); }});
+  });
+}
+
+async function downloadTailoredDocx(jobId, docId) {
+  const editor = document.getElementById('to-result-editor');
+  if (!editor) return;
+  const j = jobs[jobId];
+  const jobDoc = (j?.documents||[]).find(d => d.id === docId);
+  const label = jobDoc?.type === 'resume' ? 'Resume' : 'Cover Letter';
+  const filename = (j ? j.company + ' - ' + j.title + ' Tailored ' + label : 'tailored-document').replace(/[^a-zA-Z0-9 \-]/g, '');
+  const text = editor.innerText || editor.textContent || '';
+
+  try {
+    const res = await fetch(API + '/api/download-docx', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ text, filename }),
+    });
+    if (!res.ok) throw new Error('Server error');
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename + '.docx';
+    a.click(); URL.revokeObjectURL(a.href);
+  } catch(e) {
+    // Fallback: download as txt
+    const blob = new Blob([text], {type:'text/plain'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename + '.txt';
+    a.click();
+    alert('DOCX generation failed — downloaded as .txt instead.');
+  }
 }
 
 function changeTailorDocType(jobId, docId, newType) {
@@ -2937,241 +3851,11 @@ function changeTailorDocType(jobId, docId, newType) {
 }
 
 function closeTailorArea(jobId) {
+  // Legacy: close the inline tailor area (now a no-op since we use overlay)
   const area = document.getElementById('tailor-work-area-' + jobId);
   if (area) { area.style.display = 'none'; area.innerHTML = ''; }
 }
 
-// ── Run the tailor ──
-async function runDocTailor(jobId, docId) {
-  const j = jobs[jobId]; if (!j) return;
-  const jobDoc = (j.documents||[]).find(d => d.id === docId); if (!jobDoc) return;
-
-  const btn = document.getElementById('tailor-doc-btn-' + docId);
-  const stream = document.getElementById('tailor-doc-stream-' + docId);
-  const resultArea = document.getElementById('tailor-doc-result-' + docId);
-  const ctx = document.getElementById('tailor-ctx-' + docId)?.value || '';
-
-  if (!jobDoc._content) { if (stream) stream.innerHTML = '<span style="color:var(--red);font-size:13px">No document content to tailor. Try re-uploading.</span>'; return; }
-
-  if (btn) { btn.disabled = true; btn.textContent = 'Tailoring...'; }
-  if (stream) stream.innerHTML = '<span style="font-size:12px;color:var(--text3);animation:pulse 1s infinite">Generating tailored version...</span>';
-  if (resultArea) resultArea.style.display = 'none';
-
-  try {
-    const res = await fetch(API + '/api/tailor', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({
-        company: j.company, title: j.title, location: j.location, salary: j.salary,
-        postingText: j.postingText || j.postingText,
-        content: jobDoc._content, docType: jobDoc.type, context: ctx,
-      }),
-    });
-    if (!res.ok) throw new Error('Request failed');
-    const data = await res.json();
-    const tailored = data.result || data.text || '';
-
-    if (stream) stream.innerHTML = '';
-    if (resultArea) {
-      resultArea.style.display = 'block';
-      resultArea.innerHTML = renderTailorResult(jobId, docId, tailored, jobDoc);
-      // Set content as plain text — avoids HTML injection entirely
-      const editor = document.getElementById('tailor-result-editor-' + docId);
-      if (editor) editor.innerText = tailored;
-    }
-    // Cache result on doc
-    jobDoc._tailored = tailored;
-  } catch(e) {
-    if (stream) stream.innerHTML = `<span style="color:var(--red);font-size:13px">Failed: ${esc(e.message)}</span>`;
-  }
-  if (btn) { btn.disabled = false; btn.textContent = 'Re-tailor'; }
-}
-
-// ── Render the result with save options ──
-function renderTailorResult(jobId, docId, tailored, jobDoc) {
-  const label = jobDoc.type === 'resume' ? 'Resume' : 'Cover Letter';
-  return `
-    <div style="margin-top:4px">
-      <div style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px;margin-bottom:8px">TAILORED ${label.toUpperCase()}</div>
-      <div id="tailor-result-editor-${docId}" contenteditable="true" style="min-height:200px;max-height:500px;overflow-y:auto;padding:16px 0;font-size:13px;line-height:1.7;color:var(--text);outline:none;border-bottom:1px solid var(--border);white-space:pre-wrap"></div>
-      <div style="display:flex;gap:8px;padding:10px 0;flex-wrap:wrap">
-        <button onclick="saveTailoredToLibrary('${jobId}','${docId}')" style="padding:6px 14px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer">Save to library</button>
-        <button onclick="downloadTailoredResult('${docId}','txt')" style="padding:6px 14px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:12px;font-family:var(--font);color:var(--text2);cursor:pointer">↓ .txt</button>
-        <button onclick="downloadTailoredResult('${docId}','docx')" style="padding:6px 14px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:12px;font-family:var(--font);color:var(--text2);cursor:pointer">↓ .docx</button>
-      </div>
-    </div>`;
-}
-
-// ── Save tailored result to Document Library ──
-async function saveTailoredToLibrary(jobId, docId) {
-  const j = jobs[jobId]; if (!j) return;
-  const jobDoc = (j.documents||[]).find(d => d.id === docId); if (!jobDoc) return;
-  const editorEl = document.getElementById('tailor-result-editor-' + docId);
-  if (!editorEl) return;
-  const text = editorEl.innerText || editorEl.textContent || '';
-  const html = editorEl.innerHTML || '';
-  const name = j.company + ' – ' + j.title + ' (Tailored ' + (jobDoc.type === 'resume' ? 'Resume' : 'Cover Letter') + ')';
-
-  try {
-    const res = await fetch(API + '/api/docs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ name, type: jobDoc.type, content: text, html }),
-    });
-    const libDoc = await res.json();
-    // Add as a new job doc
-    if (!j.documents) j.documents = [];
-    j.documents = j.documents.filter(d => !(d.source === 'tailored' && d.type === jobDoc.type && d.name === name));
-    j.documents.unshift({ id: genId(), name, type: jobDoc.type, docLibId: libDoc.id, source: 'tailored', createdAt: Date.now(), usedForApplication: false });
-    scheduleSave();
-    // Show confirmation
-    const btn = editorEl.nextElementSibling?.querySelector('button');
-    alert('Saved to Document Library ✓');
-    renderDetail();
-  } catch(e) { alert('Save failed: ' + e.message); }
-}
-
-// ── Download tailored result ──
-function downloadTailoredResult(docId, format) {
-  const el = document.getElementById('tailor-result-editor-' + docId);
-  if (!el) return;
-  const text = el.innerText || el.textContent || '';
-  if (format === 'txt') {
-    const blob = new Blob([text], { type: 'text/plain' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = 'tailored-document.txt'; a.click();
-  } else {
-    // Use server docx generation
-    fetch(API + '/api/download-docx', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ text, filename: 'tailored-document' }),
-    }).then(r => r.blob()).then(blob => {
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-      a.download = 'tailored-document.docx'; a.click();
-    }).catch(e => alert('Download failed: ' + e.message));
-  }
-}
-
-
-function tagJobDocument(jobId, docId) {
-  const j = jobs[jobId]; if (!j || !j.documents) return;
-  // Clear all then set this one
-  j.documents.forEach(d => d.usedForApplication = false);
-  const doc = j.documents.find(d => d.id === docId);
-  if (doc) doc.usedForApplication = true;
-  scheduleSave(); renderDetail();
-}
-
-function removeJobDocument(jobId, docId) {
-  const j = jobs[jobId]; if (!j || !j.documents) return;
-  j.documents = j.documents.filter(d => d.id !== docId);
-  scheduleSave(); renderDetail();
-}
-
-async function uploadToJobDocuments(event, jobId) {
-  const file = event.target.files[0]; if (!file) return;
-  const j = jobs[jobId]; if (!j) return;
-  const formData = new FormData();
-  formData.append('file', file);
-  const ext = file.name.split('.').pop().toLowerCase();
-  const type = file.name.toLowerCase().includes('cover') ? 'cover' : 'resume';
-  formData.append('type', type);
-  try {
-    // Upload to library first
-    const res = await fetch(API + '/api/docs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ name: file.name, type, content: '' }),
-    });
-    const libDoc = await res.json();
-    // Also parse the file
-    const parseForm = new FormData();
-    parseForm.append('file', file);
-    const parseRes = await fetch(API + '/api/parse-file', {
-      method: 'POST', headers: { Authorization: 'Bearer ' + token }, body: parseForm,
-    });
-    const parsed = parseRes.ok ? await parseRes.json() : {};
-    // Update library doc with content
-    await fetch(API + '/api/docs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ id: libDoc.id, name: file.name, type, content: parsed.text||'', html: parsed.html||null }),
-    });
-    // Add to job documents
-    if (!j.documents) j.documents = [];
-    j.documents.unshift({ id: genId(), name: file.name, type, docLibId: libDoc.id, source: 'uploaded', createdAt: Date.now(), usedForApplication: false });
-    scheduleSave(); renderDetail();
-  } catch(e) { alert('Upload failed: ' + e.message); }
-}
-
-async function pickFromLibraryForJob(jobId) {
-  const j = jobs[jobId]; if (!j) return;
-  try {
-    const res = await fetch(API + '/api/docs', { headers: { Authorization: 'Bearer ' + token } });
-    libraryDocs = await res.json();
-  } catch(e) { libraryDocs = []; }
-  // Show picker with callback to add to job
-  showLibraryPickerForJob(jobId);
-}
-
-function showLibraryPickerForJob(jobId, onSelect) {
-  _libPickerCallback = onSelect || null;
-  const overlay = document.createElement('div');
-  overlay.id = 'lib-job-picker-overlay';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center';
-  overlay.innerHTML = `
-    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:min(520px,92vw);max-height:72vh;display:flex;flex-direction:column;overflow:hidden">
-      <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border)">
-        <div style="font-size:14px;font-weight:600;color:var(--text);flex:1">Add from Library</div>
-        <input oninput="filterJobLibPicker(this.value)" placeholder="Search..." style="padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12px;font-family:var(--font);color:var(--text);outline:none;width:160px">
-        <button onclick="document.getElementById('lib-job-picker-overlay').remove()" style="width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:16px;color:var(--text2)">×</button>
-      </div>
-      <div id="lib-job-picker-list" style="flex:1;overflow-y:auto;padding:12px">
-        ${renderLibPickerItems(libraryDocs, jobId)}
-      </div>
-    </div>`;
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-  document.body.appendChild(overlay);
-}
-
-function filterJobLibPicker(q) {
-  const list = document.getElementById('lib-job-picker-list');
-  if (!list) return;
-  const jobId = list.dataset.jobId;
-  const filtered = libraryDocs.filter(d => d.name.toLowerCase().includes(q.toLowerCase()));
-  list.innerHTML = renderLibPickerItems(filtered, list.dataset.jobid);
-}
-
-function renderLibPickerItems(docs, jobId) {
-  if (!docs.length) return '<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px">No documents found</div>';
-  return docs.map(d => `
-    <div onclick="addLibDocToJob('${jobId}','${d.id}')" style="padding:12px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;cursor:pointer;transition:background 0.12s;display:flex;align-items:center;gap:10px" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
-      <span style="font-size:16px">${d.type==='resume'?'📄':'✉️'}</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d.name)}</div>
-        <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">${d.type} · ${new Date(d.createdAt).toLocaleDateString()}</div>
-      </div>
-      <span style="font-size:12px;color:var(--blue)">Add →</span>
-    </div>`).join('');
-}
-
-let _libPickerCallback = null;
-function addLibDocToJob(jobId, docLibId) {
-  document.getElementById('lib-job-picker-overlay')?.remove();
-  const j = jobs[jobId]; if (!j) return;
-  const libDoc = libraryDocs.find(d => d.id === docLibId); if (!libDoc) return;
-  if (_libPickerCallback) {
-    const cb = _libPickerCallback; _libPickerCallback = null;
-    cb(libDoc); return;
-  }
-  if (!j.documents) j.documents = [];
-  if (j.documents.some(d => d.docLibId === docLibId)) {
-    alert('This document is already in the list.'); return;
-  }
-  j.documents.unshift({ id: genId(), name: libDoc.name, type: libDoc.type, docLibId, source: 'library', createdAt: Date.now(), usedForApplication: false });
-  scheduleSave(); renderDetail();
-}
 
 async function saveToJobDocuments(type, jobId) {
   const j = jobs[jobId]; if (!j) return;
@@ -3203,15 +3887,27 @@ function renderContactsTab(j) {
   if (!j.contacts) j.contacts = [];
   const cs = j.contacts;
   return `<div style="max-width:680px;margin:0 auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px">
       <div style="font-size:14px;font-weight:600;color:var(--text)">Contacts at ${esc(j.company)}</div>
-      <button onclick="openContactModal('${j.id}')" style="padding:6px 14px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer">+ Add contact</button>
+      <div style="display:flex;gap:8px">
+        <button onclick="suggestOutreachTargets('${j.id}')" style="padding:6px 12px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:12px;font-family:var(--font);color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:6px">
+          <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.1 2.6 2.6.4-1.9 1.8.5 2.6L6 7.2 3.7 8.4l.5-2.6L2.3 4l2.6-.4L6 1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>
+          Suggest targets
+        </button>
+        <button onclick="openContactModal('${j.id}')" style="padding:6px 14px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer">+ Add contact</button>
+      </div>
     </div>
+    <div id="suggest-contacts-result-${j.id}" style="margin-bottom:12px"></div>
     ${cs.length === 0 ? `
-      <div style="text-align:center;padding:48px 20px;color:var(--text3)">
+      <div style="text-align:center;padding:40px 20px;color:var(--text3)">
         <div style="font-size:32px;margin-bottom:12px">👤</div>
-        <div style="font-size:14px;font-weight:500;color:var(--text2);margin-bottom:6px">No contacts yet</div>
-        <div style="font-size:13px;line-height:1.6">Add recruiters, hiring managers, or anyone you've connected with at this company.</div>
+        <div style="font-size:14px;font-weight:500;color:var(--text2);margin-bottom:8px">No contacts yet</div>
+        <div style="font-size:13px;line-height:1.6;margin-bottom:16px">Add recruiters, hiring managers, or anyone you've connected with at this company.</div>
+        <button onclick="suggestOutreachTargets('${j.id}')" id="suggest-contacts-btn-${j.id}" style="padding:8px 18px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.1 2.6 2.6.4-1.9 1.8.5 2.6L6 7.2 3.7 8.4l.5-2.6L2.3 4l2.6-.4L6 1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg>
+          Who should I reach out to?
+        </button>
+        <div id="suggest-contacts-result-${j.id}" style="margin-top:16px;text-align:left"></div>
       </div>` : `
       <div style="display:flex;flex-direction:column;gap:0">
         ${cs.map(c => `
@@ -3254,13 +3950,13 @@ function openContactModal(jobId, contactId) {
   overlay.innerHTML = `
     <div style="background:var(--bg2);border-radius:var(--radius);width:min(480px,92vw);padding:24px;box-shadow:0 16px 64px rgba(0,0,0,0.2)">
       <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:16px">${c ? 'Edit contact' : 'Add contact'}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">
         <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">NAME</label>
           <input id="cm-name" value="${esc(c?.name||'')}" placeholder="Full name" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none"></div>
         <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">ROLE</label>
           <input id="cm-role" value="${esc(c?.role||'')}" placeholder="e.g. Hiring Manager" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none"></div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">
         <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">EMAIL</label>
           <input id="cm-email" value="${esc(c?.email||'')}" placeholder="email@company.com" type="email" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none"></div>
         <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">LAST CONTACT</label>
@@ -3621,7 +4317,7 @@ function openEmailTemplates(jobId) {
       </div>
       <div style="display:flex;flex:1;overflow:hidden">
         <!-- Template list -->
-        <div style="width:220px;flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:10px 8px">
+        <div style="width:min(220px,35vw);flex-shrink:0;border-right:1px solid var(--border);overflow-y:auto;padding:10px 8px">
           ${EMAIL_TEMPLATES.map(t => `
             <button onclick="showEmailTemplate('${t.id}','${jobId||''}')" id="et-btn-${t.id}" style="width:100%;padding:10px 12px;background:transparent;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;text-align:left;transition:all 0.12s" onmouseover="this.style.background='var(--bg3)'" onmouseout="if(!this.classList.contains('et-active'))this.style.background='transparent'">
               <span style="font-size:16px">${t.icon}</span>
@@ -3677,6 +4373,780 @@ function showEmailTemplate(id, jobId) {
     </div>`;
 }
 
+// ══════════════════════════════════════════════
+// ── AI OUTREACH SUGGESTIONS ──
+// ══════════════════════════════════════════════
+async function suggestOutreachTargets(jobId) {
+  const j = jobs[jobId]; if (!j) return;
+  const resultEl = document.getElementById('suggest-contacts-result-' + jobId);
+  const btn = document.getElementById('suggest-contacts-btn-' + jobId);
+
+  if (resultEl) resultEl.innerHTML = '<div style="font-size:13px;color:var(--text3);padding:8px 0">Analyzing the role and generating outreach targets...</div>';
+  if (btn) { btn.disabled = true; btn.textContent = 'Thinking...'; }
+
+  try {
+    const res = await fetch(API + '/api/outreach-targets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        title: j.title,
+        company: j.company,
+        postingText: (j.postingText || j.postingText || '').slice(0, 3000),
+        existingContacts: (j.contacts || []).map(c => c.role + ' ' + c.name).join(', '),
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+
+    const targets = data.targets || [];
+    if (!targets.length) {
+      if (resultEl) resultEl.innerHTML = '<div style="font-size:13px;color:var(--text3)">No suggestions generated. Try adding more job posting details.</div>';
+      return;
+    }
+
+    if (resultEl) {
+      resultEl.innerHTML = `
+        <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
+          <div style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px;margin-bottom:12px">WHO TO REACH OUT TO</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            ${targets.map((t, i) => `
+              <div style="padding:14px;background:var(--bg3);border-radius:var(--radius-sm)">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px">
+                  <div>
+                    <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(t.role)}</div>
+                    <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:1px">${esc(t.priority || '')} priority</div>
+                  </div>
+                  <button onclick="addSuggestedContact('${jobId}',${i})" style="flex-shrink:0;padding:4px 10px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-size:11px;font-weight:600;font-family:var(--font);cursor:pointer">+ Add contact</button>
+                </div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:6px">${esc(t.why)}</div>
+                ${t.how ? `<div style="font-size:12px;color:var(--text3);font-style:italic;line-height:1.5">💬 ${esc(t.how)}</div>` : ''}
+                ${t.searchTip ? `<div style="font-size:11px;color:var(--blue);margin-top:6px">🔍 Find on LinkedIn: <em>${esc(t.searchTip)}</em></div>` : ''}
+              </div>`).join('')}
+          </div>
+        </div>`;
+
+      // Cache suggestions for adding contacts
+      window._outreachSuggestions = window._outreachSuggestions || {};
+      window._outreachSuggestions[jobId] = targets;
+    }
+  } catch(e) {
+    if (resultEl) resultEl.innerHTML = `<div style="font-size:13px;color:var(--red);padding:8px 0">Failed: ${esc(e.message)}</div>`;
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1l1.1 2.6 2.6.4-1.9 1.8.5 2.6L6 7.2 3.7 8.4l.5-2.6L2.3 4l2.6-.4L6 1z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/></svg> Who should I reach out to?'; }
+  }
+}
+
+function addSuggestedContact(jobId, idx) {
+  const target = (window._outreachSuggestions?.[jobId] || [])[idx];
+  if (!target) return;
+  // Pre-fill contact modal with suggestion
+  openContactModal(jobId);
+  setTimeout(() => {
+    const roleEl = document.getElementById('cm-role');
+    const notesEl = document.getElementById('cm-notes');
+    if (roleEl) roleEl.value = target.role || '';
+    if (notesEl) notesEl.value = (target.why || '') + (target.how ? '\n\nApproach: ' + target.how : '');
+  }, 80);
+}
+
+// ══════════════════════════════════════════════
+// ── REFERRAL PIPELINE OVERLAY ──
+// ══════════════════════════════════════════════
+function showReferralPipeline() {
+  document.getElementById('referral-pipeline-overlay')?.remove();
+
+  // Build the data: all contacts across all jobs, grouped by company
+  const allJobs = Object.values(jobs);
+  const companiesWithContacts = {};
+  const companiesWithoutContacts = [];
+
+  allJobs.forEach(j => {
+    if (!j.company) return;
+    const cs = j.contacts || [];
+    if (!companiesWithContacts[j.company]) {
+      companiesWithContacts[j.company] = { jobs: [], contacts: [] };
+    }
+    companiesWithContacts[j.company].jobs.push(j);
+    cs.forEach(c => {
+      if (!companiesWithContacts[j.company].contacts.find(x => x.id === c.id)) {
+        companiesWithContacts[j.company].contacts.push({ ...c, jobId: j.id, jobTitle: j.title });
+      }
+    });
+    if (cs.length === 0) companiesWithoutContacts.push(j);
+  });
+
+  const withContacts = Object.entries(companiesWithContacts).filter(([, v]) => v.contacts.length > 0);
+  const opportunities = Object.entries(companiesWithContacts).filter(([, v]) => v.contacts.length === 0);
+
+  const overlay = document.createElement('div');
+  overlay.id = 'referral-pipeline-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border-radius:var(--radius);width:min(740px,95vw);height:min(82vh,680px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 16px 64px rgba(0,0,0,0.25)">
+      <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0">
+        <div style="flex:1">
+          <div style="font-size:15px;font-weight:600;color:var(--text)">Referral Pipeline</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:2px">Contacts who could refer you, and where you still need to find one</div>
+        </div>
+        <button onclick="document.getElementById('referral-pipeline-overlay').remove()" style="width:28px;height:28px;background:var(--bg3);border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:18px;color:var(--text2)">×</button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:20px">
+
+        ${withContacts.length === 0 && opportunities.length === 0 ? `
+          <div style="text-align:center;padding:48px 20px;color:var(--text3)">
+            <div style="font-size:32px;margin-bottom:12px">🤝</div>
+            <div style="font-size:14px;font-weight:500;color:var(--text2);margin-bottom:6px">No contacts yet</div>
+            <div style="font-size:13px">Add contacts to your job applications to build your referral pipeline.</div>
+          </div>` : ''}
+
+        ${withContacts.length > 0 ? `
+          <div style="margin-bottom:24px">
+            <div style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px;margin-bottom:12px">✓ YOU HAVE CONTACTS AT</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              ${withContacts.map(([company, data]) => `
+                <div style="padding:14px 16px;background:rgba(52,211,153,0.05);border:1px solid rgba(52,211,153,0.15);border-radius:var(--radius-sm)">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:6px">
+                    <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(company)}</div>
+                    <div style="font-size:11px;font-family:var(--mono);color:var(--text3)">${data.jobs.map(j => esc(j.title)).join(', ')}</div>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:6px">
+                    ${data.contacts.map(c => `
+                      <div style="display:flex;align-items:center;gap:10px">
+                        <div style="width:28px;height:28px;border-radius:50%;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--text2);flex-shrink:0;font-family:var(--mono)">${esc(c.name||'?').slice(0,2).toUpperCase()}</div>
+                        <div style="flex:1;min-width:0">
+                          <div style="font-size:13px;font-weight:500;color:var(--text)">${esc(c.name||'')}</div>
+                          <div style="font-size:11px;color:var(--text3)">${esc(c.role||'')}${c.lastContact ? ' · Last contact: ' + fmtDate(c.lastContact) : ''}</div>
+                        </div>
+                        <div style="display:flex;gap:6px;flex-shrink:0">
+                          ${c.email ? `<a href="mailto:${esc(c.email)}" style="padding:3px 8px;background:var(--accent-bg);color:#1a1917;border-radius:var(--radius-sm);font-size:11px;font-weight:600;text-decoration:none">Email</a>` : ''}
+                          ${c.linkedin ? `<a href="${esc(c.linkedin)}" target="_blank" style="padding:3px 8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:11px;color:var(--blue);text-decoration:none">LinkedIn ↗</a>` : ''}
+                          <button onclick="document.getElementById('referral-pipeline-overlay').remove();selectJob('${c.jobId}');switchTab('contacts')" style="padding:3px 8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);color:var(--text2);cursor:pointer">View</button>
+                        </div>
+                      </div>`).join('')}
+                  </div>
+                  ${!data.contacts.some(c => c.lastContact) ? `
+                    <div style="margin-top:10px;font-size:12px;color:var(--amber)">⚡ Haven't contacted anyone here yet — use the Email Templates to reach out</div>` : ''}
+                </div>`).join('')}
+            </div>
+          </div>` : ''}
+
+        ${opportunities.length > 0 ? `
+          <div>
+            <div style="font-size:11px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px;margin-bottom:12px">⚡ NO CONTACTS YET AT</div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              ${opportunities.map(([company, data]) => `
+                <div style="padding:12px 16px;background:var(--bg3);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+                  <div>
+                    <div style="font-size:13px;font-weight:500;color:var(--text)">${esc(company)}</div>
+                    <div style="font-size:11px;color:var(--text3)">${data.jobs.map(j => esc(j.title)).join(', ')}</div>
+                  </div>
+                  <div style="display:flex;gap:6px;flex-shrink:0">
+                    <button onclick="document.getElementById('referral-pipeline-overlay').remove();selectJob('${data.jobs[0].id}');switchTab('contacts')" style="padding:5px 10px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-size:12px;font-weight:600;font-family:var(--font);cursor:pointer">Find contacts →</button>
+                  </div>
+                </div>`).join('')}
+            </div>
+          </div>` : ''}
+      </div>
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 1: KEYBOARD SHORTCUTS
+// ══════════════════════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  // Skip if typing in an input/textarea
+  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  if (e.target.contentEditable === 'true') return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+  const jobList = getFilteredJobs();
+  const idx = jobList.findIndex(j => j.id === currentJobId);
+
+  switch(e.key) {
+    case 'n': case 'N': openAddModal(); break;
+    case 'j': case 'J': // next job
+      if (jobList[idx + 1]) selectJob(jobList[idx + 1].id);
+      break;
+    case 'k': case 'K': // prev job
+      if (idx > 0) selectJob(jobList[idx - 1].id);
+      break;
+    case '1': if (currentJobId) switchTab('notes'); break;
+    case '2': if (currentJobId) switchTab('insights'); break;
+    case '3': if (currentJobId) switchTab('posting'); break;
+    case '4': if (currentJobId) switchTab('documents'); break;
+    case '5': if (currentJobId) switchTab('contacts'); break;
+    case '6': if (currentJobId) switchTab('interview'); break;
+    case '/': e.preventDefault(); document.getElementById('search-input')?.focus(); break;
+    case '?': showKeyboardShortcuts(); break;
+    case 'Escape': closeAddModal?.(); closeSettings?.(); closeAnalytics?.(); closeDocsPage?.(); break;
+  }
+});
+
+function showKeyboardShortcuts() {
+  const existing = document.getElementById('kbd-overlay');
+  if (existing) { existing.remove(); return; }
+  const overlay = document.createElement('div');
+  overlay.id = 'kbd-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:900;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML = `<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;padding:28px;width:min(480px,90vw);max-height:80vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,0.2)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:700;color:var(--text)">Keyboard Shortcuts</div>
+      <button onclick="document.getElementById('kbd-overlay').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
+    </div>
+    ${[
+      ['Navigation',''],
+      ['n', 'New application'],
+      ['j / k', 'Next / previous job'],
+      ['/', 'Focus search'],
+      ['Esc', 'Close modal / panel'],
+      ['Tabs',''],
+      ['1','Notes tab'],
+      ['2','Insights tab'],
+      ['3','Job Posting tab'],
+      ['4','Documents & Tailoring'],
+      ['5','Contacts tab'],
+      ['6','Interview Prep tab'],
+      ['Other',''],
+      ['?','Show this dialog'],
+    ].map(([k,v]) => !v ? `<div style="font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin:14px 0 6px;font-weight:600">${k}</div>` :
+      `<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:13px;color:var(--text2)">${v}</span>
+        <kbd style="background:var(--bg3);border:1px solid var(--border2);border-radius:5px;padding:2px 8px;font-family:var(--mono);font-size:12px;color:var(--text)">${k}</kbd>
+      </div>`).join('')}
+  </div>`;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 2: FOLLOW-UP REMINDERS (stale application nudges)
+// ══════════════════════════════════════════════════════════════════
+function getStaleJobs() {
+  const now = Date.now();
+  const TWO_WEEKS = 14 * 86400000;
+  const ONE_WEEK  = 7  * 86400000;
+  return Object.values(jobs).filter(j => {
+    if (['rejected','ghosted','withdrawn','expired','offer'].includes(j.status)) return false;
+    const age = now - (j.updatedAt || j.createdAt || 0);
+    if (j.status === 'applied'      && age > TWO_WEEKS) return true;
+    if (j.status === 'screening'    && age > ONE_WEEK)  return true;
+    if (j.status === 'interviewing' && age > ONE_WEEK)  return true;
+    return false;
+  });
+}
+
+function renderStaleNudge() {
+  const stale = getStaleJobs();
+  const el = document.getElementById('stale-nudge');
+  if (!el) return;
+  if (!stale.length) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = `<div style="background:rgba(232,168,56,0.12);border:1px solid rgba(232,168,56,0.3);border-radius:8px;padding:10px 12px;margin:8px 12px;cursor:pointer" onclick="showStaleJobs()">
+    <div style="font-size:12px;font-weight:600;color:var(--amber)">⏰ ${stale.length} application${stale.length>1?'s':''} need follow-up</div>
+    <div style="font-size:11px;color:var(--text3);margin-top:2px">${stale[0].company} — ${stale[0].title}${stale.length>1?' + '+(stale.length-1)+' more':''}</div>
+  </div>`;
+}
+
+function showStaleJobs() {
+  const stale = getStaleJobs();
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = `<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:min(500px,100%);max-height:70vh;overflow-y:auto;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,0.2)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+      <div style="font-size:16px;font-weight:700;color:var(--text)">⏰ Needs Follow-up</div>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
+    </div>
+    ${stale.map(j => {
+      const days = Math.floor((Date.now() - (j.updatedAt||j.createdAt||0)) / 86400000);
+      return `<div onclick="this.closest('[style*=fixed]').remove();selectJob('${j.id}')" style="padding:12px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:background .12s" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
+        <div style="display:flex;justify-content:space-between;align-items:start">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(j.title)}</div>
+            <div style="font-size:12px;color:var(--text3)">${esc(j.company)} · ${esc(j.status)}</div>
+          </div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--amber);white-space:nowrap">${days}d ago</div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+  overlay.addEventListener('click', e => { if (e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 3: BULK OPERATIONS
+// ══════════════════════════════════════════════════════════════════
+let bulkSelected = new Set();
+let bulkMode = false;
+
+function toggleBulkMode() {
+  bulkMode = !bulkMode;
+  bulkSelected.clear();
+  renderJobList();
+  const btn = document.getElementById('bulk-mode-btn');
+  if (btn) btn.textContent = bulkMode ? '✕ Cancel' : '⊡ Select';
+}
+
+function toggleBulkSelect(jobId, e) {
+  e.stopPropagation();
+  if (bulkSelected.has(jobId)) bulkSelected.delete(jobId);
+  else bulkSelected.add(jobId);
+  renderJobList();
+  updateBulkBar();
+}
+
+function updateBulkBar() {
+  const bar = document.getElementById('bulk-action-bar');
+  if (!bar) return;
+  if (!bulkMode || !bulkSelected.size) { bar.style.display = 'none'; return; }
+  bar.style.display = 'flex';
+  bar.querySelector('.bulk-count').textContent = bulkSelected.size + ' selected';
+}
+
+function bulkChangeStatus(status) {
+  bulkSelected.forEach(id => { if (jobs[id]) { jobs[id].status = status; jobs[id].updatedAt = Date.now(); } });
+  scheduleSave(); bulkSelected.clear(); renderJobList(); updateBulkBar(); renderStaleNudge();
+}
+
+function bulkDelete() {
+  if (!confirm(`Delete ${bulkSelected.size} application${bulkSelected.size>1?'s':''}? This cannot be undone.`)) return;
+  bulkSelected.forEach(id => { delete jobs[id]; });
+  if (bulkSelected.has(currentJobId)) { currentJobId = null; renderDetail(); }
+  scheduleSave(); bulkSelected.clear(); renderJobList(); updateBulkBar(); renderStaleNudge();
+}
+
+function bulkExport() {
+  const selected = [...bulkSelected].map(id => jobs[id]).filter(Boolean);
+  const data = {
+    __version: 2, __app: 'applied-tracker',
+    exportedAt: new Date().toISOString(),
+    jobCount: selected.length, jobs: selected,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `applied-export-selected-${Date.now()}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 4: COMPANY WATCHLIST
+// ══════════════════════════════════════════════════════════════════
+function showWatchlist() {
+  const watchlist = Object.values(jobs).filter(j => j.watchlist);
+  const overlay = document.createElement('div');
+  overlay.id = 'watchlist-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;overflow:hidden';
+  overlay.innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;padding:18px 24px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
+      <div style="font-size:16px;font-weight:700;color:var(--text);flex:1">👀 Company Watchlist</div>
+      <button onclick="addToWatchlist()" style="padding:7px 14px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">+ Add company</button>
+      <button onclick="document.getElementById('watchlist-overlay').remove()" style="width:32px;height:32px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:18px;color:var(--text2)">×</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:24px">
+      ${watchlist.length === 0 ? `<div style="text-align:center;padding:48px;color:var(--text3)">
+        <div style="font-size:40px;margin-bottom:12px">👀</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">No companies on your watchlist</div>
+        <div style="font-size:13px">Add companies you want to work at eventually — track news, signals, and contacts over time.</div>
+      </div>` : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
+        ${watchlist.map(j => `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px;position:relative">
+          <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px">${esc(j.company)}</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:10px">${esc(j.watchlistNote||'No notes yet')}</div>
+          ${j.url ? `<a href="${esc(j.url)}" target="_blank" style="font-size:12px;color:var(--blue)">Open posting ↗</a>` : ''}
+          <div style="position:absolute;top:12px;right:12px;display:flex;gap:4px">
+            <button onclick="document.getElementById('watchlist-overlay').remove();selectJob('${j.id}')" style="padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--text2);cursor:pointer">View</button>
+            <button onclick="toggleWatchlist('${j.id}');document.getElementById('watchlist-overlay').remove();showWatchlist()" style="padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:11px;color:var(--red);cursor:pointer">Remove</button>
+          </div>
+        </div>`).join('')}
+      </div>`}
+    </div>`;
+  overlay.addEventListener('click', e => { if (e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function toggleWatchlist(jobId) {
+  const j = jobs[jobId]; if (!j) return;
+  j.watchlist = !j.watchlist;
+  if (j.watchlist && !j.watchlistAddedAt) j.watchlistAddedAt = Date.now();
+  scheduleSave(); renderDetail();
+}
+
+async function addToWatchlist() {
+  const company = prompt('Company name:');
+  if (!company?.trim()) return;
+  const note = prompt('Why are you interested? (optional):') || '';
+  const url = prompt('Job posting or company URL (optional):') || '';
+  const id = genId();
+  jobs[id] = {
+    id, title: 'Watchlist', company: company.trim(),
+    status: 'to apply', watchlist: true, watchlistNote: note,
+    url, createdAt: Date.now(), updatedAt: Date.now(),
+    notes: [], contacts: [],
+  };
+  scheduleSave();
+  document.getElementById('watchlist-overlay')?.remove();
+  showWatchlist();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 5: OFFER COMPARISON
+// ══════════════════════════════════════════════════════════════════
+function showOfferComparison() {
+  const offers = Object.values(jobs).filter(j => j.status === 'offer' || j.offerDetails);
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:var(--bg);z-index:500;display:flex;flex-direction:column;overflow:hidden';
+  const cols = offers.length ? offers : [];
+  overlay.innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;padding:18px 24px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
+      <div style="font-size:16px;font-weight:700;color:var(--text);flex:1">⚖ Offer Comparison</div>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="width:32px;height:32px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:18px;color:var(--text2)">×</button>
+    </div>
+    <div style="flex:1;overflow:auto;padding:24px">
+      ${cols.length < 2 ? `<div style="text-align:center;padding:48px;color:var(--text3)">
+        <div style="font-size:40px;margin-bottom:12px">⚖</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px">Need at least 2 offers to compare</div>
+        <div style="font-size:13px">Mark applications as "offer" to compare them here.</div>
+      </div>` : `
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;min-width:${cols.length*220}px">
+          <thead>
+            <tr style="border-bottom:2px solid var(--border)">
+              <th style="text-align:left;padding:10px 14px;font-size:11px;font-family:var(--mono);color:var(--text3);font-weight:600;width:160px">FACTOR</th>
+              ${cols.map(j => `<th style="text-align:left;padding:10px 14px">
+                <div style="font-size:14px;font-weight:700;color:var(--text)">${esc(j.company)}</div>
+                <div style="font-size:11px;color:var(--text3)">${esc(j.title)}</div>
+              </th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${[
+              ['Base salary', j => j.salary || j.offerDetails?.base || '—'],
+              ['Total comp', j => j.offerDetails?.totalComp || '—'],
+              ['Equity', j => j.offerDetails?.equity || '—'],
+              ['Bonus', j => j.offerDetails?.bonus || '—'],
+              ['Location', j => j.location || '—'],
+              ['Work type', j => j.workType || '—'],
+              ['PTO', j => j.offerDetails?.pto || '—'],
+              ['Start date', j => j.offerDetails?.startDate || '—'],
+              ['Your score', j => j.offerDetails?.score ? '⭐'.repeat(Math.min(5,j.offerDetails.score)) : '—'],
+            ].map(([label, getter], ri) => `
+              <tr style="border-bottom:1px solid var(--border);background:${ri%2?'var(--bg3)':''}">
+                <td style="padding:10px 14px;font-size:12px;font-weight:600;color:var(--text2);font-family:var(--mono)">${label.toUpperCase()}</td>
+                ${cols.map(j => `<td style="padding:10px 14px;font-size:13px;color:var(--text)">
+                  <input onblur="saveOfferField('${j.id}','${label}',this.value)" style="background:transparent;border:none;color:var(--text);font-family:var(--font);font-size:13px;width:100%;outline:none;border-bottom:1px dashed var(--border)" value="${esc(String(getter(j)))}" placeholder="—">
+                </td>`).join('')}
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`}
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+function saveOfferField(jobId, field, value) {
+  const j = jobs[jobId]; if (!j) return;
+  if (!j.offerDetails) j.offerDetails = {};
+  const key = {
+    'Base salary': 'base', 'Total comp': 'totalComp', 'Equity': 'equity',
+    'Bonus': 'bonus', 'PTO': 'pto', 'Start date': 'startDate', 'Your score': 'score',
+  }[field] || field.toLowerCase();
+  j.offerDetails[key] = value;
+  scheduleSave();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 6: KEYWORD GAP ANALYSIS (in Files & Tailoring tab)
+// ══════════════════════════════════════════════════════════════════
+let gapAnalysisCache = {};
+
+async function runKeywordGap() {
+  const j = jobs[currentJobId]; if (!j) return;
+  const doc = (j.activeDoc === 'cover' ? j.cover : j.resume) || j.resume;
+  if (!doc?.content) { alert('Upload a resume first to run gap analysis.'); return; }
+  if (!j.postingText && !j.jobDescription) { alert('No job posting text found. Open the Job Posting tab first to cache the posting.'); return; }
+
+  const btn = document.getElementById('gap-analysis-btn');
+  const out = document.getElementById('gap-analysis-output');
+  if (btn) { btn.disabled=true; btn.textContent='Analyzing...'; }
+  if (out) out.innerHTML = '<div style="color:var(--text3);font-size:13px">Running keyword analysis...</div>';
+
+  try {
+    const res = await fetch(API + '/api/keyword-gap', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        resumeText: doc.content,
+        jobPosting: j.postingText || j.jobDescription || '',
+        jobTitle: j.title, company: j.company,
+      }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error);
+    const data = await res.json();
+    gapAnalysisCache[j.id] = data;
+    renderGapAnalysis(data, out);
+  } catch(e) {
+    if (out) out.innerHTML = `<div style="color:var(--red);font-size:13px">Error: ${esc(e.message)}</div>`;
+  }
+  if (btn) { btn.disabled=false; btn.textContent='🔍 Analyze keyword gaps'; }
+}
+
+function renderGapAnalysis(data, container) {
+  if (!container) return;
+  const scoreColor = data.matchScore >= 70 ? 'var(--green)' : data.matchScore >= 50 ? 'var(--amber)' : 'var(--red)';
+  const riskColors = { low: 'var(--green)', medium: 'var(--amber)', high: 'var(--red)' };
+  container.innerHTML = `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">Keyword Gap Analysis</div>
+        <div style="display:flex;gap:12px;align-items:center">
+          <div style="font-size:11px;color:var(--text3)">ATS risk: <span style="color:${riskColors[data.atsRisk]||'var(--text)'};font-weight:600">${(data.atsRisk||'').toUpperCase()}</span></div>
+          <div style="font-size:24px;font-weight:700;color:${scoreColor}">${data.matchScore||0}%</div>
+        </div>
+      </div>
+      <div style="height:6px;background:var(--bg4);border-radius:3px;margin-bottom:14px;overflow:hidden">
+        <div style="width:${data.matchScore||0}%;height:100%;background:${scoreColor};border-radius:3px;transition:width .6s ease"></div>
+      </div>
+      ${data.missingCritical?.length ? `<div style="margin-bottom:10px">
+        <div style="font-size:10px;font-family:var(--mono);color:var(--red);font-weight:600;margin-bottom:6px;letter-spacing:.5px">MISSING — CRITICAL</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${data.missingCritical.map(k => `<span style="padding:3px 8px;background:rgba(184,50,37,0.12);border:1px solid rgba(184,50,37,0.3);border-radius:4px;font-size:12px;color:var(--red)">${esc(k)}</span>`).join('')}
+        </div>
+      </div>` : ''}
+      ${data.missingNice?.length ? `<div style="margin-bottom:10px">
+        <div style="font-size:10px;font-family:var(--mono);color:var(--amber);font-weight:600;margin-bottom:6px;letter-spacing:.5px">MISSING — NICE TO HAVE</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${data.missingNice.map(k => `<span style="padding:3px 8px;background:rgba(160,96,16,0.10);border:1px solid rgba(160,96,16,0.25);border-radius:4px;font-size:12px;color:var(--amber)">${esc(k)}</span>`).join('')}
+        </div>
+      </div>` : ''}
+      ${data.present?.length ? `<div style="margin-bottom:12px">
+        <div style="font-size:10px;font-family:var(--mono);color:var(--green);font-weight:600;margin-bottom:6px;letter-spacing:.5px">FOUND IN RESUME ✓</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          ${data.present.slice(0,12).map(k => `<span style="padding:3px 8px;background:rgba(26,102,64,0.10);border:1px solid rgba(26,102,64,0.25);border-radius:4px;font-size:12px;color:var(--green)">${esc(k)}</span>`).join('')}
+          ${data.present.length > 12 ? `<span style="font-size:12px;color:var(--text3)">+${data.present.length-12} more</span>` : ''}
+        </div>
+      </div>` : ''}
+      ${data.topRecommendations?.length ? `<div>
+        <div style="font-size:10px;font-family:var(--mono);color:var(--text2);font-weight:600;margin-bottom:6px;letter-spacing:.5px">TOP RECOMMENDATIONS</div>
+        ${data.topRecommendations.map(r => `<div style="display:flex;gap:8px;margin-bottom:6px"><span style="color:var(--accent-bg)">→</span><span style="font-size:12px;color:var(--text2)">${esc(r)}</span></div>`).join('')}
+      </div>` : ''}
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 7: EMAIL TEMPLATES
+// ══════════════════════════════════════════════════════════════════
+function showEmailTemplates(jobId) {
+  const j = jobs[jobId || currentJobId]; if (!j) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'email-tpl-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px';
+  const types = [
+    { id: 'thank-you',  label: 'Thank-you after interview',   icon: '🙏' },
+    { id: 'follow-up',  label: 'Follow-up on application',    icon: '📬' },
+    { id: 'negotiate',  label: 'Salary negotiation',          icon: '💰' },
+    { id: 'decline',    label: 'Decline an offer',            icon: '🚫' },
+    { id: 'referral',   label: 'Reach out to contact',        icon: '🤝' },
+    { id: 'withdraw',   label: 'Withdraw application',        icon: '↩' },
+  ];
+  overlay.innerHTML = `<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:min(560px,100%);max-height:85vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border)">
+      <div style="font-size:16px;font-weight:700;color:var(--text)">✉ Email Templates</div>
+      <button onclick="document.getElementById('email-tpl-overlay').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
+    </div>
+    <div style="padding:20px 24px">
+      <div style="font-size:13px;color:var(--text3);margin-bottom:16px">${esc(j.title)} @ ${esc(j.company)}</div>
+      <div id="email-tpl-list" style="display:flex;flex-direction:column;gap:8px">
+        ${types.map(t => `<button onclick="generateEmailTemplate('${t.id}','${jobId||currentJobId}')" style="padding:12px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);cursor:pointer;text-align:left;display:flex;align-items:center;gap:10px;transition:all .12s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">
+          <span>${t.icon}</span><span>${t.label}</span>
+        </button>`).join('')}
+      </div>
+      <div id="email-tpl-result" style="margin-top:16px"></div>
+    </div>
+  </div>`;
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+async function generateEmailTemplate(type, jobId) {
+  const j = jobs[jobId]; if (!j) return;
+  const out = document.getElementById('email-tpl-result');
+  if (out) out.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px">Drafting email...</div>';
+
+  // Get contact name if available
+  const contactName = j.contacts?.[0]?.name || '';
+
+  try {
+    const res = await fetch(API + '/api/email-template', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
+      body: JSON.stringify({ type, company: j.company, title: j.title, contactName }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error);
+    const data = await res.json();
+    if (!out) return;
+    out.innerHTML = `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px">
+      <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:6px;letter-spacing:.5px">SUBJECT</div>
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px;padding:8px 10px;background:var(--bg2);border-radius:4px">${esc(data.subject)}</div>
+      <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:6px;letter-spacing:.5px">BODY</div>
+      <div id="email-body-text" style="font-size:13px;color:var(--text2);line-height:1.7;white-space:pre-wrap;padding:8px 10px;background:var(--bg2);border-radius:4px;margin-bottom:12px">${esc(data.body)}</div>
+      <div style="display:flex;gap:8px">
+        <button onclick="navigator.clipboard.writeText(${JSON.stringify(data.subject + '\n\n' + data.body)}).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy email',1500)})" style="flex:1;padding:8px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Copy email</button>
+        <button onclick="document.getElementById('email-tpl-result').innerHTML=''" style="padding:8px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer">← Back</button>
+      </div>
+    </div>`;
+  } catch(e) {
+    if (out) out.innerHTML = `<div style="color:var(--red);font-size:13px">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 8: SALARY BENCHMARKING
+// ══════════════════════════════════════════════════════════════════
+async function runSalaryBenchmark(jobId) {
+  const j = jobs[jobId || currentJobId]; if (!j) return;
+  const btn = document.getElementById('salary-benchmark-btn');
+  const out = document.getElementById('salary-benchmark-output');
+  if (btn) { btn.disabled=true; btn.textContent='Fetching data...'; }
+  if (out) out.innerHTML = '<div style="color:var(--text3);font-size:13px">Analyzing market data...</div>';
+
+  try {
+    const res = await fetch(API + '/api/salary-benchmark', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
+      body: JSON.stringify({ title: j.title, location: j.location, company: j.company }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error);
+    const data = await res.json();
+    if (!out) return;
+    const fmt = n => n >= 1000 ? '$' + Math.round(n/1000) + 'k' : '$' + n;
+    const entered = parseInt((j.salary||'0').replace(/[^0-9]/g,'')) || 0;
+    const pos = entered && data.p50 ? (entered >= data.p75 ? 'above' : entered >= data.p50 ? 'at' : 'below') : null;
+    out.innerHTML = `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-top:10px">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px">📊 Market Salary Data</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px">
+        ${[['25th', data.p25, 'var(--text3)'],['Median', data.p50, 'var(--text)'],['75th', data.p75, 'var(--accent-bg)'],['90th', data.p90, 'var(--green)']].map(([label,val,color]) => `
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:10px;text-align:center">
+            <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:4px">${label}</div>
+            <div style="font-size:16px;font-weight:700;color:${color}">${fmt(val)}</div>
+          </div>`).join('')}
+      </div>
+      ${entered && pos ? `<div style="padding:8px 12px;background:${pos==='above'?'rgba(26,102,64,.12)':pos==='at'?'rgba(160,96,16,.12)':'rgba(184,50,37,.12)'};border-radius:6px;font-size:12px;color:${pos==='above'?'var(--green)':pos==='at'?'var(--amber)':'var(--red)'};margin-bottom:10px">
+        Your target (${fmt(entered)}) is <strong>${pos} median</strong>
+      </div>` : ''}
+      ${data.negotiationTips?.length ? `<div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:6px;font-weight:600;letter-spacing:.5px">NEGOTIATION TIPS</div>
+        ${data.negotiationTips.map(t => `<div style="font-size:12px;color:var(--text2);margin-bottom:4px">→ ${esc(t)}</div>`).join('')}` : ''}
+    </div>`;
+  } catch(e) {
+    if (out) out.innerHTML = `<div style="color:var(--red);font-size:13px">Error: ${esc(e.message)}</div>`;
+  }
+  if (btn) { btn.disabled=false; btn.textContent='📊 Benchmark salary'; }
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 9: PUBLIC STATUS PAGE
+// ══════════════════════════════════════════════════════════════════
+async function showStatusPageSettings() {
+  let current = null;
+  try {
+    const res = await fetch(API+'/api/status-page', {headers:{Authorization:'Bearer '+token}});
+    current = await res.json();
+  } catch(e) {}
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:600;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML = `<div style="background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:min(480px,100%);padding:28px;box-shadow:0 12px 40px rgba(0,0,0,.2)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:700;color:var(--text)">🔗 Public Status Page</div>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px">×</button>
+    </div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:16px;line-height:1.6">A public link to share with recruiters showing your availability — no private job data is exposed.</div>
+    ${current?.active && current.token ? `<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;margin-bottom:16px">
+      <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:4px">YOUR STATUS PAGE</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input readonly value="${window.location.origin}/status/${current.token}" style="flex:1;padding:7px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--mono);font-size:12px;color:var(--text);outline:none">
+        <button onclick="navigator.clipboard.writeText('${window.location.origin}/status/${current.token}').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)})" style="padding:7px 12px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">Copy</button>
+        <a href="/status/${current.token}" target="_blank" style="padding:7px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);text-decoration:none">Preview</a>
+      </div>
+    </div>` : ''}
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;color:var(--text2)">
+        <input type="checkbox" id="sp-available" ${current?.available?'checked':''}>
+        I am open to new opportunities
+      </label>
+      <div class="settings-field">
+        <label>HEADLINE</label>
+        <input type="text" id="sp-headline" placeholder="e.g. Senior Engineer seeking ML roles" value="${esc(current?.headline||'')}" style="width:100%;box-sizing:border-box">
+      </div>
+      <div class="settings-field">
+        <label>AVAILABLE FROM</label>
+        <input type="text" id="sp-avail-from" placeholder="e.g. March 2025" value="${esc(current?.availableFrom||'')}" style="width:100%;box-sizing:border-box">
+      </div>
+      <div class="settings-field">
+        <label>PUBLIC NOTE</label>
+        <textarea id="sp-note" placeholder="Brief public note for recruiters..." rows="3" style="width:100%;box-sizing:border-box;resize:vertical">${esc(current?.note||'')}</textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button onclick="saveStatusPage(this)" style="flex:1;padding:9px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">
+        ${current?.active ? 'Update status page' : 'Create status page'}
+      </button>
+      ${current?.active ? `<button onclick="deleteStatusPage(this)" style="padding:9px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--red);cursor:pointer">Delete</button>` : ''}
+    </div>
+  </div>`;
+  overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+async function saveStatusPage(btn) {
+  const available = document.getElementById('sp-available')?.checked;
+  const headline = document.getElementById('sp-headline')?.value.trim();
+  const availableFrom = document.getElementById('sp-avail-from')?.value.trim();
+  const note = document.getElementById('sp-note')?.value.trim();
+  if (btn) { btn.disabled=true; btn.textContent='Saving...'; }
+  try {
+    const res = await fetch(API+'/api/status-page/generate', {
+      method:'POST', headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
+      body: JSON.stringify({ available, headline, availableFrom, note }),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error);
+    btn?.closest('[style*=fixed]')?.remove();
+    showStatusPageSettings();
+  } catch(e) { alert('Error: '+e.message); }
+  if (btn) { btn.disabled=false; }
+}
+
+async function deleteStatusPage(btn) {
+  if (!confirm('Delete your public status page?')) return;
+  await fetch(API+'/api/status-page', {method:'DELETE', headers:{Authorization:'Bearer '+token}});
+  btn?.closest('[style*=fixed]')?.remove();
+  showStatusPageSettings();
+}
+
+// ══════════════════════════════════════════════════════════════════
+// FEATURE 10: APPLICATION VELOCITY (added to analytics)
+// ══════════════════════════════════════════════════════════════════
+function computeVelocity() {
+  const all = Object.values(jobs);
+  if (!all.length) return null;
+  const now = Date.now();
+  const thirtyDaysAgo = now - 30 * 86400000;
+  const sevenDaysAgo  = now - 7  * 86400000;
+  const last30 = all.filter(j => j.createdAt > thirtyDaysAgo);
+  const last7  = all.filter(j => j.createdAt > sevenDaysAgo);
+  const responded = all.filter(j => ['screening','interviewing','offer'].includes(j.status));
+  const responseRate = all.length ? Math.round(responded.length / all.length * 100) : 0;
+  const avgDaysToResponse = responded.length ? Math.round(
+    responded.reduce((s,j) => s + ((j.updatedAt||j.createdAt||now) - (j.createdAt||now)), 0)
+    / responded.length / 86400000
+  ) : null;
+  return { last30: last30.length, last7: last7.length, responseRate, avgDaysToResponse,
+    total: all.length, active: all.filter(j => !['rejected','ghosted','withdrawn','expired'].includes(j.status)).length };
+}
+
 async function checkAIProviders() {
   const el = document.getElementById('ai-provider-status');
   if (el) el.textContent = 'Checking...';
@@ -3724,6 +5194,178 @@ function showSettingsSection(id) {
   document.querySelectorAll('[id^="snav-"]').forEach(btn => {
     btn.classList.toggle('active', btn.id === 'snav-' + id);
   });
+  // Auto-load recovery status when pane opens
+  if (id === 'recovery') loadRecoveryStatus();
+  if (id === 'account') renderEncryptionStatus();
+  if (id === 'tailoring') {
+    const s = getTailorSettings();
+    const as = document.getElementById('st-autosave');
+    const cl = document.getElementById('st-cleanup');
+    if (as) as.checked = s.autoSave;
+    if (cl) cl.checked = s.cleanupOnExit;
+  }
+}
+
+function renderEncryptionStatus() {
+  const icon  = document.getElementById('enc-icon');
+  const label = document.getElementById('enc-status-label');
+  const sub   = document.getElementById('enc-status-sub');
+  const area  = document.getElementById('enc-upgrade-area');
+  if (!label) return;
+
+  if (isEncrypted) {
+    if (icon)  icon.textContent  = '🔒';
+    if (label) label.textContent = 'End-to-end encrypted';
+    if (label) label.style.color = 'var(--green)';
+    if (sub)   sub.textContent   = 'Your data is encrypted with a key derived from your password. The server only stores ciphertext.';
+    if (area)  area.innerHTML    = '';
+  } else {
+    if (icon)  icon.textContent  = '🔓';
+    if (label) label.textContent = 'Not encrypted';
+    if (label) label.style.color = 'var(--amber)';
+    if (sub)   sub.textContent   = 'Your data is stored in plaintext on the server. Enable encryption to protect it.';
+    if (area)  area.innerHTML    = `
+      <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:12px">
+        Enabling encryption generates a new data key, encrypts all your existing jobs, and re-registers your credentials.
+        You will need to <strong>save your recovery codes</strong> — losing them means permanent data loss.
+      </div>
+      <div class="settings-field" style="margin-bottom:8px">
+        <label>CONFIRM YOUR PASSWORD</label>
+        <input type="password" id="enc-upgrade-pw" placeholder="Enter current password to enable encryption" style="width:100%;box-sizing:border-box">
+      </div>
+      <div class="auth-error" id="enc-upgrade-err"></div>
+      <button onclick="enableEncryption()" id="enc-upgrade-btn" style="padding:9px 18px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">
+        🔒 Enable end-to-end encryption
+      </button>`;
+  }
+}
+
+async function enableEncryption() {
+  const pw  = document.getElementById('enc-upgrade-pw')?.value;
+  const btn = document.getElementById('enc-upgrade-btn');
+  const err = document.getElementById('enc-upgrade-err');
+  if (err) err.classList.remove('show');
+  if (!pw) { if (err) { err.textContent='Enter your password.'; err.classList.add('show'); } return; }
+
+  // Verify password by logging in fresh (can't trust the in-memory state)
+  if (btn) { btn.disabled=true; btn.textContent='Generating keys...'; }
+  try {
+    // Generate new data key in browser
+    const genDataKey = await CryptoEngine.generateDataKey();
+    const pwKey      = await CryptoEngine.deriveKey(pw, currentUser);
+    const encryptedDataKey = await CryptoEngine.wrapKey(genDataKey, pwKey);
+
+    // Generate 8 recovery key slots
+    const rawCodes = Array.from({length:8}, () => {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      return Array.from({length:4}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+    });
+    const formattedCodes = rawCodes.map(c => c.match(/.{1,4}/g).join('-'));
+    const recoveryKeySlots = await Promise.all(rawCodes.map(async (code,i) => {
+      const codeKey = await CryptoEngine.deriveKey(code, currentUser);
+      return { index:i, slot: await CryptoEngine.wrapKey(genDataKey, codeKey) };
+    }));
+
+    if (btn) btn.textContent='Encrypting your data...';
+
+    // Encrypt all current jobs with the new key
+    const ciphertext = await CryptoEngine.encrypt(genDataKey, jobs);
+
+    // Send to server: enable encryption + new key material + encrypted jobs
+    const res = await fetch(API+'/api/enable-encryption', {
+      method:'POST',
+      headers:{'Content-Type':'application/json', Authorization:'Bearer '+token},
+      body: JSON.stringify({ password:pw, encryptedDataKey, recoveryKeySlots, encryptedJobs: ciphertext }),
+    });
+    const d = await res.json();
+    if (!res.ok) { if (err) { err.textContent=d.error||'Failed'; err.classList.add('show'); } return; }
+
+    // Update in-memory state
+    dataKey     = genDataKey;
+    isEncrypted = true;
+
+    // Show recovery codes
+    showRecoveryCodesModal(formattedCodes, () => {
+      renderEncryptionStatus();
+      setSettingsStatus('account-status','success','Encryption enabled. Your data is now protected.');
+    }, true);
+
+  } catch(e) {
+    if (err) { err.textContent='Error: '+e.message; err.classList.add('show'); }
+  } finally {
+    if (btn) { btn.disabled=false; btn.textContent='🔒 Enable end-to-end encryption'; }
+  }
+}
+
+async function loadRecoveryStatus() {
+  const box = document.getElementById('recovery-status-box');
+  if (!box) return;
+  try {
+    const res = await fetch(API + '/api/recovery-codes', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('Failed');
+    const data = await res.json();
+    const created = data.createdAt ? new Date(data.createdAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Unknown';
+    const countColor = data.count >= 5 ? 'var(--green)' : data.count >= 2 ? 'var(--amber)' : 'var(--red)';
+    box.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <div style="font-size:28px;font-weight:700;color:${countColor}">${data.count}</div>
+        <div>
+          <div style="font-size:13px;font-weight:500;color:var(--text)">codes remaining</div>
+          <div style="font-size:11px;color:var(--text3)">Generated ${created}</div>
+        </div>
+      </div>
+      ${data.count === 0 ? '<div style="font-size:13px;color:var(--red);font-weight:500">⚠ No recovery codes left — generate new ones below.</div>' :
+        data.count <= 2 ? '<div style="font-size:13px;color:var(--amber)">⚠ Running low — consider generating new codes soon.</div>' :
+        '<div style="font-size:13px;color:var(--green)">✓ You have recovery codes available.</div>'}`;
+  } catch(e) {
+    box.innerHTML = '<div style="color:var(--text3)">Could not load status.</div>';
+  }
+}
+
+async function generateNewRecoveryCodes() {
+  const pw = document.getElementById('regen-password')?.value;
+  const btn = document.getElementById('regen-btn');
+  const err = document.getElementById('regen-error');
+  if (err) err.classList.remove('show');
+  if (!pw) {
+    if (err) { err.textContent = 'Enter your current password to confirm.'; err.classList.add('show'); }
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating...'; }
+  try {
+    // Zero-knowledge: generate new recovery key slots in browser
+    let recoveryKeySlots = [];
+    if (isEncrypted && dataKey) {
+      const rawCodes = Array.from({length: 8}, () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        return Array.from({length: 4}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+      });
+      recoveryKeySlots = await Promise.all(rawCodes.map(async (code, i) => {
+        const codeKey = await CryptoEngine.deriveKey(code, currentUser);
+        return { index: i, slot: await CryptoEngine.wrapKey(dataKey, codeKey) };
+      }));
+    }
+    const res = await fetch(API + '/api/recovery-codes/regenerate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ password: pw, recoveryKeySlots }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      if (err) { err.textContent = data.error || 'Failed'; err.classList.add('show'); }
+      return;
+    }
+    // Clear password field
+    if (document.getElementById('regen-password')) document.getElementById('regen-password').value = '';
+    // Show new codes modal
+    showRecoveryCodesModal(data.recoveryCodes, () => loadRecoveryStatus());
+  } catch(e) {
+    if (err) { err.textContent = 'Could not connect.'; err.classList.add('show'); }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🔑 Generate 8 new recovery codes'; }
+  }
 }
 
 function setSettingsStatus(id, type, msg) {
@@ -3744,7 +5386,15 @@ async function changePassword() {
     const res = await fetch(API + '/api/change-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ currentPassword: current, newPassword: newPw })
+      body: JSON.stringify(await (async () => {
+        const body = { currentPassword: current, newPassword: newPw };
+        // Zero-knowledge: re-wrap dataKey with new password — server never sees the key
+        if (isEncrypted && dataKey) {
+          const newPwKey = await CryptoEngine.deriveKey(newPw, currentUser);
+          body.newEncryptedDataKey = await CryptoEngine.wrapKey(dataKey, newPwKey);
+        }
+        return body;
+      })())
     });
     const data = await res.json();
     if (!res.ok) { setSettingsStatus('pw-status','error', data.error || 'Failed to change password'); return; }
@@ -3770,6 +5420,104 @@ function clearFinnhubKey() {
   document.getElementById('s-finnhub-key').value = '';
   setSettingsStatus('finnhub-status','success','Finnhub key removed.');
 }
+
+async function exportData(format = 'zip') {
+  const ext = format === 'json' ? 'json' : 'zip';
+  try {
+    const res = await fetch(API + '/api/export-data?format=' + format, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Export failed'); }
+    const blob = await res.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'applied-export-' + new Date().toISOString().split('T')[0] + '.' + ext;
+    a.click(); URL.revokeObjectURL(a.href);
+    setSettingsStatus('export-status', 'success', 'Download started.');
+  } catch(e) { setSettingsStatus('export-status', 'error', e.message); }
+}
+
+async function doImportData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('import-status');
+  const mode = document.getElementById('import-mode')?.value || 'append';
+
+  // ── Client-side pre-validation ──
+  if (!file.name.endsWith('.json')) {
+    setSettingsStatus('import-status', 'error', 'Only .json files exported from this app are accepted.');
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    setSettingsStatus('import-status', 'error', 'File too large (max 10MB).');
+    return;
+  }
+
+  setSettingsStatus('import-status', '', 'Reading file...');
+  let parsed;
+  try {
+    const text = await file.text();
+    parsed = JSON.parse(text);
+  } catch(e) {
+    setSettingsStatus('import-status', 'error', 'File is not valid JSON.');
+    return;
+  }
+
+  // Basic client-side structural check before sending
+  if (parsed.__app !== 'applied-tracker' || !Array.isArray(parsed.jobs)) {
+    setSettingsStatus('import-status', 'error', 'Not a valid Applied export file. Only exports from this app are accepted.');
+    return;
+  }
+
+  const jobCount = parsed.jobs.length;
+  if (mode === 'replace') {
+    const confirmed = confirm('REPLACE mode will permanently overwrite all your existing ' + Object.keys(jobs).length + ' jobs with the ' + jobCount + ' jobs from this file. This cannot be undone. Continue?');
+    if (!confirmed) { event.target.value = ''; return; }
+  }
+
+  setSettingsStatus('import-status', '', 'Uploading and validating...');
+  try {
+    const res = await fetch(API + '/api/import-data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ ...parsed, mode }),
+    });
+    const d = await res.json();
+    if (!res.ok) throw new Error(d.error || 'Import failed');
+
+    if (d.zerKnowledge && dataKey) {
+      // Zero-knowledge account: server returned sanitized jobs, we must encrypt+merge locally
+      setSettingsStatus('import-status', '', 'Encrypting and merging ' + d.count + ' jobs...');
+      const sanitizedJobs = d.sanitizedJobs || [];
+      if (mode === 'replace') {
+        jobs = Object.fromEntries(sanitizedJobs.map(j => [j.id, j]));
+      } else {
+        sanitizedJobs.forEach(j => { jobs[j.id] = j; });
+      }
+      // Force immediate save (encrypted)
+      clearTimeout(saveTimer);
+      const ciphertext = await CryptoEngine.encrypt(dataKey, jobs);
+      await fetch(API + '/api/jobs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ __enc: true, data: ciphertext }),
+      });
+    } else {
+      // Plaintext account — reload from server
+      await loadJobs();
+    }
+
+    renderJobList();
+    setSettingsStatus('import-status', 'success',
+      d.count + ' jobs imported successfully (' + mode + ' mode). ' +
+      (d.zerKnowledge ? 'Data encrypted with your key.' : '')
+    );
+  } catch(e) {
+    setSettingsStatus('import-status', 'error', 'Import failed: ' + e.message);
+  }
+  event.target.value = ''; // Reset file input
+}
+
 
 async function exportAllData() {
   const btn = document.getElementById('export-btn');
@@ -3893,10 +5641,12 @@ setInterval(() => {
       </div>
       <div style="flex:1;overflow-y:auto">
         <button id="snav-account"   onclick="showSettingsSection('account')"   class="snav-btn">Account</button>
+        <button id="snav-recovery"  onclick="showSettingsSection('recovery')"  class="snav-btn">Recovery Codes</button>
         <button id="snav-ai"        onclick="showSettingsSection('ai')"        class="snav-btn">AI Providers</button>
         <button id="snav-financial" onclick="showSettingsSection('financial')" class="snav-btn">Financial Data</button>
         <button id="snav-extension" onclick="showSettingsSection('extension')" class="snav-btn">Browser Extensions</button>
         <button id="snav-help"      onclick="showSettingsSection('help')"      class="snav-btn">Help &amp; Support</button>
+        <button id="snav-tailoring" onclick="showSettingsSection('tailoring')" class="snav-btn">Tailoring</button>
         <button id="snav-data"      onclick="showSettingsSection('data')"      class="snav-btn">Data &amp; Export</button>
         <button id="snav-feedback"  onclick="showSettingsSection('feedback')" class="snav-btn">Feedback</button>
         <button id="snav-danger"    onclick="showSettingsSection('danger')"    class="snav-btn" style="color:var(--red)">Danger Zone</button>
@@ -3931,6 +5681,56 @@ setInterval(() => {
           <div class="settings-section-body">
             <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Signed in as <strong style="color:var(--text)" id="s-session-user"></strong></div>
             <button class="settings-btn danger" onclick="closeSettings();doLogout()">Sign out</button>
+          </div>
+        </div>
+
+        <div class="settings-section" id="encryption-status-section">
+          <div class="settings-section-title">DATA ENCRYPTION</div>
+          <div class="settings-section-body">
+            <div id="encryption-status-box" style="display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--radius-sm);margin-bottom:12px;background:var(--bg3);border:1px solid var(--border)">
+              <div id="enc-icon" style="font-size:20px">🔐</div>
+              <div>
+                <div id="enc-status-label" style="font-size:13px;font-weight:600;color:var(--text)">Loading...</div>
+                <div id="enc-status-sub" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
+              </div>
+            </div>
+            <div id="enc-upgrade-area"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECOVERY CODES -->
+      <div class="settings-pane" id="spane-recovery" style="display:none">
+        <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:20px">Recovery Codes</div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">YOUR BACKUP CODES</div>
+          <div class="settings-section-body">
+            <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:16px">
+              Recovery codes let you reset your password if you ever lose access to your email.
+              Each code works <strong>once only</strong>. You start with 8 — keep them in a password manager or printed somewhere safe.
+            </div>
+            <div id="recovery-status-box" style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;font-size:13px;color:var(--text2)">
+              Loading...
+            </div>
+            <button onclick="loadRecoveryStatus()" style="padding:7px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer;margin-bottom:8px">↻ Refresh status</button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">GENERATE NEW CODES</div>
+          <div class="settings-section-body">
+            <div style="font-size:13px;color:var(--text3);margin-bottom:14px">
+              Generating new codes immediately invalidates all previous codes. You'll need to enter your current password to confirm.
+            </div>
+            <div class="settings-field">
+              <label>CURRENT PASSWORD</label>
+              <input type="password" id="regen-password" placeholder="Enter your password to confirm" style="width:100%;box-sizing:border-box">
+            </div>
+            <div class="auth-error" id="regen-error"></div>
+            <button onclick="generateNewRecoveryCodes()" id="regen-btn" style="padding:9px 18px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">
+              🔑 Generate 8 new recovery codes
+            </button>
           </div>
         </div>
       </div>
@@ -4058,6 +5858,82 @@ setInterval(() => {
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M1 10v1a2 2 0 002 2h8a2 2 0 002-2v-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
               Download all data as zip
             </button>
+            <button onclick="exportData('json')" style="padding:8px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer;display:flex;align-items:center;gap:8px;margin-top:8px">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M1 10v1a2 2 0 002 2h8a2 2 0 002-2v-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Download as JSON (for reimport)
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">IMPORT DATA</div>
+          <div class="settings-section-body">
+            <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:14px">
+              Restore from a previous export. Only <strong>Applied JSON exports</strong> are accepted (.json files from this app).
+              Imported jobs are added alongside your existing data.
+            </div>
+            <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:var(--radius-sm);padding:12px;margin-bottom:14px;font-size:12px;color:var(--amber);line-height:1.6">
+              ⚠ Review imported data after upload — all HTML tags are stripped and only safe fields are accepted. Verify job count matches your export.
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+              <select id="import-mode" style="padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text);outline:none">
+                <option value="append">Append — add alongside existing jobs</option>
+                <option value="replace">Replace — overwrite all existing jobs</option>
+              </select>
+              <label style="padding:8px 14px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 10V2M4 5l3-3 3 3M1 10v1a2 2 0 002 2h8a2 2 0 002-2v-1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Select JSON file
+                <input type="file" accept=".json" style="display:none" onchange="doImportData(event)">
+              </label>
+            </div>
+            <div id="import-status" class="settings-status"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAILORING -->
+      <div class="settings-pane" id="spane-tailoring" style="display:none">
+        <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:20px">Tailoring</div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">AUTO-SAVE</div>
+          <div class="settings-section-body">
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;margin-bottom:14px">
+              <input type="checkbox" id="st-autosave" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent-bg)" onchange="setTailorSetting('tailor_autosave',this.checked)">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Auto-save every tailored version to vault</div>
+                <div style="font-size:12px;color:var(--text3);margin-top:2px;line-height:1.5">Each time you tailor a document it is automatically saved to your Document Library with a version number and timestamp. Default: on.</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">CLEANUP</div>
+          <div class="settings-section-body">
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;margin-bottom:14px">
+              <input type="checkbox" id="st-cleanup" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent-bg)" onchange="setTailorSetting('tailor_cleanup_exit',this.checked)">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Clean up intermediate versions on exit</div>
+                <div style="font-size:12px;color:var(--text3);margin-top:2px;line-height:1.5">When you close the tailoring panel, all versions except the final one are removed from your Document Library. Keeps the vault tidy. Default: on.</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">HOW IT WORKS</div>
+          <div class="settings-section-body">
+            <div style="font-size:13px;color:var(--text2);line-height:1.8">
+              <strong style="color:var(--text)">Opening tailoring</strong><br>
+              Click <strong>Tailor ✦</strong> on any document in the Documents tab — it opens as a focused full-screen overlay.<br><br>
+              <strong style="color:var(--text)">Format</strong><br>
+              All tailored documents are saved to your vault and downloadable as <strong>.docx</strong> (Microsoft Word format). The document is fully editable before downloading.<br><br>
+              <strong style="color:var(--text)">Re-tailoring</strong><br>
+              Every time you click <strong>Re-tailor</strong> a new version is generated and auto-saved (if enabled). The version counter increments: v1, v2, v3…<br><br>
+              <strong style="color:var(--text)">Version cleanup</strong><br>
+              With cleanup on, closing the panel deletes v1, v2, etc. and keeps only the final version. Turn cleanup off if you want to keep all versions for comparison.
+            </div>
           </div>
         </div>
       </div>

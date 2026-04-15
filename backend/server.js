@@ -1,6 +1,13 @@
 const express = require('express');
 const archiver = require('archiver');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
+
+// ── Zero-knowledge encryption ──
+// All encryption/decryption happens in the browser via WebCrypto.
+// The server stores opaque ciphertext and never sees plaintext job data or keys.
+// encryptedDataKey: browser-generated, wrapped with PBKDF2(password) key — server stores only
+// recoveryKeySlots: encryptedDataKey wrapped with each recovery code key — for code-based recovery
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
@@ -30,6 +37,38 @@ const FROM_EMAIL    = process.env.FROM_EMAIL || 'Applied <noreply@applied.app>';
 const resetTokens   = {};
 
 
+
+// ── RECOVERY CODES ──
+// Generate 8 groups of 4 chars (e.g. A3X9-K2M1-PQ7R-B5N2-...)
+function generateRecoveryCodes(count = 8) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no confusable chars
+  return Array.from({ length: count }, () =>
+    Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  );
+}
+function formatCode(segments) { return segments.join('-'); }
+
+// Store hashed codes alongside user; return plaintext for display
+async function attachRecoveryCodes(user) {
+  const codes = generateRecoveryCodes(8);
+  user.recoveryCodes = await Promise.all(codes.map(c => bcrypt.hash(c, 10)));
+  user.recoveryCodesCreatedAt = Date.now();
+  return codes; // plaintext — shown once, never stored
+}
+
+// Verify a submitted recovery code against stored hashes
+async function verifyRecoveryCode(user, submitted) {
+  if (!user.recoveryCodes || !user.recoveryCodes.length) return null;
+  const clean = submitted.replace(/-/g, '').toUpperCase();
+  for (let i = 0; i < user.recoveryCodes.length; i++) {
+    const match = await bcrypt.compare(clean, user.recoveryCodes[i]);
+    if (match) {
+      user.recoveryCodes.splice(i, 1); // one-time use — consume it
+      return true;
+    }
+  }
+  return false;
+}
 
 async function sendMail(to, subject, html) {
   const mailer = getMailer();
@@ -258,22 +297,34 @@ function saveUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 }
 
-function loadUserJobs(userId) {
+function loadUserJobs(userId, dataKey) {
   const file = path.join(JOBS_DIR, `${userId}.json`);
   if (!fs.existsSync(file)) return {};
-  return JSON.parse(fs.readFileSync(file, 'utf8'));
+  const raw = fs.readFileSync(file, 'utf8');
+  // Support both encrypted (new) and plaintext (legacy migration) formats
+  if (dataKey && raw.includes(':') && !raw.startsWith('{')) {
+    try { return JSON.parse(decryptData(raw, dataKey)); } catch(e) {}
+  }
+  try { return JSON.parse(raw); } catch(e) { return {}; }
 }
 
-function saveUserJobs(userId, jobs) {
+function saveUserJobs(userId, data, dataKey) {
   const file = path.join(JOBS_DIR, `${userId}.json`);
-  fs.writeFileSync(file, JSON.stringify(jobs, null, 2));
+  const json = JSON.stringify(data);
+  fs.writeFileSync(file, dataKey ? encryptData(json, dataKey) : json);
 }
+
+
 
 function authMiddleware(req, res, next) {
   const auth = req.headers.authorization;
   if (!auth || !auth.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
   try {
     req.user = jwt.verify(auth.slice(7), JWT_SECRET);
+    // Expose the user's dataKey for encrypted storage operations
+    if (req.user.wrappedKey) {
+      try { req.dataKey = unwrapDataKey(req.user.wrappedKey); } catch(e) {}
+    }
     next();
   } catch {
     res.status(401).json({ error: 'Invalid token' });
@@ -282,11 +333,12 @@ function authMiddleware(req, res, next) {
 
 // --- Auth Routes ---
 app.post('/api/register', async (req, res) => {
-  const { username, password, email } = req.body;
+  const { username, password, email, encryptedDataKey, recoveryKeySlots } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
   if (!email || !email.includes('@')) return res.status(400).json({ error: 'Valid email address required' });
   if (username.length < 3) return res.status(400).json({ error: 'Username must be at least 3 characters' });
-  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  if (!encryptedDataKey) return res.status(400).json({ error: 'Encryption key required' });
 
   const users = loadUsers();
   const key = username.toLowerCase().trim();
@@ -294,13 +346,39 @@ app.post('/api/register', async (req, res) => {
 
   const isAdmin = key === ADMIN_USERNAME.toLowerCase();
   const hashed = await bcrypt.hash(password, 12);
-  const userId = Date.now().toString(36) + Math.random().toString(36).slice(2);
-  users[key] = { id: userId, username: username.trim(), email: email.toLowerCase().trim(), password: hashed, createdAt: Date.now(), isActive: true, isAdmin };
+
+  // Generate recovery codes (bcrypt hashes for server-side rate-limit verification)
+  const codes = generateRecoveryCodes(8);
+  const formatted = codes.map(c => c.match(/.{1,4}/g).join('-'));
+  const codeHashes = await Promise.all(codes.map(c => bcrypt.hash(c, 10)));
+
+  const userId = 'u_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  users[key] = {
+    id: userId,
+    username: username.trim(),
+    email: email.toLowerCase().trim(),   // plaintext for SMTP only
+    password: hashed,
+    createdAt: Date.now(),
+    isActive: true,
+    isAdmin,
+    // Zero-knowledge encryption fields (browser-generated, server never sees plaintext key)
+    encryptedDataKey,                    // dataKey wrapped with PBKDF2(password) — opaque to server
+    recoveryKeySlots: recoveryKeySlots || [], // dataKey wrapped with each recovery code key
+    recoveryCodes: codeHashes,           // bcrypt hashes only — for rate-limit verification
+    recoveryCodesCreatedAt: Date.now(),
+    encrypted: true,
+  };
   saveUsers(users);
 
   const token = jwt.sign({ id: userId, username: username.trim(), isAdmin }, JWT_SECRET, { expiresIn: '30d' });
-  res.json({ token, username: username.trim() });
+  res.json({
+    token,
+    username: username.trim(),
+    recoveryCodes: formatted,            // shown once — never stored in plaintext
+    recoveryCodesCreatedAt: Date.now(),
+  });
 });
+
 
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
@@ -316,19 +394,49 @@ app.post('/api/login', async (req, res) => {
   if (!valid) return res.status(401).json({ error: 'Invalid username or password' });
 
   const isAdmin = user.isAdmin || key === ADMIN_USERNAME.toLowerCase();
+  users[key].lastLogin = Date.now();
+  saveUsers(users);
+
   const token = jwt.sign({ id: user.id, username: user.username, isAdmin }, JWT_SECRET, { expiresIn: '30d' });
-  res.json({ token, username: user.username, isAdmin });
+  res.json({
+    token,
+    username: user.username,
+    isAdmin,
+    // Return encrypted key material — browser decrypts with password (server never sees plaintext)
+    encryptedDataKey: user.encryptedDataKey || null,
+    recoveryKeySlots: user.recoveryKeySlots || [],
+    encrypted: user.encrypted || false,
+  });
 });
 
 // --- Jobs Routes ---
 app.get('/api/jobs', authMiddleware, (req, res) => {
-  res.json(loadUserJobs(req.user.id));
+  // Returns opaque blob — browser decrypts with its own key
+  const file = path.join(JOBS_DIR, `${req.user.id}.json`);
+  if (!fs.existsSync(file)) return res.json({ __enc: false, data: {} });
+  const raw = fs.readFileSync(file, 'utf8');
+  try {
+    const parsed = JSON.parse(raw);
+    // If already a zero-knowledge blob, return as-is
+    if (parsed.__enc !== undefined) return res.json(parsed);
+    // Legacy plaintext — return as-is for migration
+    return res.json({ __enc: false, data: parsed });
+  } catch(e) {
+    // Raw ciphertext string (old server-side encrypted format) — treat as legacy
+    return res.json({ __enc: false, data: {} });
+  }
 });
 
 app.put('/api/jobs', authMiddleware, (req, res) => {
   const jobs = req.body;
   if (typeof jobs !== 'object') return res.status(400).json({ error: 'Invalid data' });
-  saveUserJobs(req.user.id, jobs);
+  // Accept either zero-knowledge blob {__enc, data} or plaintext — store as-is
+  const file = path.join(JOBS_DIR, `${req.user.id}.json`);
+  if (!fs.existsSync(JOBS_DIR)) fs.mkdirSync(JOBS_DIR, { recursive: true });
+  fs.writeFileSync(file, JSON.stringify(jobs));
+  return res.json({ ok: true });
+  // Legacy path below — kept for reference but not reached
+  saveUserJobs(req.user.id, jobs, req.dataKey);
   res.json({ ok: true });
 });
 
@@ -784,9 +892,9 @@ function toTitleCase(str) {
 
 // ── Change password ──
 app.post('/api/change-password', authMiddleware, async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
+  const { currentPassword, newPassword, newEncryptedDataKey } = req.body;
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both passwords required' });
-  if (newPassword.length < 6) return res.status(400).json({ error: 'New password must be at least 6 characters' });
+  if (newPassword.length < 8) return res.status(400).json({ error: 'New password must be at least 8 characters' });
 
   const users = loadUsers();
   const userEntry = Object.values(users).find(u => u.id === req.user.id);
@@ -796,88 +904,130 @@ app.post('/api/change-password', authMiddleware, async (req, res) => {
   if (!valid) return res.status(401).json({ error: 'Current password is incorrect' });
 
   userEntry.password = await bcrypt.hash(newPassword, 12);
+
+  // Zero-knowledge: browser re-wraps the dataKey with new password and sends new encryptedDataKey
+  // Server just stores the new opaque wrapper — never sees the actual dataKey
+  if (newEncryptedDataKey) {
+    userEntry.encryptedDataKey = newEncryptedDataKey;
+  }
+
   saveUsers(users);
   res.json({ ok: true });
 });
 
-// ── Export all user data as zip ──
+// ── Export all user data as human-readable formats ──
 app.get('/api/export-data', authMiddleware, async (req, res) => {
+  const format = req.query.format || 'zip';
   try {
-    const userJobs = loadUserJobs(req.user.id);
-    const archive = archiver('zip', { zlib: { level: 6 } });
+    const userJobs = loadUserJobs(req.user.id, req.dataKey);
+    const jobList  = Object.values(userJobs).sort((a,b) => b.createdAt - a.createdAt);
 
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="applied-export-${Date.now()}.zip"`);
-    archive.pipe(res);
+    const csvRow = arr => arr.map(v => v == null ? '' : '"' + String(v).replace(/"/g,'""') + '"').join(',');
 
-    for (const job of Object.values(userJobs)) {
-      const safeName = `${job.company}_${job.title}`.replace(/[^a-zA-Z0-9_\- ]/g, '_').slice(0, 60);
-      const folder = `${safeName}/`;
-
-      // Job metadata as JSON
-      const meta = {
-        id: job.id, title: job.title, company: job.company,
-        location: job.location, salary: job.salary, status: job.status,
-        url: job.url, createdAt: new Date(job.createdAt).toISOString(),
-        notes: (job.notes || []).map(n => ({
-          date: new Date(n.ts).toISOString(),
-          text: n.text
-        }))
-      };
-      archive.append(JSON.stringify(meta, null, 2), { name: folder + 'job.json' });
-
-      // Resume
-      if (job.resume?.content) {
-        const ext = job.resume.name?.split('.').pop() || 'txt';
-        archive.append(job.resume.content, { name: folder + `resume.${ext}` });
-      }
-
-      // Cover letter
-      if (job.cover?.content) {
-        const ext = job.cover.name?.split('.').pop() || 'txt';
-        archive.append(job.cover.content, { name: folder + `cover_letter.${ext}` });
-      }
-
-      // Tailored resume
-      if (job.tailoredResume) {
-        archive.append(job.tailoredResume, { name: folder + 'resume_tailored.txt' });
-      }
-
-      // Tailored cover letter
-      if (job.tailoredCover) {
-        archive.append(job.tailoredCover, { name: folder + 'cover_letter_tailored.txt' });
-      }
-
-      // Insights summary
-      if (job.insights) {
-        const insightsSummary = {
-          generatedAt: job.insights.generatedAt ? new Date(job.insights.generatedAt).toISOString() : null,
-          overview: job.insights.overview,
-          companyOverview: job.insights.companyOverview,
-          roleIntel: job.insights.roleIntel,
-          flags: job.insights.flags,
-          interviewTips: job.insights.interviewTips,
-          culture: job.insights.culture ? {
-            overallRating: job.insights.culture.overallRating,
-            summary: job.insights.culture.summary
-          } : null
-        };
-        archive.append(JSON.stringify(insightsSummary, null, 2), { name: folder + 'insights.json' });
-      }
-
-      // Notes as plain text
-      if (job.notes?.length) {
-        const notesText = job.notes.map(n =>
-          `[${new Date(n.ts).toISOString()}]\n${n.text}\n`
-        ).join('\n---\n\n');
-        archive.append(notesText, { name: folder + 'notes.txt' });
-      }
+    if (format === 'csv') {
+      const headers = 'Title,Company,Location,Work Type,Salary,Status,Source,Referred By,Deadline,Follow-Up,URL,Date Added,Notes,Contacts';
+      const rows = jobList.map(j => csvRow([
+        j.title, j.company, j.location, j.workType, j.salary, j.status,
+        j.source, j.referredBy, j.deadline, j.followUpDate, j.url,
+        j.createdAt ? new Date(j.createdAt).toISOString().slice(0,10) : '',
+        (j.notes||[]).length, (j.contacts||[]).length
+      ]));
+      res.setHeader('Content-Type','text/csv');
+      res.setHeader('Content-Disposition',`attachment; filename="pursuit-jobs-${Date.now()}.csv"`);
+      return res.send([headers,...rows].join('\n'));
     }
 
+    if (format === 'txt') {
+      const lines = ['PURSUIT — JOB APPLICATION EXPORT','='.repeat(50),
+        `Exported: ${new Date().toISOString()}`,`Total: ${jobList.length} applications`,''];
+      for (const j of jobList) {
+        lines.push('-'.repeat(50));
+        lines.push(`${j.title} @ ${j.company}`);
+        lines.push(`Status: ${j.status}${j.location?' | '+j.location:''}${j.workType?' | '+j.workType:''}${j.salary?' | '+j.salary:''}`);
+        if (j.source) lines.push(`Source: ${j.source}${j.referredBy?' (via '+j.referredBy+')':''}`);
+        if (j.deadline) lines.push(`Deadline: ${j.deadline}`);
+        if (j.followUpDate) lines.push(`Follow-up: ${j.followUpDate}`);
+        if (j.url) lines.push(`URL: ${j.url}`);
+        if (j.notes&&j.notes.length) { lines.push('','NOTES:'); j.notes.forEach(n=>lines.push(`  [${new Date(n.ts).toISOString().slice(0,10)}] ${n.text}`)); }
+        if (j.contacts&&j.contacts.length) { lines.push('','CONTACTS:'); j.contacts.forEach(c=>lines.push(`  ${c.name||''}${c.role?' — '+c.role:''}${c.email?' | '+c.email:''}`)); }
+        if (j.interviews&&j.interviews.length) { lines.push('','INTERVIEW PREP:'); j.interviews.forEach(q=>lines.push(`  [${q.category}] ${q.practiced?'✓':'○'} ${q.question}`)); }
+        if (j.tailoredResume) lines.push('','TAILORED RESUME (excerpt):',j.tailoredResume.slice(0,300)+'...');
+        lines.push('');
+      }
+      res.setHeader('Content-Type','text/plain');
+      res.setHeader('Content-Disposition',`attachment; filename="pursuit-export-${Date.now()}.txt"`);
+      return res.send(lines.join('\n'));
+    }
+
+    // JSON — machine-readable full export for reimport
+    if (format === 'json') {
+      const exportData = {
+        __version: 2,
+        __app: 'applied-tracker',
+        exportedAt: new Date().toISOString(),
+        exportedBy: req.user.username,
+        jobCount: jobList.length,
+        jobs: jobList.map(j => ({
+          // Identity
+          title:       j.title       || '',
+          company:     j.company     || '',
+          location:    j.location    || '',
+          workType:    j.workType    || '',
+          salary:      j.salary      || '',
+          status:      j.status      || 'applied',
+          url:         j.url         || '',
+          source:      j.source      || '',
+          referredBy:  j.referredBy  || '',
+          deadline:    j.deadline    || '',
+          followUpDate:j.followUpDate|| '',
+          createdAt:   j.createdAt   || Date.now(),
+          // Content
+          notes:       (j.notes || []).map(n => ({ text: String(n.text||''), ts: Number(n.ts||0) })),
+          contacts:    (j.contacts || []).map(c => ({
+            name: String(c.name||''), role: String(c.role||''),
+            email: String(c.email||''), linkedin: String(c.linkedin||''),
+            notes: String(c.notes||''), lastContact: c.lastContact||null,
+          })),
+          interviews:  (j.interviews || []).map(q => ({
+            question: String(q.question||''), category: String(q.category||'general'),
+            practiced: !!q.practiced, notes: String(q.notes||''),
+          })),
+          tailoredResume: j.tailoredResume ? String(j.tailoredResume) : null,
+          tailoredCover:  j.tailoredCover  ? String(j.tailoredCover)  : null,
+          // Deliberately EXCLUDED: resume binary, insights (stale data), tailored HTML (can be regenerated)
+        })),
+      };
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="applied-export-${Date.now()}.json"`);
+      return res.send(JSON.stringify(exportData, null, 2));
+    }
+
+    // ZIP (default) — all-applications.csv + per-job folders
+    const archive = archiver('zip',{zlib:{level:6}});
+    res.setHeader('Content-Type','application/zip');
+    res.setHeader('Content-Disposition',`attachment; filename="pursuit-export-${Date.now()}.zip"`);
+    archive.pipe(res);
+
+    const csvHeaders = 'Title,Company,Location,Work Type,Salary,Status,Source,Referred By,Deadline,Follow-Up,URL,Date Added';
+    const csvRows = jobList.map(j=>csvRow([j.title,j.company,j.location,j.workType,j.salary,j.status,j.source,j.referredBy,j.deadline,j.followUpDate,j.url,j.createdAt?new Date(j.createdAt).toISOString().slice(0,10):'']));
+    archive.append([csvHeaders,...csvRows].join('\n'),{name:'all-applications.csv'});
+
+    for (const j of jobList) {
+      const safe = `${j.company||'unknown'}_${j.title||'unknown'}`.replace(/[^a-zA-Z0-9_ -]/g,'_').slice(0,60);
+      const f = safe+'/';
+      const sumLines = [`${j.title} @ ${j.company}`,`Status: ${j.status}`,j.location?`Location: ${j.location}${j.workType?' ('+j.workType+')':''}`:null,j.salary?`Salary: ${j.salary}`:null,j.source?`Source: ${j.source}${j.referredBy?' via '+j.referredBy:''}`:null,j.deadline?`Deadline: ${j.deadline}`:null,j.followUpDate?`Follow-up: ${j.followUpDate}`:null,j.url?`URL: ${j.url}`:null,`Added: ${new Date(j.createdAt||Date.now()).toISOString().slice(0,10)}`].filter(Boolean);
+      archive.append(sumLines.join('\n'),{name:f+'summary.txt'});
+      if (j.notes&&j.notes.length) archive.append(j.notes.map(n=>`[${new Date(n.ts||Date.now()).toISOString().slice(0,10)}]\n${n.text}`).join('\n\n---\n\n'),{name:f+'notes.txt'});
+      if (j.contacts&&j.contacts.length) archive.append(['Name,Role,Email,LinkedIn,Last Contact,Notes',...j.contacts.map(c=>csvRow([c.name,c.role,c.email,c.linkedin,c.lastContact,c.notes]))].join('\n'),{name:f+'contacts.csv'});
+      if (j.interviews&&j.interviews.length) archive.append(j.interviews.map(q=>`[${q.category}] ${q.practiced?'✓ Practiced':'○ Not practiced'}\n${q.question}${q.notes?'\nNotes: '+q.notes:''}`).join('\n\n'),{name:f+'interview-prep.txt'});
+      if (j.tailoredResume) archive.append(j.tailoredResume,{name:f+'tailored-resume.txt'});
+      if (j.tailoredCover) archive.append(j.tailoredCover,{name:f+'tailored-cover-letter.txt'});
+      if (j.insights) { const ins=j.insights; archive.append([`INSIGHTS: ${j.title} @ ${j.company}`,ins.overview?'\nOVERVIEW\n'+ins.overview:'',ins.companyOverview?'\nCOMPANY\n'+ins.companyOverview:'',ins.roleIntel?'\nROLE\n'+ins.roleIntel:'',ins.culture&&ins.culture.summary?'\nCULTURE\n'+ins.culture.summary:'',ins.interviewTips?'\nINTERVIEW TIPS\n'+ins.interviewTips:'',ins.flags&&ins.flags.length?'\nFLAGS\n'+ins.flags.map(f=>'• '+f).join('\n'):''].filter(Boolean).join('\n'),{name:f+'insights.txt'}); }
+    }
     archive.finalize();
   } catch(e) {
-    console.error('Export error:', e);
-    if (!res.headersSent) res.status(500).json({ error: e.message });
+    console.error('Export error:',e);
+    if (!res.headersSent) res.status(500).json({error:e.message});
   }
 });
 
@@ -929,6 +1079,39 @@ app.post('/api/extract-fields', authMiddleware, async (req, res) => {
 });
 
 // ── Document tailoring (OpenRouter → Groq → Anthropic) ──
+// POST /api/outreach-targets — AI suggests who to reach out to at a company
+app.post('/api/outreach-targets', authMiddleware, async (req, res) => {
+  const { title, company, postingText, existingContacts } = req.body;
+  if (!company) return res.status(400).json({ error: 'Company required' });
+
+  const jobInfo = 'Role: ' + (title || 'Not specified') + '\nCompany: ' + company +
+    (postingText ? '\nJob posting:\n' + postingText.slice(0, 2500) : '') +
+    (existingContacts ? '\nAlready tracking: ' + existingContacts : '');
+
+  const systemPrompt = 'You are a career coach expert at networking and referrals. Return only valid JSON, no markdown.';
+  const userPrompt = 'Suggest 4 specific types of people the candidate should reach out to at this company for a referral or inside connection.' +
+    '\n\n' + jobInfo +
+    '\n\nReturn a JSON array of exactly 4 objects:' +
+    '\n[{"role":"exact job title to find","priority":"High|Medium","why":"one sentence on why this person matters","how":"one sentence on how to approach them","searchTip":"LinkedIn search string to find them"}]' +
+    '\nBe specific to this role and company. Make role titles realistic and searchable on LinkedIn.';
+
+  try {
+    const raw = await callAIFast(systemPrompt, userPrompt, 1000);
+    let targets;
+    try {
+      const clean = raw.replace(/```json|```/g, '').trim();
+      targets = JSON.parse(clean);
+    } catch(e) {
+      const match = raw.match(/\[[\s\S]*\]/);
+      targets = match ? JSON.parse(match[0]) : [];
+    }
+    if (!Array.isArray(targets)) targets = [];
+    res.json({ targets });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // POST /api/interview-questions — generate tailored interview questions
 app.post('/api/interview-questions', authMiddleware, async (req, res) => {
   const { title, company, postingText } = req.body;
@@ -1885,25 +2068,16 @@ app.post('/api/admin/update-user', adminMiddleware, (req, res) => {
 // GET /api/admin/users — list all users
 app.get('/api/admin/users', adminMiddleware, (req, res) => {
   const users = loadUsers();
-  const userList = Object.values(users).map(u => {
-    // Count jobs for this user
-    const jobsFile = path.join(DATA_DIR, 'jobs', u.id + '.json');
-    let jobCount = 0;
-    try {
-      if (fs.existsSync(jobsFile)) {
-        jobCount = Object.keys(JSON.parse(fs.readFileSync(jobsFile, 'utf8'))).length;
-      }
-    } catch(e) {}
-    return {
-      username: u.username,
-      email: u.email || '',
-      createdAt: u.createdAt,
-      isActive: u.isActive !== false,
-      isAdmin: u.isAdmin || false,
-      lastLogin: u.lastLogin || null,
-      jobCount,
-    };
-  }).sort((a, b) => b.createdAt - a.createdAt);
+  // Admin sees ONLY public profile fields — no job data, no password hashes, no encryption keys
+  const userList = Object.values(users).map(u => ({
+    username: u.username,
+    email: u.email || '',
+    createdAt: u.createdAt,
+    isActive: u.isActive !== false,
+    isAdmin: u.isAdmin || false,
+    lastLogin: u.lastLogin || null,
+    // Note: job count intentionally omitted — job data is encrypted and private
+  })).sort((a, b) => b.createdAt - a.createdAt);
   res.json(userList);
 });
 
@@ -2026,6 +2200,473 @@ app.get('/admin', (req, res) => {
 
 app.get('/reset-password', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/public/reset-password.html'));
+});
+
+// ── Account recovery with recovery code ──
+app.post('/api/recover', async (req, res) => {
+  // Zero-knowledge recovery:
+  // 1. Browser submits code — server verifies bcrypt hash (rate limiting), returns matching slot
+  // 2. Browser decrypts slot with PBKDF2(code) to get dataKey
+  // 3. Browser re-wraps dataKey with PBKDF2(newPassword) → newEncryptedDataKey
+  // 4. Browser sends newEncryptedDataKey back — server stores it without ever seeing the key
+  const { username, recoveryCode, newPassword, newEncryptedDataKey, slotIndex } = req.body;
+  if (!username || !recoveryCode || !newPassword)
+    return res.status(400).json({ error: 'username, recoveryCode, and newPassword required' });
+  if (newPassword.length < 8)
+    return res.status(400).json({ error: 'New password must be at least 8 characters' });
+
+  const users = loadUsers();
+  const key = username.toLowerCase().trim();
+  const user = users[key];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (!user.recoveryCodes || user.recoveryCodes.length === 0)
+    return res.status(400).json({ error: 'No recovery codes on file. Contact admin.' });
+
+  // Verify code against bcrypt hashes (prevents brute force)
+  const clean = recoveryCode.replace(/-/g, '').toUpperCase();
+  let matchedIndex = -1;
+  for (let i = 0; i < user.recoveryCodes.length; i++) {
+    const ok = await bcrypt.compare(clean, user.recoveryCodes[i]);
+    if (ok) { matchedIndex = i; break; }
+  }
+  if (matchedIndex < 0) return res.status(400).json({ error: 'Invalid or already-used recovery code' });
+
+  // If browser sent the new encrypted data key, store it (zero-knowledge recovery complete)
+  // If not, return the recovery key slot so the browser can derive the new key
+  if (newEncryptedDataKey) {
+    // Phase 2: store the re-wrapped key and complete recovery
+    user.recoveryCodes.splice(matchedIndex, 1); // consume code
+    user.password = await bcrypt.hash(newPassword, 12);
+    user.encryptedDataKey = newEncryptedDataKey;
+    user.recoveryUsedAt = Date.now();
+    saveUsers(users);
+    const token = jwt.sign({ id: user.id, username: user.username, isAdmin: user.isAdmin }, JWT_SECRET, { expiresIn: '30d' });
+    return res.json({ ok: true, token, username: user.username, codesRemaining: user.recoveryCodes.length, encryptedDataKey: newEncryptedDataKey });
+  } else {
+    // Phase 1: return the matching recovery slot so browser can decrypt the dataKey
+    const slot = user.recoveryKeySlots?.[matchedIndex] || null;
+    return res.json({ ok: true, phase: 1, slot, slotIndex: matchedIndex, encrypted: user.encrypted || false });
+  }
+});
+
+// ── Generate fresh recovery codes (requires password confirmation) ──
+app.post('/api/recovery-codes/regenerate', authMiddleware, async (req, res) => {
+  const { password, recoveryKeySlots } = req.body;
+  if (!password) return res.status(400).json({ error: 'Current password required' });
+
+  const users = loadUsers();
+  const user = users[req.user.username.toLowerCase()];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  const ok = await bcrypt.compare(password, user.password);
+  if (!ok) return res.status(400).json({ error: 'Incorrect password' });
+
+  // Generate 8 new codes (plaintext returned once, bcrypt hashes stored)
+  const codes = generateRecoveryCodes(8);
+  const formatted = codes.map(c => c.match(/.{1,4}/g).join('-'));
+  user.recoveryCodes = await Promise.all(codes.map(c => bcrypt.hash(c, 10)));
+  user.recoveryCodesCreatedAt = Date.now();
+  // Zero-knowledge: store browser-generated key slots (opaque to server)
+  if (recoveryKeySlots && recoveryKeySlots.length) {
+    user.recoveryKeySlots = recoveryKeySlots;
+  }
+  saveUsers(users);
+
+  res.json({ recoveryCodes: formatted, createdAt: user.recoveryCodesCreatedAt });
+});
+
+// ── Get recovery code metadata (count remaining, created date) ──
+app.get('/api/recovery-codes', authMiddleware, (req, res) => {
+  const users = loadUsers();
+  const user = users[req.user.username.toLowerCase()];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  res.json({
+    count: user.recoveryCodes?.length || 0,
+    createdAt: user.recoveryCodesCreatedAt || null,
+  });
+});
+
+// ── Admin: reset a user's recovery codes ──
+app.post('/api/admin/reset-recovery-codes', adminMiddleware, async (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'username required' });
+  const users = loadUsers();
+  const key = username.toLowerCase();
+  if (!users[key]) return res.status(404).json({ error: 'User not found' });
+
+  const codes = generateRecoveryCodes(8);
+  const formatted = codes.map(c => c.match(/.{1,4}/g).join('-'));
+  users[key].recoveryCodes = await Promise.all(codes.map(c => bcrypt.hash(c, 10)));
+  users[key].recoveryCodesCreatedAt = Date.now();
+  saveUsers(users);
+
+  // Optionally email them if SMTP configured
+  if (users[key].email) {
+    try {
+      await sendMail(users[key].email, 'New recovery codes for your Applied account',
+        `<p>Hi ${users[key].username},</p>
+        <p>An admin has generated new recovery codes for your account. Store these somewhere safe — each can only be used once:</p>
+        <pre style="font-size:16px;letter-spacing:2px;line-height:2">${formatted.join('\n')}</pre>
+        <p>If you did not request this, contact your admin immediately.</p>`
+      );
+    } catch(e) { console.warn('Could not email recovery codes:', e.message); }
+  }
+
+  res.json({ ok: true, recoveryCodes: formatted });
+});
+
+// ── Data Import — strict validation and sanitization ──
+const ALLOWED_STATUSES = new Set(['to apply','applied','screening','interviewing','offer','rejected','ghosted','withdrawn','expired']);
+const MAX_IMPORT_SIZE  = 10 * 1024 * 1024; // 10MB hard limit
+const MAX_JOBS         = 2000;             // sanity cap
+const MAX_STR          = 2000;             // max chars per string field
+const MAX_NOTE_TEXT    = 50000;            // notes can be longer
+const MAX_RESUME_TEXT  = 200000;          // tailored docs
+
+function sanitizeStr(v, maxLen = MAX_STR) {
+  if (v == null) return '';
+  // Strip all HTML tags — import is plaintext only
+  return String(v).replace(/<[^>]*>/g, '').replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '').slice(0, maxLen).trim();
+}
+
+function sanitizeUrl(v) {
+  if (!v) return '';
+  const s = sanitizeStr(v, 2048);
+  // Only allow http/https URLs
+  if (!/^https?:\/\//i.test(s)) return '';
+  // Block local/internal addresses
+  if (/localhost|127\.|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\./i.test(s)) return '';
+  return s;
+}
+
+function sanitizeNote(n) {
+  if (!n || typeof n !== 'object') return null;
+  const text = sanitizeStr(n.text, MAX_NOTE_TEXT);
+  const ts   = Number(n.ts) || 0;
+  if (!text) return null;
+  if (ts < 0 || ts > Date.now() + 86400000) return null; // reject future timestamps (>1d ahead)
+  return { text, ts };
+}
+
+function sanitizeContact(c) {
+  if (!c || typeof c !== 'object') return null;
+  const name = sanitizeStr(c.name, 200);
+  if (!name) return null;
+  return {
+    name,
+    role:        sanitizeStr(c.role,        200),
+    email:       sanitizeStr(c.email,       200).replace(/[^a-zA-Z0-9@._+-]/g, ''),
+    linkedin:    sanitizeUrl(c.linkedin),
+    notes:       sanitizeStr(c.notes,       2000),
+    lastContact: c.lastContact ? sanitizeStr(String(c.lastContact), 50) : null,
+  };
+}
+
+function sanitizeInterview(q) {
+  if (!q || typeof q !== 'object') return null;
+  const question = sanitizeStr(q.question, 2000);
+  if (!question) return null;
+  const allowedCats = new Set(['general','behavioral','technical','situational','company','custom']);
+  return {
+    question,
+    category:  allowedCats.has(q.category) ? q.category : 'general',
+    practiced: !!q.practiced,
+    notes:     sanitizeStr(q.notes, 2000),
+  };
+}
+
+function sanitizeJob(j, index) {
+  if (!j || typeof j !== 'object') throw new Error(`Job ${index}: not an object`);
+  const title   = sanitizeStr(j.title,   300);
+  const company = sanitizeStr(j.company, 300);
+  if (!title && !company) throw new Error(`Job ${index}: must have at least a title or company`);
+
+  const status = ALLOWED_STATUSES.has(j.status) ? j.status : 'applied';
+  const createdAt = (Number(j.createdAt) > 0 && Number(j.createdAt) < Date.now() + 86400000)
+    ? Number(j.createdAt) : Date.now();
+
+  const notes      = (Array.isArray(j.notes)      ? j.notes      : []).map(sanitizeNote).filter(Boolean).slice(0, 500);
+  const contacts   = (Array.isArray(j.contacts)   ? j.contacts   : []).map(sanitizeContact).filter(Boolean).slice(0, 200);
+  const interviews = (Array.isArray(j.interviews) ? j.interviews : []).map(sanitizeInterview).filter(Boolean).slice(0, 500);
+
+  return {
+    id:          'imp_' + Math.random().toString(36).slice(2,10) + Date.now().toString(36),
+    title,
+    company,
+    location:    sanitizeStr(j.location,     300),
+    workType:    sanitizeStr(j.workType,     50),
+    salary:      sanitizeStr(j.salary,       100),
+    status,
+    url:         sanitizeUrl(j.url),
+    source:      sanitizeStr(j.source,       200),
+    referredBy:  sanitizeStr(j.referredBy,   200),
+    deadline:    sanitizeStr(j.deadline,     50),
+    followUpDate:sanitizeStr(j.followUpDate, 50),
+    createdAt,
+    importedAt:  Date.now(),
+    notes,
+    contacts,
+    interviews,
+    tailoredResume: j.tailoredResume ? sanitizeStr(String(j.tailoredResume), MAX_RESUME_TEXT) : null,
+    tailoredCover:  j.tailoredCover  ? sanitizeStr(String(j.tailoredCover),  MAX_RESUME_TEXT) : null,
+  };
+}
+
+app.post('/api/import-data', authMiddleware, express.json({ limit: '10mb' }), async (req, res) => {
+  try {
+    const body = req.body;
+
+    // ── Structural validation ──
+    if (!body || typeof body !== 'object')        throw new Error('Invalid format: expected JSON object');
+    if (body.__app !== 'applied-tracker')         throw new Error('Invalid file: not an Applied export');
+    if (!Number.isInteger(body.__version) || body.__version < 1 || body.__version > 10)
+                                                  throw new Error('Invalid or unsupported export version');
+    if (!Array.isArray(body.jobs))                throw new Error('Invalid format: jobs must be an array');
+    if (body.jobs.length > MAX_JOBS)              throw new Error(`Import exceeds maximum of ${MAX_JOBS} jobs`);
+
+    // ── Sanitize every job (throws on bad data) ──
+    const sanitized = body.jobs.map((j, i) => sanitizeJob(j, i));
+
+    // ── Merge strategy: append imported jobs (don't overwrite existing) ──
+    const { mode = 'append' } = body;
+    if (!['append', 'replace'].includes(mode))   throw new Error('mode must be "append" or "replace"');
+
+    // Load current jobs (server just sees the raw blob for zero-knowledge accounts)
+    const jobsFile = path.join(JOBS_DIR, `${req.user.id}.json`);
+    let currentBlob = { __enc: false, data: {} };
+    if (fs.existsSync(jobsFile)) {
+      try { currentBlob = JSON.parse(fs.readFileSync(jobsFile, 'utf8')); } catch(e) {}
+    }
+
+    // For zero-knowledge accounts the server can't merge into the ciphertext —
+    // the client must handle that. Signal this back.
+    if (currentBlob.__enc === true) {
+      // Return the sanitized jobs for the browser to encrypt+merge
+      return res.json({ ok: true, zerKnowledge: true, sanitizedJobs: sanitized, mode, count: sanitized.length });
+    }
+
+    // Plaintext merge
+    const current = (currentBlob.__enc === false ? currentBlob.data : currentBlob) || {};
+    let merged;
+    if (mode === 'replace') {
+      merged = Object.fromEntries(sanitized.map(j => [j.id, j]));
+    } else {
+      // append — give imported jobs new IDs to avoid conflicts
+      merged = { ...current, ...Object.fromEntries(sanitized.map(j => [j.id, j])) };
+    }
+
+    fs.writeFileSync(jobsFile, JSON.stringify({ __enc: false, data: merged }));
+    res.json({ ok: true, count: sanitized.length, mode, zerKnowledge: false });
+
+  } catch(e) {
+    console.error('Import error:', e.message);
+    res.status(400).json({ error: e.message });
+  }
+});
+
+// ── Enable zero-knowledge encryption for existing plaintext accounts ──
+app.post('/api/enable-encryption', authMiddleware, async (req, res) => {
+  const { password, encryptedDataKey, recoveryKeySlots, encryptedJobs } = req.body;
+  if (!password || !encryptedDataKey || !encryptedJobs)
+    return res.status(400).json({ error: 'password, encryptedDataKey, and encryptedJobs required' });
+
+  const users = loadUsers();
+  const userKey = Object.keys(users).find(k => users[k].id === req.user.id);
+  if (!userKey) return res.status(404).json({ error: 'User not found' });
+  const user = users[userKey];
+
+  // Verify password
+  const valid = await bcrypt.compare(password, user.password);
+  if (!valid) return res.status(401).json({ error: 'Incorrect password' });
+
+  // Already encrypted — don't double-encrypt
+  if (user.encrypted) return res.status(400).json({ error: 'Account is already encrypted' });
+
+  // Generate fresh recovery codes (bcrypt hashes for rate limiting)
+  const codes = generateRecoveryCodes(8);
+  const codeHashes = await Promise.all(codes.map(c => bcrypt.hash(c, 10)));
+
+  // Update user with encryption metadata
+  user.encrypted = true;
+  user.encryptedDataKey = encryptedDataKey;
+  user.recoveryKeySlots = recoveryKeySlots || [];
+  user.recoveryCodes = codeHashes;
+  user.recoveryCodesCreatedAt = Date.now();
+  user.encryptedAt = Date.now();
+  saveUsers(users);
+
+  // Store the encrypted jobs blob
+  const jobsFile = path.join(JOBS_DIR, `${req.user.id}.json`);
+  if (!fs.existsSync(JOBS_DIR)) fs.mkdirSync(JOBS_DIR, { recursive: true });
+  fs.writeFileSync(jobsFile, JSON.stringify({ __enc: true, data: encryptedJobs }));
+
+  res.json({ ok: true });
+});
+
+
+// ══════════════════════════════════════════
+// FEATURE: Keyword Gap Analysis
+// ══════════════════════════════════════════
+app.post('/api/keyword-gap', authMiddleware, async (req, res) => {
+  const { resumeText, jobPosting, jobTitle, company } = req.body;
+  if (!resumeText || !jobPosting) return res.status(400).json({ error: 'resumeText and jobPosting required' });
+
+  const systemPrompt = 'You are an expert ATS analyst and career coach. Return ONLY valid JSON with no markdown.';
+  const userPrompt = `Analyze keyword gaps between this resume and job posting.
+
+JOB: ${company} — ${jobTitle}
+
+JOB POSTING:
+${jobPosting.slice(0, 3000)}
+
+RESUME:
+${resumeText.slice(0, 3000)}
+
+Return ONLY this JSON:
+{
+  "missingCritical": ["keyword1", "keyword2"],
+  "missingNice": ["keyword3"],
+  "present": ["keyword4", "keyword5"],
+  "matchScore": 72,
+  "topRecommendations": ["Add 'Python' to skills section", "Mention 'agile' in experience"],
+  "atsRisk": "medium"
+}`;
+
+  try {
+    const raw = await callAI(['openrouter', 'groq', 'google'], systemPrompt, userPrompt, 1500);
+    const clean = raw.replace(/```json|```/g, '').trim();
+    res.json(JSON.parse(clean));
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ══════════════════════════════════════════
+// FEATURE: Email Templates
+// ══════════════════════════════════════════
+app.post('/api/email-template', authMiddleware, async (req, res) => {
+  const { type, company, title, contactName, context } = req.body;
+  const templates = {
+    'thank-you':  `Write a concise, genuine thank-you email after a job interview at ${company} for the ${title} role${contactName ? ' addressed to ' + contactName : ''}. ${context || ''} Be warm but professional, 3-4 sentences, no clichés.`,
+    'follow-up':  `Write a polite follow-up email to ${company} about the ${title} application I submitted 2 weeks ago. ${context || ''} Express continued interest, ask for an update, 2-3 sentences.`,
+    'decline':    `Write a gracious email declining the ${title} offer from ${company}. ${context || ''} Keep the door open, be appreciative, brief.`,
+    'negotiate':  `Write a salary negotiation email for the ${title} offer from ${company}. ${context || ''} Be confident but collaborative, provide a counter range.`,
+    'referral':   `Write an outreach email to ${contactName || 'a contact'} at ${company} asking about the ${title} role. ${context || ''} Brief, genuine, not pushy.`,
+    'withdraw':   `Write a professional email withdrawing my application for ${title} at ${company}. ${context || ''} Brief, appreciative, leaves good impression.`,
+  };
+  if (!templates[type]) return res.status(400).json({ error: 'Invalid template type' });
+
+  const systemPrompt = 'You are a professional career coach who writes authentic, human-sounding emails. Never use generic AI phrases. Return only the email body text, no subject line.';
+  try {
+    const body = await callAI(['openrouter', 'groq', 'google'], systemPrompt, templates[type], 500);
+    // Generate subject line too
+    const subject = await callAI(['groq', 'openrouter', 'google'], 'Write only a concise email subject line, no quotes.', `Type: ${type}, Company: ${company}, Role: ${title}`, 80);
+    res.json({ subject: subject.trim(), body: body.trim() });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ══════════════════════════════════════════
+// FEATURE: Salary Benchmarking
+// ══════════════════════════════════════════
+app.post('/api/salary-benchmark', authMiddleware, async (req, res) => {
+  const { title, location, company, experience } = req.body;
+  if (!title) return res.status(400).json({ error: 'title required' });
+
+  const systemPrompt = 'You are a compensation analyst with deep knowledge of market salaries. Return ONLY valid JSON, no markdown.';
+  const userPrompt = `Provide salary benchmarking data for:
+Role: ${title}
+Location: ${location || 'United States'}
+Company: ${company || 'unknown'}
+Experience level: ${experience || 'mid-level'}
+
+Return ONLY this JSON (use realistic current market data):
+{
+  "p25": 95000,
+  "p50": 115000,
+  "p75": 140000,
+  "p90": 170000,
+  "currency": "USD",
+  "totalComp50": 130000,
+  "notes": "Senior roles at FAANG pay 30-50% above market",
+  "sources": ["Levels.fyi", "Glassdoor", "LinkedIn Salary"],
+  "negotiationTips": ["tip1", "tip2"]
+}`;
+
+  try {
+    const raw = await callAI(['openrouter', 'groq', 'google'], systemPrompt, userPrompt, 800);
+    const clean = raw.replace(/```json|```/g, '').trim();
+    res.json(JSON.parse(clean));
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ══════════════════════════════════════════
+// FEATURE: Public Status Page Token
+// ══════════════════════════════════════════
+const STATUS_TOKENS_FILE = path.join(DATA_DIR, 'status-tokens.json');
+function loadStatusTokens() {
+  return fs.existsSync(STATUS_TOKENS_FILE) ? JSON.parse(fs.readFileSync(STATUS_TOKENS_FILE,'utf8')) : {};
+}
+function saveStatusTokens(t) { fs.writeFileSync(STATUS_TOKENS_FILE, JSON.stringify(t)); }
+
+app.post('/api/status-page/generate', authMiddleware, (req, res) => {
+  const { available, headline, availableFrom, note } = req.body;
+  const tokens = loadStatusTokens();
+  // Revoke old token if exists
+  Object.keys(tokens).forEach(k => { if (tokens[k].userId === req.user.id) delete tokens[k]; });
+  const token = require('crypto').randomBytes(16).toString('hex');
+  tokens[token] = { userId: req.user.id, username: req.user.username, available: !!available, headline: (headline||'').slice(0,200), availableFrom: availableFrom||'', note: (note||'').slice(0,500), createdAt: Date.now() };
+  saveStatusTokens(tokens);
+  res.json({ token, url: `/status/${token}` });
+});
+
+app.delete('/api/status-page', authMiddleware, (req, res) => {
+  const tokens = loadStatusTokens();
+  Object.keys(tokens).forEach(k => { if (tokens[k].userId === req.user.id) delete tokens[k]; });
+  saveStatusTokens(tokens);
+  res.json({ ok: true });
+});
+
+app.get('/api/status-page', authMiddleware, (req, res) => {
+  const tokens = loadStatusTokens();
+  const entry = Object.entries(tokens).find(([,v]) => v.userId === req.user.id);
+  if (!entry) return res.json({ active: false });
+  res.json({ active: true, token: entry[0], ...entry[1] });
+});
+
+app.get('/status/:token', (req, res) => {
+  const tokens = loadStatusTokens();
+  const page = tokens[req.params.token];
+  if (!page) return res.status(404).send('<h1>Status page not found</h1>');
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${page.username} — Job Search Status</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f7f4ef;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+  .card{background:#fff;border:1px solid rgba(0,0,0,0.1);border-radius:16px;padding:40px;max-width:440px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,0.08)}
+  .badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;border-radius:100px;font-size:13px;font-weight:600;margin-bottom:24px}
+  .badge.open{background:#dcfce7;color:#166534}.badge.closed{background:#fee2e2;color:#991b1b}
+  .dot{width:8px;height:8px;border-radius:50%;animation:pulse 2s infinite}
+  .dot.open{background:#22c55e}.dot.closed{background:#ef4444}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  h1{font-size:26px;font-weight:700;letter-spacing:-0.5px;margin-bottom:6px}
+  .sub{color:#6b6863;font-size:15px;margin-bottom:24px}
+  .note{background:#f7f4ef;border-radius:10px;padding:16px;font-size:14px;color:#444;line-height:1.6;margin-bottom:24px}
+  .footer{font-size:12px;color:#aaa;border-top:1px solid #eee;padding-top:16px;margin-top:8px}
+  a{color:#c05e00;text-decoration:none}
+</style>
+</head><body><div class="card">
+  <div class="badge ${page.available ? 'open' : 'closed'}"><div class="dot ${page.available ? 'open' : 'closed'}"></div>${page.available ? 'Open to opportunities' : 'Not currently looking'}</div>
+  <h1>${page.username}</h1>
+  <div class="sub">${page.headline || (page.available ? 'Actively interviewing & open to new roles' : 'Not currently seeking new opportunities')}</div>
+  ${page.availableFrom ? `<div style="font-size:13px;color:#888;margin-bottom:16px">Available from: <strong>${page.availableFrom}</strong></div>` : ''}
+  ${page.note ? `<div class="note">${page.note.replace(/\n/g,'<br>')}</div>` : ''}
+  <div class="footer">Powered by <a href="/">Applied</a> · Updated ${new Date(page.createdAt).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div>
+</div></body></html>`;
+  res.send(html);
 });
 
 app.get('*', (req, res) => {

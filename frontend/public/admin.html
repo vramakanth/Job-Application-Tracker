@@ -300,6 +300,7 @@ function renderTable() {
             ${u.isActive?'Deactivate':'Reactivate'}
           </button>
           <button class="act-btn warn" onclick="openReset('${esc(u.username)}','${esc(u.email||'')}')">Reset PW</button>
+          <button class="act-btn" title="Generate new recovery codes for user" onclick="adminResetRecoveryCodes('${esc(u.username)}')" style="background:rgba(139,92,246,0.1);color:#8b5cf6;border-color:rgba(139,92,246,0.3)">Recovery Codes</button>
           <button class="act-btn" onclick="openSendLink('${esc(u.username)}','${esc(u.email||'')}')">Send Link</button>
           <button class="act-btn danger" onclick="openDelete('${esc(u.username)}')">Delete</button>
           ` : '<span style="font-size:12px;color:var(--text3)">Admin account</span>'}
@@ -437,6 +438,21 @@ async function submitEdit() {
 }
 
 // ── UTILS ──
+async function adminResetRecoveryCodes(username) {
+  if (!confirm(`Generate new recovery codes for ${username}?\n\nThis will invalidate all their existing codes and email them the new ones if they have an email on file.`)) return;
+  try {
+    const res = await fetch(API + '/api/admin/reset-recovery-codes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+      body: JSON.stringify({ username }),
+    });
+    const data = await res.json();
+    if (!res.ok) { alert('Error: ' + (data.error || 'Failed')); return; }
+    const codes = data.recoveryCodes.join('\n');
+    alert(`New recovery codes for ${username}:\n\n${codes}\n\nCopy these now — they won't be shown again.\n${data.emailed ? '\nAn email has been sent to the user.' : '\n(No email on file — share these manually.)'}`);
+  } catch(e) { alert('Could not connect to server.'); }
+}
+
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function fmtDate(ts){ return new Date(ts).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
 </script>
