@@ -46,3 +46,7 @@ jobs:
       - name: Smoke tests
         working-directory: frontend
         run: node tests/smoke.test.js
+
+      - name: Filter & watchlist unit tests
+        working-directory: frontend
+        run: node tests/filter.test.js
