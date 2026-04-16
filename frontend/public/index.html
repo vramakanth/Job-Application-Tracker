@@ -404,6 +404,8 @@ input[type=\"file\"] { display: none; }
 .fetch-loading { display: flex; align-items: center; gap: 10px; padding: 20px; font-size: 13px; color: var(--text2); }
 
 /* ── DOCUMENTS TAB (job documents) ── */
+.docs-header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
+.docs-title { font-size: 15px; font-weight: 600; color: var(--text); }
 .docs-section { padding: 20px 24px; }
 .docs-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .docs-section-title { font-size: 14px; font-weight: 600; color: var(--text); }
@@ -620,43 +622,43 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
 
         <!-- Pipeline -->
-        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8a838" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M4 20V14M8 20V10M12 20V4M16 20V10M20 20V14"/></svg>
+        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px);color:rgba(232,168,56,0.9)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M4 20V14M8 20V10M12 20V4M16 20V10M20 20V14"/></svg>
           <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Pipeline tracking</div>
           <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Kanban-style status from wishlist to offer. See your full funnel at a glance.</div>
         </div>
 
         <!-- AI tailoring -->
-        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8a838" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
+        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px);color:rgba(232,168,56,0.9)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
           <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">AI resume tailoring</div>
           <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Instantly tailor your resume and cover letter to each role. Formatting preserved.</div>
         </div>
 
         <!-- Company intel -->
-        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8a838" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px);color:rgba(232,168,56,0.9)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
           <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Company intelligence</div>
           <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Glassdoor ratings, salary ranges, culture and news — all in one click.</div>
         </div>
 
         <!-- Interview -->
-        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8a838" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px);color:rgba(232,168,56,0.9)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Interview prep</div>
           <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">AI-generated role-specific questions. Track what you've practiced.</div>
         </div>
 
         <!-- Salary -->
-        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8a838" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px);color:rgba(232,168,56,0.9)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
           <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Salary intelligence</div>
           <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Market benchmarks, total comp breakdown, and negotiation signals.</div>
         </div>
 
         <!-- Documents -->
-        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8a838" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px);color:rgba(232,168,56,0.9)">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Document library</div>
           <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Store resumes and cover letters. Pick and tailor per application.</div>
         </div>
@@ -796,6 +798,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       <button class="filter-tab" onclick="setFilter('to apply')" data-filter="to apply">to apply</button>
       <button class="filter-tab" onclick="setFilter('applied')" data-filter="applied">applied</button>
       <button class="filter-tab" onclick="setFilter('interview')" data-filter="interview">interview</button>
+      <button class="filter-tab" onclick="setFilter('stale')" data-filter="stale">stale</button>
     </div>
 
     <div class="job-list" id="job-list"></div>
@@ -808,16 +811,16 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       </button>
       <button class="sidebar-action-btn" onclick="showDocumentsPage()" data-section="library" title="Document library">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        Documents
+        Library
       </button>
 
       <button class="sidebar-action-btn" onclick="showReferralPipeline()" data-section="referrals" title="Referral pipeline">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
         Referrals
       </button>
-      <button class="sidebar-action-btn" onclick="showStaleJobs()" data-section="stale" title="Jobs needing attention">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Stale jobs
+      <button class="sidebar-action-btn" onclick="openSettings()" data-section="settings" title="Settings">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="2.5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        Settings
       </button>
     </div>
 
@@ -1246,6 +1249,7 @@ function showApp() {
   showScreen('app');
   const bg = document.getElementById('mountain-bg'); if(bg) bg.style.display='none';
   setTimeout(_initMobileNav, 50);
+  if (localStorage.getItem('autoCheckEnabled') === '1') setTimeout(scheduleAutoCheck, 2000);
   document.getElementById('user-avatar').textContent = (currentUser||'?').slice(0,2).toUpperCase();
   document.getElementById('user-name-display').textContent = currentUser;
   const vl = document.getElementById('version-label');
@@ -1671,6 +1675,63 @@ async function downloadExtension() {
   }
 }
 
+function setAutoCheck(enabled) {
+  localStorage.setItem('autoCheckEnabled', enabled ? '1' : '0');
+  updateAutoCheckUI();
+  if (enabled) scheduleAutoCheck();
+}
+
+function updateAutoCheckUI() {
+  const enabled = localStorage.getItem('autoCheckEnabled') === '1';
+  const toggle = document.getElementById('auto-check-toggle');
+  const track = document.getElementById('auto-check-track');
+  const thumb = document.getElementById('auto-check-thumb');
+  const lastEl = document.getElementById('auto-check-last-run');
+  if (toggle) toggle.checked = enabled;
+  if (track) track.style.background = enabled ? 'var(--accent-bg)' : 'var(--bg4)';
+  if (thumb) { thumb.style.transform = enabled ? 'translateX(18px)' : ''; thumb.style.background = enabled ? '#1a0d00' : 'var(--text3)'; }
+  if (lastEl) {
+    const last = localStorage.getItem('autoCheckLastRun');
+    lastEl.textContent = last ? 'Last checked: ' + new Date(parseInt(last)).toLocaleString() : 'Never checked';
+  }
+}
+
+function scheduleAutoCheck() {
+  const INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+  const last = parseInt(localStorage.getItem('autoCheckLastRun') || '0');
+  const now = Date.now();
+  if (now - last > INTERVAL) {
+    setTimeout(() => autoCheckStaleJobs(), 5000); // 5s delay after app load
+  } else {
+    const remaining = INTERVAL - (now - last);
+    setTimeout(() => autoCheckStaleJobs(), remaining);
+  }
+}
+
+async function autoCheckStaleJobs() {
+  if (localStorage.getItem('autoCheckEnabled') !== '1') return;
+  const allJobs = Object.values(jobs);
+  const active = allJobs.filter(j => !['rejected','ghosted','withdrawn','expired'].includes(j.status) && j.url);
+  let changed = 0;
+  for (const j of active) {
+    try {
+      const res = await fetch(API + '/api/check-posting', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ url: j.url }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        if (d.expired && !j.staledByUser) { j.stale = true; changed++; }
+      }
+    } catch {}
+  }
+  if (changed > 0) { scheduleSave(); renderJobList(); }
+  localStorage.setItem('autoCheckLastRun', Date.now().toString());
+  // Schedule next run
+  setTimeout(() => autoCheckStaleJobs(), 24 * 60 * 60 * 1000);
+}
+
 function doLogout() {
   const bg = document.getElementById('mountain-bg'); if(bg) bg.style.display='';
   token=null; currentUser=null; jobs={}; currentJobId=null;
@@ -1744,6 +1805,20 @@ function toggleSidebarMore(btn) {
     };
     setTimeout(() => document.addEventListener('click', close, true), 0);
   }
+}
+
+function toggleStale(jobId) {
+  const j = jobs[jobId]; if (!j) return;
+  j.stale = !j.stale;
+  // Mark as user-set so auto-check won't overwrite this decision
+  if (j.stale) {
+    j.staledByUser = true;
+  } else {
+    j.staledByUser = false;  // User un-staled it, allow auto-check again
+  }
+  scheduleSave();
+  renderDetail();
+  renderJobList();
 }
 
 function updateStatus(jobId, status) {
@@ -2000,7 +2075,8 @@ function getFilteredJobs() {
   const q = (document.getElementById('search-input')?.value || '').toLowerCase();
   return Object.values(jobs)
     .filter(j => {
-      if (currentFilter !== 'all' && j.status !== currentFilter) return false;
+      if (currentFilter === 'stale') { if (!j.stale) return false; }
+      else if (currentFilter !== 'all' && j.status !== currentFilter) return false;
       if (!q) return true;
       const searchable = [
         j.title, j.company, j.location, j.workType, j.salary, j.status,
@@ -2032,6 +2108,7 @@ function renderJobList() {
         <div class="job-item-meta">
           <div class="status-dot" style="background:${statusColor(j.status)}"></div>
           <span style="font-size:10px;font-family:var(--mono);color:${statusColor(j.status)}">${j.status}</span>
+          ${j.stale ? '<span style="font-size:9px;padding:1px 6px;background:rgba(234,88,12,0.12);color:#ea580c;border-radius:3px;font-family:var(--mono);border:1px solid rgba(234,88,12,0.25)">stale</span>' : ''}
           ${j.followUpDate && new Date(j.followUpDate) <= new Date(Date.now()+86400000*2) ? '<span style="font-size:9px;padding:1px 4px;background:rgba(251,191,36,0.15);color:var(--amber);border-radius:3px">↩</span>' : ''}
           ${j.deadline && new Date(j.deadline) <= new Date(Date.now()+86400000*3) ? '<span style="font-size:9px;padding:1px 4px;background:rgba(239,68,68,0.12);color:var(--red);border-radius:3px">⏰</span>' : ''}
           <span style="flex:1"></span>
@@ -2224,9 +2301,15 @@ function renderDetail() {
           </button>
         </div>
         <div class="detail-meta">
-          <select class="status-select" onchange="updateStatus('${j.id}',this.value)" style="color:${statusColor(j.status)}">
-            ${STATUSES.map(s=>`<option value="${s}"${j.status===s?' selected':''}>${s}</option>`).join('')}
-          </select>
+          <div style="display:flex;align-items:center;gap:6px">
+            <select class="status-select" onchange="updateStatus('${j.id}',this.value)" style="color:${statusColor(j.status)}">
+              ${STATUSES.map(s=>`<option value="${s}"${j.status===s?' selected':''}>${s}</option>`).join('')}
+            </select>
+            <button onclick="toggleStale('${j.id}')" title="${j.stale ? 'Mark as active (remove stale)' : 'Mark as stale'}" style="flex-shrink:0;display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:100px;font-size:10px;font-family:var(--mono);font-weight:600;cursor:pointer;transition:all .15s;border:1px solid ${j.stale ? 'rgba(234,88,12,0.5)' : 'var(--border)'};background:${j.stale ? 'rgba(234,88,12,0.12)' : 'var(--bg3)'};color:${j.stale ? '#ea580c' : 'var(--text3)'}">
+              <svg width="9" height="9" viewBox="0 0 10 10" fill="none"><circle cx="5" cy="5" r="4" stroke="currentColor" stroke-width="1.3"/><path d="M5 3v2.5l1.5 1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+              ${j.stale ? 'stale' : 'active'}
+            </button>
+          </div>
           <span class="date-added">Added ${fmtDate(j.createdAt)}</span>
           ${j.source ? `<span style="font-size:11px;color:var(--text3);font-family:var(--mono)">${j.source}${j.referredBy ? ` · via ${esc(j.referredBy)}` : ''}</span>` : ''}
           ${j.deadline ? `<span style="font-size:11px;color:var(--red);font-family:var(--mono)">⏰ Due ${fmtDate(j.deadline)}</span>` : ''}
@@ -2244,9 +2327,7 @@ function renderDetail() {
       <div class="detail-tab${activeDetailTab==='documents'?' active':''}"  onclick="switchTab('documents')">Documents${j.documents?.length ? ` <span style="font-size:10px;padding:1px 5px;background:var(--bg3);border-radius:100px;border:1px solid var(--border)">${j.documents.length}</span>` : ''}</div>
       <div class="detail-tab${activeDetailTab==='contacts'?' active':''}"   onclick="switchTab('contacts')">Contacts${j.contacts?.length ? ` <span style="font-size:10px;padding:1px 5px;background:var(--bg3);border-radius:100px;border:1px solid var(--border)">${j.contacts.length}</span>` : ''}</div>
       <div class="detail-tab${activeDetailTab==='interview'?' active':''}"  onclick="switchTab('interview')">Interview Prep</div>
-      <div class="detail-tab${activeDetailTab==='files'?' active':''}" onclick="switchTab('files')">
-        Files${(j.resume||j.cover) ? ' <span style="width:6px;height:6px;background:var(--green);border-radius:50%;display:inline-block;vertical-align:middle;margin-left:3px"></span>' : ''}
-      </div>
+
     </div>
     ${activeDetailTab === 'posting'
       ? renderPostingTab(j)
@@ -2258,7 +2339,7 @@ function renderDetail() {
             ? `<div class="tab-pane">${renderContactsTab(j)}</div>`
             : activeDetailTab === 'interview'
               ? `<div class="tab-pane">${renderInterviewTab(j)}</div>`
-              : `<div class="tab-pane">${activeDetailTab==='notes' ? renderNotesTab(j) : activeDetailTab==='files' ? renderFilesTab(j) : renderNotesTab(j)}</div>`
+              : `<div class="tab-pane">${renderNotesTab(j)}</div>`
     }
   `;
 }
@@ -2307,15 +2388,17 @@ function renderPostingTab(j) {
 }
 
 function buildPostingHtml(j) {
-  if (j.postingHtml) {
+  // Prefer clean extracted text when it's substantial (avoids raw HTML leaking through)
+  const cleanText = j.postingText && j.postingText.length > 200 ? j.postingText : null;
+
+  if (j.postingHtml && !cleanText) {
+    // Only use raw HTML path when we have no clean text to fall back on
     try {
       const parser = new DOMParser();
       const doc = parser.parseFromString(j.postingHtml, 'text/html');
-      // Remove noise
       ['script','style','nav','header','footer','iframe','noscript','form','button','input'].forEach(tag => {
         doc.querySelectorAll(tag).forEach(el => el.remove());
       });
-      // Try to isolate the job content
       const tries = [
         '[class*="job-description"]','[class*="jobDescription"]','[id*="job-description"]',
         '[class*="description"]','[class*="job-details"]','[class*="jobDetails"]',
@@ -2323,29 +2406,44 @@ function buildPostingHtml(j) {
       ];
       let root = null;
       for (const sel of tries) {
-        try { root = doc.querySelector(sel); if (root && root.textContent.trim().length > 100) break; root = null; } catch(e){}
+        try { root = doc.querySelector(sel); if (root && root.textContent.trim().length > 200) break; root = null; } catch(e){}
       }
       root = root || doc.body;
-
-      function sanitize(node) {
-        if (node.nodeType === 3) return esc(node.textContent);
-        if (node.nodeType !== 1) return '';
-        const tag = node.tagName.toLowerCase();
-        const safe = ['p','h1','h2','h3','h4','ul','ol','li','strong','b','em','i','br','hr','div','section','span','a'];
-        const children = Array.from(node.childNodes).map(sanitize).join('');
-        if (!safe.includes(tag)) return children;
-        if (tag === 'a') {
-          const href = node.getAttribute('href') || '#';
-          return `<a href="${esc(href)}" target="_blank" rel="noopener">${children}</a>`;
+      const bodyText = root.textContent.trim();
+      // If the extracted HTML body has real content, sanitize and show it
+      if (bodyText.length > 200) {
+        function sanitize(node) {
+          if (node.nodeType === 3) return esc(node.textContent);
+          if (node.nodeType !== 1) return '';
+          const tag = node.tagName.toLowerCase();
+          const safe = ['p','h1','h2','h3','h4','ul','ol','li','strong','b','em','i','br','hr'];
+          const children = Array.from(node.childNodes).map(sanitize).join('');
+          if (!safe.includes(tag)) return children || '';
+          return `<${tag}>${children}</${tag}>`;
         }
-        return `<${tag}>${children}</${tag}>`;
+        const sanitized = sanitize(root).replace(/(<br>\s*){3,}/g,'<br><br>');
+        return `<div class="posting-body">${sanitized}</div>`;
       }
-      return `<div class="posting-body">${sanitize(root)}</div>`;
     } catch(e) {}
   }
 
+  if (cleanText) {
+    // Clean text renderer — strips any stray HTML tags first
+    const stripped = cleanText.replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;/gi, ' ').replace(/\s+/g, ' ');
+    const html = stripped
+      .replace(/\n{3,}/g, '\n\n')
+      .split('\n\n')
+      .map(p => p.trim())
+      .filter(Boolean)
+      .map(p => `<p>${esc(p).replace(/\n/g,'<br>')}</p>`)
+      .join('');
+    return `<div class="posting-body">${html}</div>`;
+  }
+
   if (j.postingText) {
+    // Fallback: postingText even if short
     const html = j.postingText
+      .replace(/<[^>]+>/g, ' ')
       .replace(/\n{3,}/g, '\n\n')
       .split('\n\n')
       .map(p => p.trim())
@@ -2847,57 +2945,55 @@ function renderFlags(flags) {
 
 
 function renderAgeDistribution(wf) {
-  if (!wf.ageRanges && !wf.medianAge) return '';
-  const ar = wf.ageRanges || {};
-  const segs = [
-    { label: 'Under 30', val: ar.under30 || 0, color: 'var(--blue)' },
-    { label: '30–40',    val: ar['30to40'] || 0, color: 'var(--green)' },
-    { label: '40–50',    val: ar['40to50'] || 0, color: 'var(--amber)' },
-    { label: '50+',      val: ar.over50 || 0, color: 'var(--text3)' },
-  ].filter(s => s.val > 0);
-  const total = segs.reduce((s, r) => s + r.val, 0) || 100;
-  const bar = segs.map(s =>
-    '<div style="width:' + (s.val/total*100).toFixed(1) + '%;background:' + s.color + ';height:100%"></div>'
-  ).join('');
-  const legend = segs.map(s =>
-    '<span style="font-size:11px;font-family:var(--mono);color:var(--text3)"><span style="color:' + s.color + '">●</span> ' + s.label + ': ' + s.val + '%</span>'
-  ).join('');
-  return '<div style="margin-bottom:16px">' +
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
-      '<div style="font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px">AGE DISTRIBUTION</div>' +
-      (wf.medianAge ? '<span style="font-size:11px;font-family:var(--mono);color:var(--text3)">Median: <strong style=\"color:var(--text2)\">' + wf.medianAge + '</strong></span>' : '') +
-    '</div>' +
-    (segs.length ? '<div style="height:8px;border-radius:4px;overflow:hidden;display:flex;margin-bottom:8px">' + bar + '</div>' +
-      '<div style="display:flex;flex-wrap:wrap;gap:10px">' + legend + '</div>' : '') +
-  '</div>';
+  const ab = wf.ageBrackets || {};
+  if (!Object.keys(ab).length) return '';
+  const brackets = [
+    { label: 'Under 30', key: 'under30', color: 'var(--blue)' },
+    { label: '30 – 40',  key: '30to40',  color: 'var(--accent)' },
+    { label: '40 – 50',  key: '40to50',  color: 'var(--purple)' },
+    { label: 'Over 50',  key: 'over50',  color: 'var(--text3)' },
+  ].filter(b => ab[b.key]);
+  if (!brackets.length) return '';
+  const bar = (label, pct, color) =>
+    `<div style="margin-bottom:6px">
+       <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-bottom:3px">
+         <span>${label}</span><span style="font-family:var(--mono)">${pct}%</span>
+       </div>
+       <div style="height:5px;background:var(--bg4);border-radius:3px;overflow:hidden">
+         <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;transition:width .4s ease"></div>
+       </div>
+     </div>`;
+  return `<div style="margin-bottom:16px">
+    <div style="font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px;margin-bottom:10px">AGE DISTRIBUTION</div>
+    ${brackets.map(b => bar(b.label, ab[b.key], b.color)).join('')}
+  </div>`;
 }
 
 function renderWorkforceSection(wf) {
   if (!wf) return '';
 
-  // Headcount sparkline (SVG)
+  // Employee growth bar chart
   const hist = wf.headcountHistory || [];
-  let sparkline = '';
+  let growthChart = '';
   if (hist.length >= 2) {
     const counts = hist.map(h => h.count);
-    const maxC = Math.max(...counts), minC = Math.min(...counts);
-    const span = maxC - minC || 1;
-    const W = 120, H = 28;
-    const pts = hist.map((h, i) => {
-      const x = Math.round((i / (hist.length - 1)) * W);
-      const y = Math.round(H - ((h.count - minC) / span) * H);
-      return `${x},${y}`;
-    }).join(' ');
-    // Color: green if last > first, red if shrinking
-    const trend = hist[hist.length-1].count >= hist[0].count ? 'var(--green)' : 'var(--red)';
-    sparkline = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="overflow:visible">
-      <polyline points="${pts}" fill="none" stroke="${trend}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      ${hist.map((h, i) => {
-        const x = Math.round((i / (hist.length - 1)) * W);
-        const y = Math.round(H - ((h.count - minC) / span) * H);
-        return `<circle cx="${x}" cy="${y}" r="3" fill="${trend}"/>`;
-      }).join('')}
-    </svg>`;
+    const maxC = Math.max(...counts) || 1;
+    const trendColor = hist[hist.length-1].count >= hist[0].count ? 'var(--green)' : 'var(--red)';
+    const fmtCount = n => n >= 1000 ? (n/1000).toFixed(1).replace(/\.0$/,'') + 'k' : String(n);
+    growthChart = `<div style="margin-top:14px;margin-bottom:20px">
+      <div style="font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px;margin-bottom:10px">EMPLOYEE GROWTH</div>
+      <div style="display:flex;align-items:flex-end;gap:5px;height:60px">
+        ${hist.map((h, i) => {
+          const pct = Math.max(4, Math.round((h.count / maxC) * 100));
+          const isLast = i === hist.length - 1;
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+            <div style="font-size:9px;color:var(--text3);font-family:var(--mono);line-height:1">${isLast ? '<strong style="color:var(--text)">'+fmtCount(h.count)+'</strong>' : ''}</div>
+            <div style="width:100%;background:${isLast ? trendColor : 'var(--bg4)'};border-radius:2px 2px 0 0;height:${pct}%;transition:height .4s ease;opacity:${isLast ? 1 : 0.55 + (i/hist.length)*0.45}"></div>
+            <div style="font-size:9px;color:var(--text3);font-family:var(--mono)">${String(h.year).slice(2)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
   }
 
   // Gender / ethnicity bars
@@ -2955,13 +3051,7 @@ function renderWorkforceSection(wf) {
             <span style="display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;font-size:11px;font-family:var(--mono);font-weight:500;color:${visaColor};background:${visaColor}18;border:1px solid ${visaColor}40">${visaLabel}</span>
           </div>
         </div>
-        <!-- Sparkline if available -->
-        ${hist.length >= 2 ? `<div style="margin-top:14px">
-          <div style="display:flex;align-items:center;gap:12px">
-            ${sparkline}
-            <div style="font-size:11px;color:var(--text3);font-family:var(--mono)">${hist[0].year} → ${hist[hist.length-1].year}</div>
-          </div>
-        </div>` : ''}
+        ${growthChart}
       </div>
 
 <!-- Layoffs alert -->
@@ -3395,16 +3485,11 @@ function renderDocsPage() {
   );
 
   overlay.innerHTML = `
-    <div class="docs-header">
-      <!-- Title row: always visible -->
-      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
-        <svg width="18" height="18" viewBox="0 0 14 14" fill="none" style="flex-shrink:0"><path d="M2 2h6l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v4h4" stroke="currentColor" stroke-width="1.3"/></svg>
-        <div class="docs-title" style="flex:1;min-width:0">Document Library</div>
-
-      </div>
-      <!-- Upload button: wraps to next line on narrow screens -->
-      <label class="tailor-btn" style="cursor:pointer;padding:7px 14px;flex-shrink:0">
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v8M3 6l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M1 10h10" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+    <div class="docs-header" style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0">
+      <svg width="16" height="16" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;color:var(--text3)"><path d="M2 2h6l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v4h4" stroke="currentColor" stroke-width="1.3"/></svg>
+      <div class="docs-title" style="flex:1;min-width:0;font-size:15px;font-weight:600;color:var(--text)">Document Library</div>
+      <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--accent-bg);color:#1a1917;border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1v8M3 6l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M1 10h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         Upload
         <input type="file" accept=".pdf,.docx,.txt" style="display:none" onchange="uploadToLibrary(event)">
       </label>
@@ -3643,7 +3728,7 @@ function renderAnalytics(overlay) {
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 4v3l2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
         ${checkingPostings ? 'Checking...' : '⟳ Check postings'}
       </button>
-      <button onclick="closeAnalytics()" style="width:32px;height:32px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;font-size:18px;color:var(--text2);display:flex;align-items:center;justify-content:center">×</button>
+
     </div>
     <!-- Check postings progress bar — shown during checking -->
     <div id="check-postings-progress" style="display:${checkingPostings?'block':'none'};padding:8px 24px;background:var(--bg3);border-bottom:1px solid var(--border);flex-shrink:0">
@@ -4683,7 +4768,13 @@ ${isAdding ? 'Generate 2-3 NEW questions per category that are different from th
     const res = await fetch(API + '/api/interview-questions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ title: j.title, company: j.company, postingText: j.postingText || j.postingText }),
+      body: JSON.stringify({
+        title: j.title,
+        company: j.company,
+        postingText: j.postingText || '',
+        count: isAdding ? 10 : 15,
+        existingQuestions: existing.map(q => q.question),
+      }),
     });
     if (!res.ok) throw new Error('AI request failed: ' + res.status);
     const data = await res.json();
@@ -5500,6 +5591,15 @@ async function checkAIProviders() {
 function openSettings(section) {
   const overlay = document.getElementById('settings-overlay');
   overlay.style.display = 'flex';
+  // Also highlight sidebar button
+  document.querySelectorAll('.sidebar-action-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.section === 'settings');
+  });
+  // Slide in with animation
+  requestAnimationFrame(() => {
+    const inner = document.getElementById('settings-panel-inner');
+    if (inner) inner.style.transform = 'translateX(0)';
+  });
   // Populate user info
   document.getElementById('s-avatar').textContent = (currentUser||'?').slice(0,2).toUpperCase();
   document.getElementById('s-username').textContent = currentUser;
@@ -5522,11 +5622,23 @@ function openSettings(section) {
   if (cleanupEl)  cleanupEl.checked  = s.cleanupOnExit;
   showSettingsSection(section || 'account');
   _setMobileActiveBtn('settings');
+  updateAutoCheckUI();
   _mobileSection = 'settings';
 }
 
 function closeSettings() {
-  document.getElementById('settings-overlay').style.display = 'none';
+  const inner = document.getElementById('settings-panel-inner');
+  if (inner) {
+    inner.style.transform = 'translateX(100%)';
+    setTimeout(() => {
+      document.getElementById('settings-overlay').style.display = 'none';
+    }, 260);
+  } else {
+    document.getElementById('settings-overlay').style.display = 'none';
+  }
+  document.querySelectorAll('.sidebar-action-btn').forEach(btn => {
+    if (btn.dataset.section === 'settings') btn.classList.remove('active');
+  });
   if (_mobileSection === 'settings') { _mobileSection = 'jobs'; _setMobileActiveBtn('jobs'); }
 }
 
@@ -5972,8 +6084,10 @@ setInterval(() => {
 
 
 <!-- SETTINGS PANEL — full overlay with sidebar nav -->
-<div id="settings-overlay" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.6);z-index:800;align-items:center;justify-content:center" onclick="if(event.target===this)closeSettings()">
-  <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:min(860px,96vw);height:min(88vh,700px);display:flex;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.4)">
+<div id="settings-overlay" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:transparent;z-index:800;align-items:stretch;justify-content:flex-end">
+  <!-- Click-catcher backdrop -->
+  <div onclick="closeSettings()" style="flex:1;cursor:pointer"></div>
+  <div style="background:var(--bg2);border-left:1px solid var(--border2);width:min(860px,100vw);height:100%;display:flex;overflow:hidden;box-shadow:-8px 0 32px rgba(0,0,0,0.18);transform:translateX(100%);transition:transform 0.25s cubic-bezier(0.4,0,0.2,1);pointer-events:auto" id="settings-panel-inner">
 
     <!-- Sidebar nav -->
     <div style="width:200px;flex-shrink:0;background:var(--bg3);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 0">
@@ -6036,6 +6150,26 @@ setInterval(() => {
           </div>
         </div>
 
+        <div class="settings-section">
+          <div class="settings-section-title">JOB POSTING AUTO-CHECK</div>
+          <div class="settings-section-body">
+            <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:12px">
+              Automatically check all active job postings every 24 hours. Jobs that are no longer available are tagged as <strong>stale</strong>.
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm)">
+              <div>
+                <div style="font-size:13px;font-weight:500;color:var(--text)">Auto-check postings</div>
+                <div style="font-size:11px;color:var(--text3);margin-top:2px" id="auto-check-last-run"></div>
+              </div>
+              <label style="position:relative;width:40px;height:22px;cursor:pointer;flex-shrink:0">
+                <input type="checkbox" id="auto-check-toggle" style="opacity:0;width:0;height:0;position:absolute" onchange="setAutoCheck(this.checked)">
+                <span id="auto-check-track" style="position:absolute;top:0;left:0;right:0;bottom:0;border-radius:11px;background:var(--bg4);border:1px solid var(--border2);transition:background .2s">
+                  <span id="auto-check-thumb" style="position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--text3);transition:transform .2s,background .2s"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
         <div class="settings-section" id="encryption-status-section">
           <div class="settings-section-title">DATA ENCRYPTION</div>
           <div class="settings-section-body">
@@ -6046,7 +6180,7 @@ setInterval(() => {
                 <div id="enc-status-sub" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
               </div>
             </div>
-            <div id="enc-upgrade-area"></div>
+            <!-- E2E encryption is always enabled for new accounts -->
           </div>
         </div>
       </div>

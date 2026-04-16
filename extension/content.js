@@ -96,6 +96,31 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     }
   }
 
+  // Google Jobs (share.google/* redirects here, or google.com/search?udm=8)
+  else if (hostname.includes('google.com') && (url.includes('udm=8') || url.includes('vssid=jobs'))) {
+    title   = title   || (
+      document.querySelector('.tNxQIb') ||
+      document.querySelector('[data-jobid] h2') ||
+      document.querySelector('.I9lvk') ||
+      document.querySelector('.KLsYvd h2')
+    )?.textContent?.trim() || '';
+    company = company || (
+      document.querySelector('.I2Cbhb') ||
+      document.querySelector('.vNEEBe')
+    )?.textContent?.trim() || '';
+    location = location || document.querySelector('.Qk80Jf, .sMzDkb')?.textContent?.trim() || '';
+    if (!salary) {
+      const bodyText2 = document.body?.innerText || '';
+      const sm = bodyText2.match(/\$[\d,]+[kK]?\s*[-\u2013]\s*\$[\d,]+[kK]?\s*(?:a year|\/yr|annually)?/i);
+      if (sm) salary = sm[0].trim();
+    }
+    if (!workType) {
+      const pageText2 = document.body?.innerText?.toLowerCase() || '';
+      if (/\bremote\b/.test(pageText2)) workType = 'Remote';
+      else if (/\bhybrid\b/.test(pageText2)) workType = 'Hybrid';
+    }
+  }
+
   // Indeed
   else if (hostname.includes('indeed.com')) {
     title   = title   || document.querySelector('h1[class*="title"], [data-testid*="jobsearch-JobInfoHeader-title"]')?.textContent?.trim() || '';

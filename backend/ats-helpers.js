@@ -20,6 +20,7 @@ function detectATS(url) {
   if (/ashbyhq\.com/i.test(url))                                    return 'ashby';
   if (/jobs\.smartrecruiters\.com/i.test(url))                      return 'smartrecruiters';
   if (/linkedin\.com\/jobs/i.test(url))                             return 'linkedin';
+  if (/share\.google\/|google\.com\/search[^?]*\?[^#]*udm=8|google\.com\/search[^?]*\?[^#]*source=sh[^&]*job/i.test(url)) return 'googlejobs';
   // Eightfold AI: powers many company career sites; identified by ?domain= param or /careers/job/ path
   if (/eightfold\.ai|vscdn\.net/i.test(url))                       return 'eightfold';
   if (/[?&]domain=[^&]+$|[?&]domain=[^&]+&|\/careers\/job\/\d+/i.test(url)) return 'eightfold';

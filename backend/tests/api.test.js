@@ -317,3 +317,60 @@ describe('GET /api/extension', () => {
     }
   });
 });
+
+// ─── Interview Questions API ──────────────────────────────────────────────────
+
+describe('POST /api/interview-questions', () => {
+  let token;
+
+  beforeAll(async () => {
+    await request(app).post('/api/register').send({ username: 'iquser', password: 'pass123' });
+    const r = await request(app).post('/api/login').send({ username: 'iquser', password: 'pass123' });
+    token = r.body.token;
+  });
+
+  it('requires auth', async () => {
+    const res = await request(app).post('/api/interview-questions').send({ title: 'SWE', company: 'Acme' });
+    expect(res.status).toBe(401);
+  });
+
+  it('accepts title + company and returns JSON', async () => {
+    const res = await request(app)
+      .post('/api/interview-questions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Software Engineer', company: 'TestCo' });
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
+  });
+
+  it('returns questions array with category field', async () => {
+    const res = await request(app)
+      .post('/api/interview-questions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ title: 'Product Manager', company: 'Acme', count: 5 });
+    expect(res.status).toBe(200);
+    if (res.body.questions) {
+      // Each question should have category and question fields
+      const q = res.body.questions[0];
+      expect(q).toHaveProperty('category');
+      expect(q).toHaveProperty('question');
+      // category must be one of the 5 valid values
+      const validCategories = ['Behavioral', 'Technical', 'Culture Fit', 'Role-Specific', 'Questions to Ask'];
+      expect(validCategories).toContain(q.category);
+    }
+  });
+
+  it('accepts existingQuestions to avoid repetition', async () => {
+    const res = await request(app)
+      .post('/api/interview-questions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        title: 'Engineer',
+        company: 'Co',
+        count: 5,
+        existingQuestions: ['Tell me about yourself.'],
+      });
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/json/);
+  });
+});

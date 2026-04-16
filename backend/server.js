@@ -383,6 +383,67 @@ async function fetchATS(rawUrl) {
   const UA   = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
   const JSON_H = { Accept: 'application/json', 'Content-Type': 'application/json' };
 
+  // ── Google Jobs ─────────────────────────────────────────────────────────────
+  if (ats === 'googlejobs') {
+    // share.google links redirect to google.com/search?...&udm=8
+    // Server-side we can't render the JS SPA, but we can follow the redirect
+    // and extract job info from the URL params and page meta
+    let resolvedUrl = url;
+    if (/share\.google/i.test(url)) {
+      try {
+        const r = await fetchTimeout(url, {
+          headers: { 'User-Agent': UA },
+          redirect: 'follow',
+        }, 8000);
+        resolvedUrl = r.url || url;
+      } catch {}
+    }
+    // Extract kgs (Knowledge Graph entity) and search query
+    try {
+      const u = new URL(resolvedUrl);
+      const query = u.searchParams.get('q') || '';
+      const kgs = u.searchParams.get('kgs') || '';
+      // Try to fetch the Google Jobs page to get structured data from meta tags
+      const r = await fetchTimeout(resolvedUrl, {
+        headers: { 'User-Agent': UA, Accept: 'text/html', 'Accept-Language': 'en-US,en;q=0.9' }
+      }, 10000);
+      if (r.ok) {
+        const html = await r.text();
+        // Extract title from og:title or title tag
+        const ogTitle = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]+)"/i)?.[1]
+                     || html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.replace(/ - Google Search$/, '').trim();
+        // Extract any JSON-LD (Google sometimes embeds it)
+        const ldMatch = html.match(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
+        let ldFields = null;
+        if (ldMatch) {
+          try {
+            const ld = JSON.parse(ldMatch[1].trim());
+            const jobs = Array.isArray(ld) ? ld : [ld];
+            const job = jobs.find(d => d['@type'] === 'JobPosting');
+            if (job) {
+              ldFields = {
+                title: job.title,
+                company: job.hiringOrganization?.name,
+                location: job.jobLocation?.address?.addressLocality || null,
+                workType: job.jobLocationType === 'TELECOMMUTE' ? 'Remote' : null,
+                salary: null,
+              };
+            }
+          } catch {}
+        }
+        const text = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 6000);
+        return {
+          fields: ldFields || (ogTitle ? { title: ogTitle.replace(/ \| Google Jobs$/, '').trim() } : null),
+          text,
+          html: '',
+          _ats: 'googlejobs',
+          _resolvedUrl: resolvedUrl !== url ? resolvedUrl : undefined,
+        };
+      }
+    } catch {}
+    return { html: '', text: '', fields: null, _ats: 'googlejobs' };
+  }
+
   // ── LinkedIn ────────────────────────────────────────────────────────────────
   if (ats === 'linkedin') {
     return { html:'', text:'', fields: null, _ats:'linkedin', _linkedinBlocked: true };
@@ -740,8 +801,8 @@ Location: ${location||'not specified'}
 Salary: ${salary||'not specified'}
 ${postingText?`Posting:\n${postingText.slice(0,2000)}`:''}
 
-Return ONLY this JSON structure:
-{"overview":{"founded":"year","employees":"range","hq":"city","industry":"sector"},"companyOverview":"3-4 paragraph overview","culture":{"overallRating":3.8,"workLifeBalance":3.5,"cultureValues":3.8,"careerOpp":3.6,"compensation":3.4,"leadership":3.5,"numRatings":"1,234","ceoApproval":72,"recommend":68,"summary":"paragraph"},"roleIntel":"2-3 paragraphs","flags":{"green":["signal"],"red":["concern"]},"linkedin":{"suggestedContacts":[{"name":"Title","role":"Manager","company":"${company}","tip":"why"}],"outreachTip":"strategy","messageTemplate":"Hi [Name], ..."},"news":[{"headline":"...","source":"...","date":"2024-01","url":"","sentiment":"positive"}],"interviewTips":"specific tips"}`;
+Return ONLY this JSON structure (fill every field you can estimate from public knowledge):
+{"overview":{"founded":"year","employees":"range","hq":"city","industry":"sector"},"companyOverview":"3-4 paragraph overview","culture":{"overallRating":3.8,"workLifeBalance":3.5,"cultureValues":3.8,"careerOpp":3.6,"compensation":3.4,"leadership":3.5,"numRatings":"1,234","ceoApproval":72,"recommend":68,"summary":"paragraph"},"roleIntel":"2-3 paragraphs","flags":{"green":["signal"],"red":["concern"]},"linkedin":{"suggestedContacts":[{"name":"Title","role":"Manager","company":"${company}","tip":"why"}],"outreachTip":"strategy","messageTemplate":"Hi [Name], ..."},"news":[{"headline":"...","source":"...","date":"2024-01","url":"","sentiment":"positive"}],"interviewTips":"specific tips","workforce":{"headcount":"12,000","headcountTrend":"growing","avgTenure":"2.8 years","fullTimePct":85,"remoteRatio":45,"recentLayoffs":"None","headcountHistory":[{"year":2019,"count":6000},{"year":2020,"count":6500},{"year":2021,"count":8000},{"year":2022,"count":10000},{"year":2023,"count":11500},{"year":2024,"count":12000}],"genderSplit":{"female":42,"male":56,"other":2},"ageBrackets":{"under30":28,"30to40":38,"40to50":22,"over50":12},"ethnicityMix":{"asian":28,"white":48,"hispanic":12,"black":8,"other":4},"visaSponsorship":"yes","visaNote":"Sponsors H-1B and green card for qualified candidates. Actively hires internationally.","topLocations":["San Diego, CA","San Francisco, CA","Remote"],"glassdoorDiversity":4.1,"note":"Workforce data estimated from public sources including LinkedIn, Glassdoor, and company reports."}}`;
   try {
     const raw = await callAI(['groq','openrouter','google'], sys, usr, 4000);
     const data = parseJson(raw);
@@ -761,12 +822,21 @@ app.post('/api/outreach-targets', authMiddleware, async (req, res) => {
 });
 
 app.post('/api/interview-questions', authMiddleware, async (req, res) => {
-  const { company, title, postingText } = req.body;
+  const { company, title, postingText, count = 15, existingQuestions = [] } = req.body;
+  const avoidSection = existingQuestions.length > 0
+    ? `\n\nDO NOT repeat these existing questions:\n${existingQuestions.map(q => '- ' + q).join('\n')}` : '';
   try {
     const raw = await callAI(['openrouter','groq','google'],
-      'Return valid JSON only, no markdown.',
-      `Generate 10 interview questions for ${title} at ${company}. Mix behavioral, technical, company-specific. ${postingText?'Based on: '+postingText.slice(0,800):''}\nReturn: {"questions":[{"question":"...","type":"behavioral|technical|company","tip":"..."}]}`,
-      1200);
+      'Return valid JSON only, no markdown, no backticks.',
+      `Generate ${count} interview questions for the role: ${title} at ${company}.${postingText ? '\nJob posting context: ' + postingText.slice(0, 1500) : ''}${avoidSection}
+
+Include 3-4 questions per category. Categories must be exactly: Behavioral, Technical, Culture Fit, Role-Specific, Questions to Ask.
+"Questions to Ask" = thoughtful questions the candidate should ask the interviewer.
+Make questions specific to this role and company.
+
+Return ONLY this JSON:
+{"questions":[{"category":"Behavioral","question":"..."},{"category":"Technical","question":"..."},{"category":"Culture Fit","question":"..."},{"category":"Role-Specific","question":"..."},{"category":"Questions to Ask","question":"..."}]}`,
+      1500);
     res.json(parseJson(raw));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

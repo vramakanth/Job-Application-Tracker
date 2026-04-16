@@ -191,3 +191,193 @@ describe('Regression — layout: app screen flex', () => {
     expect(html).not.toContain("app:''");
   });
 });
+
+// ─── Regression: 8-item fixes ─────────────────────────────────────────────────
+
+describe('Regression — analytics no close button', () => {
+  it('closeAnalytics() not called from renderAnalytics header (section view has no close)', () => {
+    // The × button was removed — analytics is now embedded in #section-view
+    const analyticsIdx = html.indexOf('Analytics Dashboard');
+    const nextSection = html.indexOf('function closeAnalytics', analyticsIdx);
+    // The header section (within 500 chars of the title) should not have closeAnalytics onclick
+    const headerSlice = html.slice(analyticsIdx, analyticsIdx + 500);
+    expect(headerSlice).not.toContain('onclick="closeAnalytics()"');
+  });
+});
+
+describe('Regression — Files tab removed', () => {
+  it('Files tab not in detail tabs row', () => {
+    // The Files tab div should be gone
+    expect(html).not.toContain("onclick=\"switchTab('files')\"");
+  });
+
+  it('Files not in tab render chain', () => {
+    // Should not fall back to renderFilesTab in the chain
+    expect(html).not.toContain("activeDetailTab==='files' ? renderFilesTab");
+  });
+});
+
+describe('Regression — sidebar button labels', () => {
+  it('sidebar button says Library not Documents', () => {
+    // The sidebar action button for the library section should say Library
+    const btnIdx = html.indexOf("data-section=\"library\"");
+    const btnSlice = html.slice(btnIdx, btnIdx + 400); // SVG is long, need wider window
+    expect(btnSlice).toContain('Library');
+    expect(btnSlice).not.toContain('>Documents<');
+  });
+});
+
+describe('Regression — interview questions API', () => {
+  it('request body includes count and existingQuestions fields', () => {
+    expect(html).toContain('existingQuestions: existing.map(q => q.question)');
+    expect(html).toContain('count: isAdding ? 10 : 15');
+  });
+
+  it('no self-referential postingText bug', () => {
+    // Was: postingText: j.postingText || j.postingText (bug — references itself)
+    expect(html).not.toContain('postingText: j.postingText || j.postingText');
+    expect(html).toContain("postingText: j.postingText || ''");
+  });
+});
+
+describe('Regression — job posting HTML rendering', () => {
+  it('buildPostingHtml prefers clean text over raw HTML', () => {
+    // The new code checks for substantial postingText first
+    expect(html).toContain('const cleanText = j.postingText && j.postingText.length > 200');
+  });
+
+  it('strips HTML tags from postingText before display', () => {
+    expect(html).toContain("replace(/<[^>]+>/g, ' ')");
+  });
+});
+
+describe('Regression — encryption always on', () => {
+  it('enc-upgrade-area removed from settings UI', () => {
+    // The enable-encryption upgrade path should be gone
+    expect(html).not.toContain('<div id="enc-upgrade-area"></div>');
+  });
+});
+
+describe('Regression — workforce demographics', () => {
+  it('renderAgeDistribution function defined', () => {
+    expect(html).toContain('function renderAgeDistribution(wf)');
+  });
+
+  it('age brackets rendered (under30, 30to40, 40to50, over50)', () => {
+    expect(html).toContain("key: 'under30'");
+    expect(html).toContain("key: '30to40'");
+    expect(html).toContain("key: 'over50'");
+  });
+
+  it('employee growth bar chart rendered from headcountHistory', () => {
+    expect(html).toContain('EMPLOYEE GROWTH');
+    expect(html).toContain('headcountHistory');
+  });
+});
+
+// ─── Regression: 6-item fixes ─────────────────────────────────────────────────
+
+describe('Regression — Settings as sidebar section', () => {
+  it('settings sidebar-action-btn exists with data-section="settings"', () => {
+    expect(html).toContain('data-section="settings"');
+    expect(html).toContain('onclick="openSettings()"');
+  });
+
+  it('stale jobs button removed from sidebar', () => {
+    // data-section="stale" should not be in sidebar-action-btns anymore
+    const sidebarIdx = html.indexOf('class="sidebar-action-btns"');
+    const sidebarEnd = html.indexOf('<!-- User bar -->', sidebarIdx);
+    const sidebar = html.slice(sidebarIdx, sidebarEnd);
+    expect(sidebar).not.toContain('data-section="stale"');
+    expect(sidebar).not.toContain('showStaleJobs()');
+  });
+
+  it('settings panel has slide-in transition', () => {
+    expect(html).toContain('settings-panel-inner');
+    expect(html).toContain('translateX(100%)');
+    expect(html).toContain('transition:transform 0.25s');
+  });
+});
+
+describe('Regression — Stale as separate boolean field', () => {
+  it('stale is NOT in STATUSES (it is a separate field, not a status)', () => {
+    // stale is now j.stale boolean, not in the status dropdown
+    expect(html).not.toContain(",'stale']");
+    // STATUSES should end with expired
+    expect(html).toContain("'expired']");
+  });
+
+  it('stale filter tab exists (filters on j.stale===true)', () => {
+    expect(html).toContain("setFilter('stale')");
+  });
+
+  it('filter logic uses j.stale field not j.status', () => {
+    expect(html).toContain("currentFilter === 'stale') { if (!j.stale)");
+  });
+
+  it('stale badge shown in job list when j.stale===true', () => {
+    expect(html).toContain("j.stale ? '<span");
+    expect(html).toContain("stale</span>'");
+  });
+
+  it('toggleStale function defined', () => {
+    expect(html).toContain('function toggleStale(jobId)');
+  });
+
+  it('toggleStale sets staledByUser flag', () => {
+    expect(html).toContain('j.staledByUser = true');
+    expect(html).toContain('j.staledByUser = false');
+  });
+
+  it('stale toggle button rendered in detail header', () => {
+    expect(html).toContain("toggleStale('${j.id}')");
+  });
+
+  it('auto-check checks staledByUser before overwriting', () => {
+    expect(html).toContain('!j.staledByUser');
+  });
+
+  it('auto-check sets j.stale not j.status', () => {
+    expect(html).toContain('j.stale = true');
+    // Should NOT set stale as status
+    expect(html).not.toContain("j.status = 'stale'");
+  });
+
+  it('stale not a color in statusColor function', () => {
+    // statusColor only covers actual statuses
+    const scIdx = html.indexOf('function statusColor');
+    const scSlice = html.slice(scIdx, scIdx + 250);
+    expect(scSlice).not.toContain("stale:'#ea580c'");
+  });
+
+  it('auto-check toggle exists in settings', () => {
+    expect(html).toContain('auto-check-toggle');
+    expect(html).toContain('JOB POSTING AUTO-CHECK');
+  });
+
+  it('autoCheckStaleJobs function defined', () => {
+    expect(html).toContain('function autoCheckStaleJobs()');
+  });
+
+  it('setAutoCheck function defined', () => {
+    expect(html).toContain('function setAutoCheck(enabled)');
+  });
+});
+
+describe('Regression — Landing page icons', () => {
+  it('feature card icons use currentColor not hardcoded orange', () => {
+    const landingIdx = html.indexOf('id="screen-landing"');
+    const loginIdx = html.indexOf('id="screen-login"');
+    const landing = html.slice(landingIdx, loginIdx);
+    // Should not have hardcoded orange stroke in feature SVGs
+    expect(landing).not.toContain('stroke="#e8a838"');
+    // Should have currentColor
+    expect(landing).toContain('stroke="currentColor"');
+  });
+});
+
+describe('Regression — Mobile transitions', () => {
+  it('settings panel uses CSS transform transition (consistent with other sections)', () => {
+    expect(html).toContain("transition:transform 0.25s cubic-bezier(0.4,0,0.2,1)");
+  });
+});

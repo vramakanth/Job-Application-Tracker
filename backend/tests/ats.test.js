@@ -370,3 +370,30 @@ describe('End-to-end regression: Dexcom URL with text fragment', () => {
     expect(isSpaShell).toBe(true);
   });
 });
+
+// ─── Google Jobs detection ─────────────────────────────────────────────────────
+
+describe('detectATS — Google Jobs', () => {
+  it('share.google short link → googlejobs', () => {
+    expect(detectATS('https://share.google/q7ODZaozjbqowhl8g')).toBe('googlejobs');
+  });
+
+  it('google.com/search?udm=8 → googlejobs', () => {
+    const url = 'https://www.google.com/search?q=director+engineer&udm=8&kgs=5098b5577bcdf208';
+    expect(detectATS(url)).toBe('googlejobs');
+  });
+
+  it('google.com/search with jobs detail viewer → googlejobs', () => {
+    const url = 'https://www.google.com/search?q=swe&source=sh/x/job/li/m1/1&udm=8';
+    expect(detectATS(url)).toBe('googlejobs');
+  });
+
+  it('regular google.com search (not jobs) → generic', () => {
+    expect(detectATS('https://www.google.com/search?q=nodejs+tutorial')).toBe('generic');
+  });
+
+  it('cleanJobUrl + detectATS works for share.google', () => {
+    const url = cleanJobUrl('https://share.google/q7ODZaozjbqowhl8g#:~:text=foo');
+    expect(detectATS(url)).toBe('googlejobs');
+  });
+});
