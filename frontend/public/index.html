@@ -1222,8 +1222,8 @@ function showScreen(n, pushHistory=true) {
   ['login','register','app','recover','forgot','landing'].forEach(s => {
     const el = document.getElementById('screen-'+s);
     if (!el) return;
-    const displayMap = {app:'',landing:'block',login:'flex',register:'flex',recover:'flex',forgot:'flex'};
-    el.style.display = s === n ? (displayMap[s] || 'block') : 'none';
+    const displayMap = {app:'flex',landing:'block',login:'flex',register:'flex',recover:'flex',forgot:'flex'};
+    el.style.display = s === n ? displayMap[s] : 'none';
   });
   // Show/hide mountain background — visible on public screens, hidden in app
   const bg = document.getElementById('mountain-bg');
@@ -1648,6 +1648,27 @@ function checkWarningBoxes() {
   const both = document.getElementById('warn-cb1')?.checked && document.getElementById('warn-cb2')?.checked;
   const btn = document.getElementById('warn-proceed-btn');
   if (btn) { btn.disabled = !both; btn.style.opacity = both ? '1' : '0.4'; }
+}
+
+async function downloadExtension() {
+  const btn = document.getElementById('ext-download-btn');
+  const orig = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Building...'; }
+  try {
+    const res = await fetch(API + '/api/extension', {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    if (!res.ok) throw new Error('Server returned ' + res.status);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'summit-extension.zip'; a.click();
+    URL.revokeObjectURL(url);
+    if (btn) { btn.innerHTML = '✓ Downloaded!'; setTimeout(() => { btn.disabled = false; btn.innerHTML = orig; }, 2500); }
+  } catch(e) {
+    if (btn) { btn.innerHTML = orig; btn.disabled = false; }
+    alert('Download failed: ' + e.message);
+  }
 }
 
 function doLogout() {
@@ -6092,11 +6113,11 @@ setInterval(() => {
         <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px">Browser Extensions</div>
         <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Add jobs to Summit in one click from any job site &mdash; LinkedIn, Indeed, Greenhouse, Lever, Workday, and more.</div>
         <div style="margin-bottom:20px">
-          <a href="/extension.zip" download style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:var(--accent-bg);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;color:#1a1917;text-decoration:none">
+          <button onclick="downloadExtension()" style="display:inline-flex;align-items:center;gap:8px;padding:10px 20px;background:var(--accent-bg);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;color:#1a1917;cursor:pointer;border:none" id="ext-download-btn">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M4 6l3 3 3-3M1 11v1a1 1 0 001 1h10a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
             Download Extension (.zip)
-          </a>
-          <div style="margin-top:6px;font-size:11px;color:var(--text3)">Contains files for both Chrome and Safari. Auto-detects job info from LinkedIn, Indeed, Greenhouse, Lever, and Workday.</div>
+          </button>
+          <div style="margin-top:6px;font-size:11px;color:var(--text3)">Works on Chrome, Brave, Edge, Arc, and any Chromium browser. Auto-detects job info from LinkedIn, Indeed, Greenhouse, Lever, Workday, and more.</div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
           <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:18px">
@@ -6106,7 +6127,7 @@ setInterval(() => {
               <li>Go to <code style="background:var(--bg4);padding:1px 4px;border-radius:3px">chrome://extensions</code></li>
               <li>Enable <strong style="color:var(--text2)">Developer Mode</strong></li>
               <li>Click <strong style="color:var(--text2)">Load unpacked</strong></li>
-              <li>Select the <code style="background:var(--bg4);padding:1px 4px;border-radius:3px">applied-extension</code> folder</li>
+              <li>Select the <code style="background:var(--bg4);padding:1px 4px;border-radius:3px">summit-extension</code> folder</li>
               <li>Sign in with your Summit credentials</li>
             </ol>
           </div>

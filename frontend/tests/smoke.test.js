@@ -146,3 +146,12 @@ describe('Regression — landing page CTAs', () => {
   it('landing has Get started CTA', () => expect(landing).toMatch(/Get started/));
   it('landing has Sign in CTA', () => expect(landing).toMatch(/Sign in/));
 });
+
+describe('Regression — showScreen displayMap', () => {
+  it('app screen uses flex not empty string (empty string is falsy)', () => {
+    // The bug: displayMap = {app:''} then (displayMap['app'] || 'block') = 'block'
+    // which makes screen-app display:block, breaking the flex layout
+    expect(html).toContain("app:'flex'");
+    expect(html).not.toContain("app:''");
+  });
+});

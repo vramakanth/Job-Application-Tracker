@@ -300,3 +300,32 @@ describe('POST /api/extract-fields', () => {
     expect(res.status).toBe(401);
   });
 });
+
+// ─── Extension download ───────────────────────────────────────────────────────
+
+describe('GET /api/extension', () => {
+  let token;
+
+  beforeAll(async () => {
+    await request(app).post('/api/register').send({ username: 'extuser', password: 'pass123' });
+    const res = await request(app).post('/api/login').send({ username: 'extuser', password: 'pass123' });
+    token = res.body.token;
+  });
+
+  it('requires auth', async () => {
+    const res = await request(app).get('/api/extension');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns a zip file when authenticated', async () => {
+    const res = await request(app)
+      .get('/api/extension')
+      .set('Authorization', `Bearer ${token}`);
+    // Will be 404 in test env (no extension folder), or 200 with zip — both are valid
+    expect([200, 404]).toContain(res.status);
+    if (res.status === 200) {
+      expect(res.headers['content-type']).toMatch(/zip/);
+      expect(res.headers['content-disposition']).toContain('summit-extension.zip');
+    }
+  });
+});

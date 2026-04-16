@@ -819,6 +819,21 @@ app.post('/api/check-posting', authMiddleware, async (req, res) => {
   } catch (e) { res.json({ expired: false, reason: 'Could not reach: ' + e.message }); }
 });
 
+app.get('/api/extension', authMiddleware, async (req, res) => {
+  // Dynamically package and serve the Chrome extension as a zip
+  const extDir = path.join(__dirname, '..', 'extension');
+  if (!fs.existsSync(extDir)) {
+    return res.status(404).json({ error: 'Extension files not found on server' });
+  }
+  res.setHeader('Content-Type', 'application/zip');
+  res.setHeader('Content-Disposition', 'attachment; filename="summit-extension.zip"');
+  const arc = archiver('zip', { zlib: { level: 9 } });
+  arc.on('error', err => { console.error('Extension zip error:', err); res.end(); });
+  arc.pipe(res);
+  arc.directory(extDir, 'summit-extension');
+  await arc.finalize();
+});
+
 app.get('/api/export-data', authMiddleware, async (req, res) => {
   const jobs = loadUserJobs(req.user.id, req.dataKey);
   const arc  = archiver('zip', { zlib: { level: 9 } });
