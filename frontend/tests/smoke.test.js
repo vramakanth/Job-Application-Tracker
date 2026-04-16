@@ -86,3 +86,52 @@ t('Tile 4: Interview Prep tile',  () => {
 t('Tile 5: Pipeline tracking',    () => has('Pipeline tracking'));
 t('No "Formatting preserved"',    () => not('Formatting preserved'));
 t('No "Salary intelligence"',     () => not('Salary intelligence'));
+
+// ── People & Diversity section ──────────────────────────────────────────────
+console.log('\n── People & Diversity section');
+t('No visa badge/pill in workforce', () => {
+  const wfStart = src.indexOf('function renderWorkforceSection');
+  const wfEnd   = src.indexOf('\nfunction renderCompensationSection');
+  const wf = src.slice(wfStart, wfEnd);
+  if (wf.includes('Sponsors visas') || wf.includes('visaLabel') || wf.includes('visaColor')) {
+    throw new Error('visa badge still present');
+  }
+});
+t('No headcountHistory growth chart', () => {
+  const wfStart = src.indexOf('function renderWorkforceSection');
+  const wfEnd   = src.indexOf('\nfunction renderCompensationSection');
+  const wf = src.slice(wfStart, wfEnd);
+  if (wf.includes('EMPLOYEE GROWTH') || wf.includes('headcountHistory')) throw new Error('growth chart still present');
+});
+t('No growing/shrinking trend badge in section header', () => {
+  const wfStart = src.indexOf('function renderWorkforceSection');
+  const wfEnd   = src.indexOf('\nfunction renderCompensationSection');
+  const wf = src.slice(wfStart, wfEnd);
+  if (wf.includes('insight-section-badge') && wf.includes('trendColor')) throw new Error('trend badge in header');
+});
+t('Stat cards use consistent border layout', () => {
+  const wfStart = src.indexOf('function renderWorkforceSection');
+  const wfEnd   = src.indexOf('\nfunction renderCompensationSection');
+  const wf = src.slice(wfStart, wfEnd);
+  if (!wf.includes('border-right:1px solid var(--border)')) throw new Error('no bordered stat cards');
+});
+t('avgTenure is a stat card (not tiny sub-label)', () => {
+  const wfStart = src.indexOf('function renderWorkforceSection');
+  const wfEnd   = src.indexOf('\nfunction renderCompensationSection');
+  const wf = src.slice(wfStart, wfEnd);
+  if (!wf.includes("'AVG TENURE'")) throw new Error('avgTenure not a stat card');
+});
+t('Layoff banner has proper 13px text', () => {
+  const wfStart = src.indexOf('function renderWorkforceSection');
+  const wfEnd   = src.indexOf('\nfunction renderCompensationSection');
+  const wf = src.slice(wfStart, wfEnd);
+  if (!wf.includes('font-size:13px;color:var(--text2)')) throw new Error('layoff text still low contrast');
+});
+t('Locations shown as pill chips', () => {
+  const wfStart = src.indexOf('function renderWorkforceSection');
+  const wfEnd   = src.indexOf('\nfunction renderCompensationSection');
+  const wf = src.slice(wfStart, wfEnd);
+  if (!wf.includes('OFFICE LOCATIONS')) throw new Error('no locations block');
+  if (!wf.includes('border-radius:100px')) throw new Error('no pill chips');
+});
+t('renderAgeDistribution removed (inlined)', () => not('function renderAgeDistribution'));
