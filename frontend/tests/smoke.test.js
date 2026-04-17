@@ -346,10 +346,8 @@ t('showHelp() calls openSection("help")', () => {
   if (!body.includes("openSection('help')")) throw new Error('openSection not called');
 });
 t('Help removed from settings nav', () => not('snav-help'));
-t('Settings Help pane has redirect to sidebar', () => {
-  const idx  = src.indexOf('id="spane-help"');
-  const body = src.slice(idx, idx + 600);
-  if (!body.includes('showHelp()')) throw new Error('no showHelp link in settings pane');
+t('Orphan spane-help pane removed (Help now in sidebar only)', () => {
+  if (src.includes('id="spane-help"')) throw new Error('orphan spane-help pane still present');
 });
 
 // ── Typography (Fraunces + Lato) ────────────────────────────────────────────
@@ -494,11 +492,70 @@ t('openSettings rescues settings-panel-inner before openSection wipes section-vi
 });
 
 // ── Settings nav: consolidated groups instead of flat list ──────────────────
-console.log('\n── Settings nav grouping');
-t('.snav-group-label CSS class defined', () => has('.snav-group-label'));
-t('Settings sidebar has 3 group labels (Security, Preferences, Your data)', () => {
+console.log('\n── Settings flat layout');
+t('Sidebar nav removed — no .snav-btn buttons anywhere', () => {
+  if (/class="snav-btn"/.test(src))     throw new Error('stale .snav-btn buttons still present');
+  if (/class="snav-group-label"/.test(src)) throw new Error('stale .snav-group-label classes still present');
+});
+t('.settings-group-label CSS class defined', () => has('.settings-group-label'));
+t('Settings panel has inline group labels (SECURITY / PREFERENCES / YOUR DATA)', () => {
   for (const label of ['>SECURITY<', '>PREFERENCES<', '>YOUR DATA<']) {
-    if (!src.includes(label)) throw new Error(`missing group label: ${label}`);
+    if (!src.includes(label)) throw new Error(`missing inline group label: ${label}`);
+  }
+});
+t('Sticky settings header with "Settings" title', () => {
+  if (!/class="settings-header"/.test(src))       throw new Error('no .settings-header element');
+  if (!/class="settings-header-title"[^>]*>Settings</.test(src)) throw new Error('no "Settings" title in header');
+});
+t('Search input with live filter bound to filterSettings', () => {
+  if (!/id="settings-search-input"/.test(src))      throw new Error('no search input');
+  if (!/oninput="filterSettings\(\)"/.test(src))    throw new Error('search input not wired to filterSettings');
+  if (!/placeholder="Search settings/.test(src))    throw new Error('search placeholder missing');
+});
+t('filterSettings function defined and hides non-matching panes via is-hidden', () => {
+  const idx = src.indexOf('function filterSettings');
+  if (idx < 0) throw new Error('filterSettings not defined');
+  const body = src.slice(idx, idx + 2000);
+  if (!body.includes("classList.toggle('is-hidden'"))  throw new Error('filterSettings does not toggle is-hidden');
+  if (!body.includes('textContent.toLowerCase'))        throw new Error('filterSettings does not do text matching');
+});
+t('filterSettings also hides group labels whose every pane is hidden', () => {
+  const idx = src.indexOf('function filterSettings');
+  const body = src.slice(idx, idx + 2000);
+  if (!body.includes('settings-group-label')) throw new Error('filterSettings does not process group labels');
+});
+t('No-matches empty state element + styling', () => {
+  if (!/id="settings-no-matches"/.test(src)) throw new Error('no settings-no-matches element');
+  has('.settings-no-matches {'); // CSS rule for the empty state
+});
+t('All settings panes are visible by default (no inline display:none)', () => {
+  // Grab all .settings-pane opening tags and assert none carry style="display:none"
+  const matches = src.match(/<div class="settings-pane"[^>]*>/g) || [];
+  for (const m of matches) {
+    if (/style="display:none/.test(m)) throw new Error('found pane with inline display:none: ' + m.slice(0, 120));
+  }
+  if (matches.length < 5) throw new Error('expected at least 5 settings panes, found ' + matches.length);
+});
+t('showSettingsSection scrolls into view + flashes amber outline', () => {
+  const idx = src.indexOf('function showSettingsSection');
+  const body = src.slice(idx, idx + 1500);
+  if (!body.includes('scrollIntoView'))   throw new Error('no scrollIntoView call');
+  if (!body.includes("'is-flash'"))       throw new Error('no is-flash class applied');
+  // It should NOT hide other panes anymore (flat layout shows all)
+  if (body.includes("style.display = 'none'")) throw new Error('showSettingsSection still hiding other panes');
+});
+t('.is-flash keyframe animation defined for amber outline pulse', () => {
+  if (!/@keyframes\s+settingsFlash/.test(src)) throw new Error('no settingsFlash keyframe');
+});
+t('openSettings runs ALL lazy loads on open (flat layout = all visible)', () => {
+  const idx = src.indexOf('function openSettings');
+  const body = src.slice(idx, idx + 2500);
+  if (!body.includes('renderEncryptionStatus()')) throw new Error('account lazy load missing on open');
+  if (!body.includes('loadRecoveryStatus()'))     throw new Error('recovery lazy load missing on open');
+});
+t('.settings-pane has scroll-margin-top for sticky-header offset', () => {
+  if (!/\.settings-pane\s*\{[^}]*scroll-margin-top/.test(src)) {
+    throw new Error('no scroll-margin-top — sticky header will overlap scroll targets');
   }
 });
 
@@ -659,18 +716,12 @@ t('.posting-body bumped to 15px + text color (was 13px/text2)', () => {
   if (!/color:\s*var\(--text\)/.test(m[0])) throw new Error('posting-body not var(--text)');
   if (/var\(--text2\)/.test(m[0]))          throw new Error('posting-body still using low-contrast text2');
 });
-t('.doc-list-name bumped to 15px', () => {
-  const m = src.match(/\.doc-list-name\s*\{[^}]*\}/);
-  if (!m || !/font-size:\s*15px/.test(m[0])) throw new Error('doc-list-name not 15px');
-});
-t('.interview-q-text bumped to 15px', () => {
-  const m = src.match(/\.interview-q-text\s*\{[^}]*\}/);
-  if (!m || !/font-size:\s*15px/.test(m[0])) throw new Error('interview-q-text not 15px');
-});
-t('.contact-name bumped to 15px', () => {
-  const m = src.match(/\.contact-name\s*\{[^}]*\}/);
-  if (!m || !/font-size:\s*15px/.test(m[0])) throw new Error('contact-name not 15px');
-});
+// NOTE: .doc-list-name, .interview-q-text, .contact-name, .interview-title,
+// .docs-section-*, .interview-category were previously tested here as part of
+// an aspirational "consistency pass". Those CSS rules existed but the markup
+// never actually applied those classes — the tests were enforcing rules with
+// no visual effect. Removed to keep tests honest. Reintroducing the editorial
+// style to Documents/Interview Prep/Contacts is separate design work.
 
 console.log('\n── App-wide display-number consistency (Fraunces)');
 t('.analytics-kpi-value uses Fraunces display serif', () => {
@@ -695,29 +746,6 @@ console.log('\n── App-wide page titles (Fraunces display)');
 t('.docs-title uses Fraunces display', () => {
   const m = src.match(/\.docs-title\s*\{[^}]*\}/);
   if (!m || !m[0].includes('var(--font-display)')) throw new Error('docs-title missing font-display');
-});
-t('.interview-title uses Fraunces display', () => {
-  const m = src.match(/\.interview-title\s*\{[^}]*\}/);
-  if (!m || !m[0].includes('var(--font-display)')) throw new Error('interview-title missing font-display');
-});
-
-console.log('\n── App-wide section headers (amber tick pattern)');
-t('.docs-section-header has amber tick', () => {
-  if (!/\.docs-section-header::before\s*\{[^}]*background:\s*var\(--accent-bg\)/s.test(src)) {
-    throw new Error('docs section-header amber tick missing');
-  }
-});
-t('.interview-category has amber tick', () => {
-  if (!/\.interview-category::before\s*\{[^}]*background:\s*var\(--accent-bg\)/s.test(src)) {
-    throw new Error('interview-category amber tick missing');
-  }
-});
-t('.docs-section-title matches insight-section-title scale (12px mono uppercase)', () => {
-  const m = src.match(/\.docs-section-title\s*\{[^}]*\}/);
-  if (!m) throw new Error('docs-section-title rule missing');
-  if (!/font-size:\s*12px/.test(m[0]))     throw new Error('not 12px');
-  if (!/var\(--mono\)/.test(m[0]))         throw new Error('not mono');
-  if (!/text-transform:\s*uppercase/.test(m[0])) throw new Error('not uppercase');
 });
 t('.auth-logo-text uses display serif', () => {
   const m = src.match(/\.auth-logo-text\s*\{[^}]*\}/);

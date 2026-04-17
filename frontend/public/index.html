@@ -71,11 +71,18 @@
     --bg2:     #222017;
     --bg3:     #2c291f;
     --bg4:     #38342a;
-    --border:  rgba(255,235,180,0.10);
-    --border2: rgba(255,235,180,0.20);
-    --text:    #f2ead8;
-    --text2:   #cbbfa0;
-    --text3:   #9a8a6a;
+    /* Borders bumped from 0.10/0.20 — at low monitor brightness the old alphas
+       disappeared. New values still read as "hairline" but stay visible. */
+    --border:  rgba(255,235,180,0.14);
+    --border2: rgba(255,235,180,0.28);
+    /* Text tokens retuned for comfortable reading.
+       Previous --text3 #9a8a6a failed WCAG AA (4.1:1) on bg3/bg4 surfaces
+       and was used 196 times — more than --text itself. Brightening each
+       step by ~0.15 luminance puts everything comfortably above AA, with
+       most combos in the AAA range. Warm cream hues preserved. */
+    --text:    #faf4e8;  /* was #f2ead8 — slightly whiter cream */
+    --text2:   #dcd0b2;  /* was #cbbfa0 — +20% luminance */
+    --text3:   #b5a582;  /* was #9a8a6a — +50% luminance; the big one */
     --accent:       #e8a838;
     --accent-bg:    #e8a838;
     --accent-bg2:   #d4922a;
@@ -97,7 +104,6 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .auth-logo-mark { width: 36px; height: 36px; background: var(--accent-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .auth-logo-mark svg { width: 20px; height: 20px; }
 .auth-logo-text { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; color: #ffffff; font-family: var(--font-display); }
-.auth-logo-sub { font-size: 11px; color: rgba(195,240,96,0.7); font-family: var(--mono); }
 .auth-heading { font-size: 28px; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 8px; color: #ffffff; font-family: var(--font-display); line-height: 1.15; }
 .auth-sub { font-size: 13px; color: rgba(255,255,255,0.55); margin-bottom: 28px; line-height: 1.6; }
 .auth-field { margin-bottom: 14px; }
@@ -135,7 +141,6 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; }
 .logo-mark svg { width: 16px; height: 16px; }
 .logo-text { font-size: 15px; font-weight: 500; letter-spacing: -0.3px; }
-.logo-sub { font-size: 11px; color: var(--text2); letter-spacing: 0.5px; font-family: var(--mono); }
 
 .add-btn { width: 100%; padding: 9px 12px; background: var(--accent); color: #0e0e0f; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.15s; }
 .add-btn:hover { background: var(--accent2); }
@@ -161,7 +166,6 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .job-item-meta { display: flex; align-items: center; gap: 6px; }
 
 .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.status-label { font-size: 10px; font-family: var(--mono); }
 
 .empty-list { text-align: center; padding: 40px 20px; color: var(--text3); font-size: 13px; }
 .empty-list svg { width: 32px; height: 32px; opacity: 0.3; margin: 0 auto 12px; display: block; }
@@ -189,7 +193,6 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .status-select { padding: 5px 10px; background: var(--bg3); border: 0.5px solid var(--border); border-radius: 100px; font-family: var(--mono); font-size: 11px; color: var(--text); cursor: pointer; outline: none; appearance: none; padding-right: 24px; background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235c5a57' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\"); background-repeat: no-repeat; background-position: right 8px center; }
 
 .date-added { font-size: 11px; color: var(--text3); font-family: var(--mono); }
-.action-btns { display: flex; gap: 8px; flex-shrink: 0; }
 .icon-btn { width: 34px; height: 34px; background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; color: var(--text2); }
 .icon-btn:hover { background: var(--bg4); color: var(--text); }
 .icon-btn.danger:hover { background: rgba(255,107,107,0.1); color: var(--red); border-color: rgba(255,107,107,0.3); }
@@ -198,7 +201,6 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .detail-tab { padding: 12px 0; margin-right: 24px; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
 .detail-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
-.tab-content { padding: 24px 28px; flex: 1; }
 
 /* NOTES */
 .notes-compose { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 20px; }
@@ -217,12 +219,10 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .note-delete:hover { color: var(--red); }
 
 /* FILES */
-.files-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
 .file-slot { background: var(--bg2); border: 0.5px dashed var(--border2); border-radius: var(--radius); padding: 20px; text-align: center; }
 .file-slot.has-file { border-style: solid; border-color: var(--border); }
 .file-slot-label { font-size: 11px; font-family: var(--mono); color: var(--text2); margin-bottom: 12px; }
 .file-slot-icon { width: 36px; height: 36px; margin: 0 auto 10px; opacity: 0.3; }
-.file-slot-name { font-size: 12px; color: var(--text); margin-bottom: 8px; word-break: break-all; }
 .file-slot-size { font-size: 10px; color: var(--text3); font-family: var(--mono); margin-bottom: 12px; }
 .file-upload-btn { padding: 6px 14px; background: transparent; border: 0.5px solid var(--border2); border-radius: var(--radius-sm); font-family: var(--font); font-size: 12px; color: var(--text2); cursor: pointer; transition: all 0.15s; }
 .file-upload-btn:hover { background: var(--bg3); color: var(--text); }
@@ -234,26 +234,8 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .file-action-btn.danger-btn { border-color: rgba(255,107,107,0.3); color: var(--red); }
 .file-action-btn.danger-btn:hover { background: rgba(255,107,107,0.1); }
 
-.tailor-section { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 20px; margin-top: 20px; }
-.tailor-heading { font-size: 13px; font-weight: 500; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
-.tailor-sub { font-size: 12px; color: var(--text2); margin-bottom: 16px; }
-.tailor-options { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-.tailor-toggle { padding: 6px 14px; background: transparent; border: 0.5px solid var(--border); border-radius: 100px; font-size: 12px; font-family: var(--mono); color: var(--text2); cursor: pointer; transition: all 0.15s; }
 .tailor-toggle.active { background: rgba(200,240,96,0.1); border-color: var(--accent); color: var(--accent); }
-.tailor-context { width: 100%; padding: 10px; background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; color: var(--text); resize: none; min-height: 80px; outline: none; margin-bottom: 12px; line-height: 1.6; }
-.tailor-context::placeholder { color: var(--text3); }
-.tailor-btn { padding: 8px 18px; background: var(--accent); color: #0e0e0f; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.15s; }
-.tailor-btn:hover { background: var(--accent2); }
-.tailor-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.ai-result { margin-top: 16px; background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 16px; }
-.ai-result-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.ai-result-label { font-size: 11px; font-family: var(--mono); color: var(--accent); }
-.ai-result-actions { display: flex; gap: 8px; }
-.ai-text { font-size: 13px; line-height: 1.7; color: var(--text); white-space: pre-wrap; max-height: 300px; overflow-y: auto; }
-.ai-text::-webkit-scrollbar { width: 3px; }
-.ai-text::-webkit-scrollbar-thumb { background: var(--bg4); }
-.typing-cursor { display: inline-block; width: 2px; height: 14px; background: var(--accent); animation: blink 1s infinite; vertical-align: middle; }
 @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
 
 /* ADD MODAL */
@@ -274,24 +256,13 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .create-btn:hover { background: var(--accent2); }
 
 /* STATUS COLORS */
-.s-applied { color: var(--blue); } .dot-applied { background: var(--blue); }
-.s-screening { color: var(--amber); } .dot-screening { background: var(--amber); }
-.s-interviewing { color: var(--purple); } .dot-interviewing { background: var(--purple); }
-.s-offer { color: var(--green); } .dot-offer { background: var(--green); }
-.s-rejected { color: var(--red); } .dot-rejected { background: var(--red); }
-.s-ghosted { color: var(--text3); } .dot-ghosted { background: var(--text3); }
-.s-withdrawn { color: var(--text3); } .dot-withdrawn { background: var(--text3); }
 
 .spinner { width: 16px; height: 16px; border: 2px solid rgba(0,0,0,0.2); border-top-color: #0e0e0f; border-radius: 50%; animation: spin 0.7s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.stats-bar { display: flex; gap: 16px; padding: 12px 28px; border-bottom: 0.5px solid var(--border); flex-wrap: wrap; }
-.stat-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); }
-.stat-num { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text); }
 
 .no-notes { text-align: center; padding: 30px; color: var(--text3); font-size: 13px; }
 .badge { padding: 2px 8px; border-radius: 100px; font-size: 10px; font-family: var(--mono); }
-.badge-new { background: rgba(200,240,96,0.15); color: var(--accent); }
 
 input[type=\"file\"] { display: none; }
 
@@ -319,23 +290,17 @@ input[type=\"file\"] { display: none; }
 .file-editor-saved { padding: 6px 16px; background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 12px; color: var(--accent); pointer-events: none; }
 .file-editor-body { flex: 1; overflow: hidden; position: relative; }
 .file-editor-textarea { width: 100%; height: 100%; padding: 20px; background: var(--bg2); border: none; outline: none; font-family: var(--mono); font-size: 13px; color: var(--text); line-height: 1.7; resize: none; }
-.file-editor-wordcount { font-size: 11px; color: var(--text3); font-family: var(--mono); }
 .doc-editor-body { flex:1;overflow-y:auto;padding:20px;font-size:13px;line-height:1.7;color:var(--text);outline:none;white-space:pre-wrap; }
 
 /* ── SETTINGS ── */
 .settings-overlay { position: fixed; top:0;right:0;bottom:0;left:0; background: rgba(0,0,0,0.4); z-index: 600; display: flex; align-items: flex-start; justify-content: flex-end; }
-.settings-panel { width: min(480px, 100vw); height: 100vh; background: var(--bg2); border-left: 1px solid var(--border2); display: flex; flex-direction: column; overflow: visible; animation: slideInRight 0.2s ease; }
 @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 .settings-header { display: flex; align-items: center; gap: 12px; padding: 20px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-.settings-title { font-size: 16px; font-weight: 600; color: var(--text); flex: 1; }
-.settings-close { width: 32px; height: 32px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text2); }
-.settings-body { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 24px; min-height: 0; }
 .settings-section { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); }
 .settings-section-title { font-size: 11px; font-family: var(--mono); color: var(--text2); font-weight: 600; letter-spacing: 0.5px; padding: 14px 16px 10px; border-bottom: 1px solid var(--border); background: var(--bg2); border-radius: var(--radius) var(--radius) 0 0; }
 .settings-section-body { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .settings-field label { display: block; font-size: 11px; font-family: var(--mono); color: var(--text2); margin-bottom: 6px; }
 .settings-field input { width: 100%; padding: 9px 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; color: var(--text); outline: none; }
-.settings-hint { font-size: 11px; color: var(--text3); line-height: 1.5; margin-top: 2px; }
 .settings-btn { padding: 8px 16px; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); background: var(--bg2); color: var(--text2); width: 100%; text-align: left; display: flex; align-items: center; gap: 8px; }
 .settings-btn.primary { background: var(--accent-bg); color: #1a1917; border-color: transparent; font-weight: 600; }
 .settings-btn.danger { border-color: rgba(192,57,43,0.3); color: var(--red); }
@@ -343,17 +308,12 @@ input[type=\"file\"] { display: none; }
 .settings-status { font-size: 12px; padding: 8px 12px; border-radius: var(--radius-sm); display: none; }
 .settings-status.success { display: block; background: rgba(20,83,45,0.1); color: var(--green); border: 1px solid rgba(20,83,45,0.2); }
 .settings-status.error { display: block; background: rgba(192,57,43,0.08); color: var(--red); border: 1px solid rgba(192,57,43,0.2); }
-.settings-user-info { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--bg2); border-bottom: 1px solid var(--border); }
-.settings-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-bg); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: #1a1917; font-family: var(--mono); flex-shrink: 0; }
-.settings-user-name { font-size: 14px; font-weight: 600; color: var(--text); }
-.settings-user-meta { font-size: 11px; color: var(--text3); margin-top: 2px; font-family: var(--mono); }
 
 /* ── INSIGHTS ── */
 .insights-wrap { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 32px 36px; display: flex; flex-direction: column; }
   .insights-inner { max-width: 780px; width: 100%; display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .insights-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 36px; gap: 16px; }
 .insights-header-left { flex: 1; min-width: 0; }
-.insights-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
 .insights-subtitle { font-size: 13px; color: var(--text2); font-family: var(--mono); letter-spacing: 0.01em; }
 .insights-refresh-btn { padding: 8px 15px; background: transparent; color: var(--text2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; transition: all .15s; }
 .insights-refresh-btn:hover { border-color: var(--border2); color: var(--text); }
@@ -409,43 +369,17 @@ input[type=\"file\"] { display: none; }
 /* ── DOCUMENTS TAB (job documents) ── */
 .docs-header { display: flex; align-items: center; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; }
 .docs-title { font-size: 22px; font-weight: 500; color: var(--text); font-family: var(--font-display); letter-spacing: -0.015em; }
-.docs-section { padding: 24px 28px; }
-.docs-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-.docs-section-header::before { content: ''; display: inline-block; width: 3px; height: 13px; background: var(--accent-bg); border-radius: 1px; margin-right: 12px; flex-shrink: 0; align-self: center; }
-.docs-section-title { font-size: 12px; font-weight: 700; color: var(--text2); letter-spacing: 0.08em; text-transform: uppercase; font-family: var(--mono); flex: 1; }
-.doc-list-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer; transition: all 0.12s; }
-.doc-list-item:hover { border-color: var(--border2); }
-.doc-list-icon { color: var(--text3); flex-shrink: 0; }
-.doc-list-info { flex: 1; min-width: 0; }
-.doc-list-name { font-size: 15px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.doc-list-meta { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-top: 3px; }
-.doc-list-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
 /* ── INTERVIEW PREP ── */
 .interview-wrap { padding: 20px 24px; overflow-y: auto; flex: 1; }
-.interview-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-.interview-title { font-size: 22px; font-weight: 500; color: var(--text); font-family: var(--font-display); letter-spacing: -0.015em; }
-.interview-progress { font-size: 12px; color: var(--text3); font-family: var(--mono); }
-.interview-category { font-size: 12px; font-family: var(--mono); font-weight: 700; color: var(--text2); letter-spacing: 0.08em; padding: 0; margin-bottom: 8px; margin-top: 32px; text-transform: uppercase; display: flex; align-items: center; }
-.interview-category::before { content: ''; display: inline-block; width: 3px; height: 13px; background: var(--accent-bg); border-radius: 1px; margin-right: 12px; flex-shrink: 0; }
-.interview-question { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
 .interview-question input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; accent-color: var(--accent-bg); }
-.interview-q-text { flex: 1; font-size: 15px; color: var(--text); line-height: 1.7; }
 .interview-q-actions { display: flex; gap: 6px; flex-shrink: 0; opacity: 0; transition: opacity 0.15s; }
 .interview-question:hover .interview-q-actions { opacity: 1; }
 
 /* ── CONTACTS TAB ── */
-.contacts-wrap { padding: 20px 24px; overflow-y: auto; flex: 1; }
-.contact-card { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; }
-.contact-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--bg3); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--text2); flex-shrink: 0; font-family: var(--mono); }
-.contact-info { flex: 1; min-width: 0; }
-.contact-name { font-size: 15px; font-weight: 500; color: var(--text); }
-.contact-role { font-size: 12px; color: var(--text2); }
-.contact-actions { display: flex; gap: 6px; flex-shrink: 0; }
 
 /* ── ANALYTICS OVERLAY ── */
 #analytics-overlay { background: var(--bg) !important; }
-.analytics-header { display: flex; align-items: center; gap: 12px; padding: 20px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .analytics-body { flex: 1; overflow-y: auto; padding: 24px; }
 .analytics-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0; margin-bottom: 32px; padding: 20px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .analytics-kpi-card { background: transparent; padding: 4px 20px 4px 0; }
@@ -460,9 +394,6 @@ input[type=\"file\"] { display: none; }
 .parse-btn { padding: 9px 14px; background: var(--accent-bg); color: #1a1917; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .parse-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .parse-status { margin-top: 10px; font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 8px; }
-.divider { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; }
-.divider-line { flex: 1; height: 1px; background: var(--border); }
-.divider-text { font-size: 11px; color: var(--text3); font-family: var(--mono); white-space: nowrap; }
 .field { margin-bottom: 12px; }
 .field label { display: block; font-size: 11px; font-family: var(--mono); color: var(--text2); margin-bottom: 5px; letter-spacing: 0.5px; }
 .field input, .field select { width: 100%; padding: 9px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; color: var(--text); outline: none; }
@@ -472,12 +403,26 @@ input[type=\"file\"] { display: none; }
 .create-btn { padding: 8px 18px; background: var(--accent-bg); color: #1a1917; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; }
 
 /* ── SIDEBAR NAV ── */
-.sidebar-section-label { padding: 8px 14px 4px; font-size: 10px; font-family: var(--mono); color: var(--text3); letter-spacing: 0.8px; font-weight: 600; text-transform: uppercase; }
-.snav-btn { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: none; background: none; color: var(--text2); font-family: var(--font); font-size: 13px; cursor: pointer; width: 100%; text-align: left; border-left: 2px solid transparent; transition: all 0.12s; }
-.snav-btn:hover { color: var(--text); background: var(--bg3); }
-.snav-btn.active { border-left-color: var(--accent-bg); color: var(--accent-bg); background: var(--bg3); padding-left: 12px; }
-.snav-group-label { padding: 16px 14px 6px; font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--text3); letter-spacing: 0.15em; text-transform: uppercase; }
-.snav-group-label:first-child { padding-top: 0; }
+/* Settings — flat scrolling layout (no more sidebar nav) */
+.settings-pane { margin-bottom: 36px; scroll-margin-top: 88px; }
+.settings-pane > *:first-child { margin-top: 0; }
+.settings-pane.is-hidden { display: none; }
+.settings-pane.is-flash { animation: settingsFlash 1.6s ease-out; }
+@keyframes settingsFlash {
+  0%   { box-shadow: 0 0 0 0 rgba(232,168,56,0.0); }
+  12%  { box-shadow: 0 0 0 4px rgba(232,168,56,0.35); }
+  100% { box-shadow: 0 0 0 0 rgba(232,168,56,0.0); }
+}
+.settings-group-label { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--text3); letter-spacing: 0.22em; text-transform: uppercase; padding: 10px 0 14px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+.settings-group-label.is-hidden { display: none; }
+.settings-header { position: sticky; top: 0; z-index: 5; background: var(--bg2); padding: 20px 28px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; }
+.settings-header-title { font-family: var(--font-display); font-size: 22px; font-weight: 500; color: var(--text); letter-spacing: -0.015em; flex-shrink: 0; }
+.settings-search-wrap { flex: 1; position: relative; min-width: 0; }
+.settings-search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 13px; height: 13px; color: var(--text3); pointer-events: none; }
+.settings-search-input { width: 100%; padding: 8px 12px 8px 30px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; color: var(--text); outline: none; transition: border-color 0.12s; box-sizing: border-box; }
+.settings-search-input:focus { border-color: var(--accent-bg); background: var(--bg4); }
+.settings-search-input::placeholder { color: var(--text3); }
+.settings-no-matches { padding: 40px 0; text-align: center; color: var(--text3); font-size: 13px; }
 .user-bar { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--border); background: var(--bg2); flex-shrink: 0; margin-top: auto; }
 .user-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-bg); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #1a1917; font-family: var(--mono); flex-shrink: 0; }
 .user-name { font-size: 12px; font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
@@ -493,7 +438,6 @@ input[type=\"file\"] { display: none; }
 @keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
 @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
 .tab-pane { animation: fadeIn .15s ease; min-height: 0; }
-.typing-cursor { display: inline-block; width: 2px; height: 14px; background: var(--accent-bg); animation: blink 1s infinite; vertical-align: middle; }
 ::selection { background: rgba(232,168,56,0.25); color: var(--text); }
 .modal-overlay { -webkit-backdrop-filter: blur(2px);backdrop-filter: blur(2px); }
 .job-list { overflow-y:auto; scrollbar-width:thin; scrollbar-color:var(--bg4) transparent; }
@@ -507,15 +451,10 @@ input[type=\"file\"] { display: none; }
 .modal { box-shadow: 0 12px 48px rgba(0,0,0,0.22) !important; }
 .auth-card { border-radius: 14px !important; }
 .add-btn:hover { box-shadow: 0 3px 10px rgba(232,168,56,0.25); transform: translateY(-1px); }
-.tailor-btn:hover { transform: translateY(-1px); }
 kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px; padding:2px 8px; font-family:var(--mono); font-size:11px; color:var(--text); }
-.tag-chip { display:inline-flex; align-items:center; padding:2px 8px; border-radius:100px; font-size:11px; font-family:var(--mono); font-weight:500; border:1px solid; }
-.tag-chip-green { background:rgba(26,102,64,0.1); border-color:rgba(26,102,64,0.25); color:var(--green); }
-.tag-chip-red { background:rgba(184,50,37,0.1); border-color:rgba(184,50,37,0.25); color:var(--red); }
 .files-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
 
 /* ── DOC EDITOR ── */
-.wysiwyg-editor { font-family: var(--font); }
 .wysiwyg-editor h2 { font-size: 15px; font-weight: 600; margin: 14px 0 6px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 4px; }
 .wysiwyg-editor p { margin: 0 0 8px; }
 .wysiwyg-editor ul, .wysiwyg-editor ol { margin: 0 0 8px; padding-left: 20px; }
@@ -549,17 +488,12 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
   .tab-pane { padding: 16px; }
   .detail-header { padding: 14px 16px 12px; }
   .detail-tabs { padding: 0 16px; }
-  .tailor-wrap { padding: 16px !important; }
   .insights-wrap { padding: 16px !important; }
   .posting-scroll { padding: 16px !important; }
   .user-bar-settings { display: none !important; }
-  .sidebar-nav-btns { display: none !important; }
-  .sidebar-user-bar { display: none !important; }
   #mobile-avatar-btn { display: flex !important; }
   #user-avatar { display: none !important; }
-  .mobile-close-hidden { display: none !important; }
   .docs-overlay, #analytics-overlay, #settings-overlay > div, #tailor-overlay, .settings-overlay { padding-bottom: 56px !important; }
-  .tailor-toggle-label { display: none !important; }
   #to-body { flex-direction: column !important; }
   #to-body > div:first-child { width: 100% !important; max-height: 220px; border-right: none !important; border-bottom: 1px solid var(--border); }
   .doc-editor-panel { align-items: flex-start; justify-content: flex-start; background: var(--bg2); }
@@ -5947,11 +5881,9 @@ function openSettings(section) {
     inner.style.cssText = 'flex:1;height:100%;display:flex;overflow:hidden;transform:none;transition:none;border-left:none;box-shadow:none;';
     sv.appendChild(inner);
   }
-  // Populate user info
-  document.getElementById('s-avatar').textContent = (currentUser||'?').slice(0,2).toUpperCase();
-  document.getElementById('s-username').textContent = currentUser;
-  document.getElementById('s-job-count').textContent = Object.keys(jobs).length + ' applications';
-  document.getElementById('s-finnhub-key').value = localStorage.getItem('finnhub_key') || '';
+  // Populate Finnhub key + session-user label (remaining IDs after sidebar removal)
+  const fk = document.getElementById('s-finnhub-key');
+  if (fk) fk.value = localStorage.getItem('finnhub_key') || '';
   const su = document.getElementById('s-session-user');
   if (su) su.textContent = currentUser || '';
   // Clear form fields
@@ -5961,13 +5893,26 @@ function openSettings(section) {
   ['pw-status','finnhub-status','export-status','delete-status'].forEach(id => {
     const el = document.getElementById(id); if (el) { el.className = 'settings-status'; el.textContent = ''; }
   });
-  // Sync tailoring settings checkboxes
+  // Eagerly run all lazy loads (flat layout — everything visible at once)
+  renderEncryptionStatus();
+  loadRecoveryStatus();
   const s = getTailorSettings();
   const autosaveEl = document.getElementById('st-autosave');
   const cleanupEl  = document.getElementById('st-cleanup');
   if (autosaveEl) autosaveEl.checked = s.autoSave;
   if (cleanupEl)  cleanupEl.checked  = s.cleanupOnExit;
-  showSettingsSection(section || 'account');
+
+  // If caller passed a specific section (e.g. from the Insights → Finnhub link),
+  // scroll+flash that pane. Otherwise just reset scroll to the top of settings.
+  if (section) {
+    showSettingsSection(section);
+  } else {
+    const scrollEl = document.getElementById('settings-content');
+    if (scrollEl) scrollEl.scrollTop = 0;
+    // Make sure search is cleared on fresh open
+    const si = document.getElementById('settings-search-input');
+    if (si) { si.value = ''; filterSettings(); }
+  }
   _setMobileActiveBtn('settings');
   updateAutoCheckUI();
   _mobileSection = 'settings';
@@ -5978,7 +5923,7 @@ function closeSettings() {
   const inner = document.getElementById('settings-panel-inner');
   const overlay = document.getElementById('settings-overlay');
   if (inner && overlay && inner.parentElement !== overlay) {
-    inner.style.cssText = 'background:var(--bg2);border-left:1px solid var(--border2);width:min(860px,100vw);height:100%;display:flex;overflow:hidden;box-shadow:-8px 0 32px rgba(0,0,0,0.18);transform:translateX(100%);transition:transform 0.25s cubic-bezier(0.4,0,0.2,1);pointer-events:auto';
+    inner.style.cssText = 'background:var(--bg2);border-left:1px solid var(--border2);width:min(640px,100vw);height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:-8px 0 32px rgba(0,0,0,0.18);transform:translateX(100%);transition:transform 0.25s cubic-bezier(0.4,0,0.2,1);pointer-events:auto';
     overlay.appendChild(inner);
   }
   overlay.style.display = 'none';
@@ -5989,15 +5934,29 @@ function showSettingsSection(id) {
   // Re-populate finnhub key each time (fixes blank after save)
   const fk = document.getElementById('s-finnhub-key');
   if (fk) fk.value = localStorage.getItem('finnhub_key') || '';
-  document.querySelectorAll('.settings-pane').forEach(p => p.style.display = 'none');
+
+  // Flat layout: every pane is always visible. Instead of hide/show, we scroll
+  // the requested pane into view and briefly flash its outline so the user sees
+  // where they landed. Callers like the Finnhub link from Insights still work.
   const pane = document.getElementById('spane-' + id);
-  if (pane) pane.style.display = 'block';
-  document.querySelectorAll('[id^="snav-"]').forEach(btn => {
-    btn.classList.toggle('active', btn.id === 'snav-' + id);
-  });
-  // Auto-load recovery status when pane opens
-  if (id === 'recovery') loadRecoveryStatus();
-  if (id === 'account') renderEncryptionStatus();
+  if (pane) {
+    // Clear any existing search filter so the target pane isn't filtered out
+    const searchInput = document.getElementById('settings-search-input');
+    if (searchInput && searchInput.value) { searchInput.value = ''; filterSettings(); }
+
+    // Scroll into view within the settings content container; scroll-margin-top
+    // on .settings-pane handles the sticky header offset
+    pane.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    // Flash amber outline — CSS animation handles removal timing
+    pane.classList.remove('is-flash');
+    void pane.offsetWidth; // force reflow so the class re-adds actually animates
+    pane.classList.add('is-flash');
+    setTimeout(() => pane.classList.remove('is-flash'), 1700);
+  }
+
+  // Per-section lazy loads (unchanged)
+  if (id === 'recovery')  loadRecoveryStatus();
+  if (id === 'account')   renderEncryptionStatus();
   if (id === 'tailoring') {
     const s = getTailorSettings();
     const as = document.getElementById('st-autosave');
@@ -6005,6 +5964,37 @@ function showSettingsSection(id) {
     if (as) as.checked = s.autoSave;
     if (cl) cl.checked = s.cleanupOnExit;
   }
+}
+
+// Live filter: hide panes whose text doesn't match the query; also hide group
+// labels whose whole group has no visible panes. Empty query = show everything.
+function filterSettings() {
+  const input = document.getElementById('settings-search-input');
+  const q = (input?.value || '').trim().toLowerCase();
+  const panes = document.querySelectorAll('#settings-content .settings-pane');
+  let visibleCount = 0;
+  panes.forEach(p => {
+    if (!q) { p.classList.remove('is-hidden'); visibleCount++; return; }
+    const hit = p.textContent.toLowerCase().includes(q);
+    p.classList.toggle('is-hidden', !hit);
+    if (hit) visibleCount++;
+  });
+  // Hide a group label if every pane following it (until the next label) is hidden
+  const groups = document.querySelectorAll('#settings-content .settings-group-label');
+  groups.forEach(label => {
+    let anyVisible = false;
+    let sib = label.nextElementSibling;
+    while (sib && !sib.classList.contains('settings-group-label')) {
+      if (sib.classList.contains('settings-pane') && !sib.classList.contains('is-hidden')) {
+        anyVisible = true; break;
+      }
+      sib = sib.nextElementSibling;
+    }
+    label.classList.toggle('is-hidden', !anyVisible);
+  });
+  // No-matches message
+  const empty = document.getElementById('settings-no-matches');
+  if (empty) empty.style.display = (q && visibleCount === 0) ? 'block' : 'none';
 }
 
 function renderEncryptionStatus() {
@@ -6441,41 +6431,22 @@ setInterval(() => {
 <div id="settings-overlay" style="display:none;position:fixed;top:0;right:0;bottom:0;left:0;background:transparent;z-index:800;align-items:stretch;justify-content:flex-end">
   <!-- Click-catcher backdrop -->
   <div onclick="closeSettings()" style="flex:1;cursor:pointer"></div>
-  <div style="background:var(--bg2);border-left:1px solid var(--border2);width:min(860px,100vw);height:100%;display:flex;overflow:hidden;box-shadow:-8px 0 32px rgba(0,0,0,0.18);transform:translateX(100%);transition:transform 0.25s cubic-bezier(0.4,0,0.2,1);pointer-events:auto" id="settings-panel-inner">
+  <div style="background:var(--bg2);border-left:1px solid var(--border2);width:min(640px,100vw);height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:-8px 0 32px rgba(0,0,0,0.18);transform:translateX(100%);transition:transform 0.25s cubic-bezier(0.4,0,0.2,1);pointer-events:auto" id="settings-panel-inner">
 
-    <!-- Sidebar nav -->
-    <div style="width:220px;flex-shrink:0;background:var(--bg3);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:24px 0 20px">
-      <div style="flex:1;overflow-y:auto">
-
-        <div class="snav-group-label">SECURITY</div>
-        <button id="snav-account"   onclick="showSettingsSection('account')"   class="snav-btn">Account</button>
-        <button id="snav-recovery"  onclick="showSettingsSection('recovery')"  class="snav-btn">Recovery codes</button>
-
-        <div class="snav-group-label">PREFERENCES</div>
-        <button id="snav-tailoring" onclick="showSettingsSection('tailoring')" class="snav-btn">Tailoring</button>
-        <button id="snav-extension" onclick="showSettingsSection('extension')" class="snav-btn">Browser extension</button>
-        <button id="snav-financial" onclick="showSettingsSection('financial')" class="snav-btn">Financial data</button>
-
-        <div class="snav-group-label">YOUR DATA</div>
-        <button id="snav-data"      onclick="showSettingsSection('data')"      class="snav-btn">Import &amp; export</button>
-        <button id="snav-feedback"  onclick="showSettingsSection('feedback')"  class="snav-btn">Send feedback</button>
-        <button id="snav-danger"    onclick="showSettingsSection('danger')"    class="snav-btn" style="color:var(--red)">Danger zone</button>
-
-        <!-- Mobile-only quick actions -->
-        <div class="snav-group-label" style="display:none" id="mobile-more-label">TOOLS</div>
-        <button onclick="closeSettings();showWatchlist()" class="snav-btn" id="mobile-watchlist-btn" style="display:none">Watchlist</button>
-        <button onclick="closeSettings();showEmailTemplates(currentJobId||Object.keys(jobs)[0])" class="snav-btn" id="mobile-email-btn" style="display:none">Email templates</button>
+    <!-- Sticky header: title + search + close -->
+    <div class="settings-header">
+      <div class="settings-header-title">Settings</div>
+      <div class="settings-search-wrap">
+        <svg viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.3"/><path d="M9.5 9.5L13 13" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        <input type="search" id="settings-search-input" class="settings-search-input" placeholder="Search settings…" oninput="filterSettings()" autocomplete="off">
       </div>
+      <button onclick="closeSettings()" style="width:32px;height:32px;flex-shrink:0;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--text2);font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text2)'">×</button>
     </div>
 
-    <!-- Content -->
-    <div style="flex:1;display:flex;flex-direction:column;overflow:hidden">
-      <div style="display:flex;justify-content:flex-end;padding:12px 16px 0;flex-shrink:0">
-        
-      </div>
-      <div style="flex:1;overflow-y:auto;padding:16px 32px 32px" id="settings-content">
+    <!-- Scrolling content — all panes visible, group labels inline -->
+    <div style="flex:1;overflow-y:auto;padding:24px 28px 40px" id="settings-content">
 
-      <!-- ACCOUNT -->
+      <div class="settings-group-label">SECURITY</div>
       <div class="settings-pane" id="spane-account">
         <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:20px">Account</div>
         <div class="settings-section">
@@ -6531,8 +6502,7 @@ setInterval(() => {
         </div>
       </div>
 
-      <!-- RECOVERY CODES -->
-      <div class="settings-pane" id="spane-recovery" style="display:none">
+      <div class="settings-pane" id="spane-recovery">
         <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:20px">Recovery Codes</div>
 
         <div class="settings-section">
@@ -6567,29 +6537,40 @@ setInterval(() => {
         </div>
       </div>
 
-      <!-- AI PROVIDERS -->
-      
 
-      <!-- FINANCIAL DATA -->
-      <div class="settings-pane" id="spane-financial" style="display:none">
-        <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:20px">Financial Data</div>
+      <div class="settings-group-label">PREFERENCES</div>
+      <div class="settings-pane" id="spane-tailoring">
+        <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:20px">Tailoring</div>
+
         <div class="settings-section">
-          <div class="settings-section-title">FINNHUB API KEY</div>
+          <div class="settings-section-title">AUTO-SAVE</div>
           <div class="settings-section-body">
-            <div class="settings-status" id="finnhub-status"></div>
-            <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Enables live stock price, market cap, P/E ratio and analyst targets in the Insights tab.</div>
-            <div class="settings-field"><label>API KEY</label><input type="password" id="s-finnhub-key" placeholder="Paste your Finnhub API key"></div>
-            <a href="https://finnhub.io/register" target="_blank" style="display:inline-block;font-size:12px;color:var(--blue);margin-bottom:12px">Get a free key at finnhub.io &nearr;</a>
-            <div style="display:flex;gap:8px">
-              <button class="settings-btn primary" onclick="saveFinnhubKeySetting()">Save key</button>
-              <button class="settings-btn" onclick="clearFinnhubKey()">Clear key</button>
-            </div>
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;margin-bottom:14px">
+              <input type="checkbox" id="st-autosave" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent-bg)" onchange="setTailorSetting('tailor_autosave',this.checked)">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Auto-save every tailored version to vault</div>
+                <div style="font-size:12px;color:var(--text3);margin-top:2px;line-height:1.5">Each time you tailor a document it is automatically saved to your Library with a version number and timestamp. Default: on.</div>
+              </div>
+            </label>
           </div>
         </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title">CLEANUP</div>
+          <div class="settings-section-body">
+            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;margin-bottom:14px">
+              <input type="checkbox" id="st-cleanup" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent-bg)" onchange="setTailorSetting('tailor_cleanup_exit',this.checked)">
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text)">Clean up intermediate versions on exit</div>
+                <div style="font-size:12px;color:var(--text3);margin-top:2px;line-height:1.5">When you close the tailoring panel, all versions except the final one are removed from your Library. Keeps the vault tidy. Default: on.</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
       </div>
 
-      <!-- BROWSER EXTENSIONS -->
-      <div class="settings-pane" id="spane-extension" style="display:none">
+      <div class="settings-pane" id="spane-extension">
         <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px">Browser Extensions</div>
         <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Add jobs to Summit in one click from any job site &mdash; LinkedIn, Indeed, Greenhouse, Lever, Workday, and more.</div>
         <div style="margin-bottom:20px">
@@ -6628,94 +6609,26 @@ setInterval(() => {
         </div>
       </div>
 
-      <!-- HELP & SUPPORT -->
-      <div class="settings-pane" id="spane-help" style="display:none">
-        <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px">Help</div>
-        <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Click <strong style="color:var(--text)">Help</strong> in the sidebar for the full guide.</div>
-        <button onclick="closeSettings();showHelp()" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          Open Help
-        </button>
-        <div style="margin-top:20px;font-size:13px;color:var(--text3);margin-bottom:28px">How to get the most out of Summit.</div>
-
-        <!-- Workflow cards -->
-        <div style="display:flex;flex-direction:column;gap:16px">
-
-          <div class="settings-section">
-            <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
-              <span>🔍</span> FINDING &amp; ADDING JOBS
-            </div>
-            <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
-              Hit <strong style="color:var(--text)">+ Add</strong> and paste any job URL — Summit will try to pull the title, company, and salary automatically. You can edit anything it gets wrong.<br><br>
-              Even better: install the <strong style="color:var(--text)">browser extension</strong> (Settings → Browser Extensions) and you'll get a one-click button on every job page. It grabs the full posting text, which makes AI tailoring a lot more accurate.
+      <div class="settings-pane" id="spane-financial">
+        <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:20px">Financial Data</div>
+        <div class="settings-section">
+          <div class="settings-section-title">FINNHUB API KEY</div>
+          <div class="settings-section-body">
+            <div class="settings-status" id="finnhub-status"></div>
+            <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Enables live stock price, market cap, P/E ratio and analyst targets in the Insights tab.</div>
+            <div class="settings-field"><label>API KEY</label><input type="password" id="s-finnhub-key" placeholder="Paste your Finnhub API key"></div>
+            <a href="https://finnhub.io/register" target="_blank" style="display:inline-block;font-size:12px;color:var(--blue);margin-bottom:12px">Get a free key at finnhub.io &nearr;</a>
+            <div style="display:flex;gap:8px">
+              <button class="settings-btn primary" onclick="saveFinnhubKeySetting()">Save key</button>
+              <button class="settings-btn" onclick="clearFinnhubKey()">Clear key</button>
             </div>
           </div>
-
-          <div class="settings-section">
-            <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
-              <span>📋</span> TRACKING YOUR PIPELINE
-            </div>
-            <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
-              Every job moves through statuses — <em>to apply → applied → interview → offer</em>. Change the status from the dropdown at the top of any job.<br><br>
-              Use the <strong style="color:var(--text)">filter bar</strong> at the top of the job list to quickly see just what you're interviewing for, or just the jobs you've starred (★ watchlist). The <strong style="color:var(--text)">stale</strong> tag appears on postings that look expired — Summit checks these automatically in the background.
-            </div>
-          </div>
-
-          <div class="settings-section">
-            <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
-              <span>✦</span> AI RESUME TAILORING
-            </div>
-            <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
-              Go to the <strong style="color:var(--text)">Documents tab</strong> on any job, then click <strong style="color:var(--text)">Tailor ✦</strong>. Summit reads the job posting and rewrites your resume or cover letter to match. It takes about 10–20 seconds.<br><br>
-              The result is fully editable before you download. If you don't love it, tweak the context field and tailor again — each version is saved separately so you never lose the original.
-            </div>
-          </div>
-
-          <div class="settings-section">
-            <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
-              <span>🏢</span> COMPANY RESEARCH
-            </div>
-            <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
-              Click the <strong style="color:var(--text)">Insights tab</strong> on any job and hit <strong style="color:var(--text)">Research this role</strong>. You'll get a rundown on the company culture, Glassdoor ratings, recent news, workforce data, and a breakdown of green flags vs. things to watch out for.<br><br>
-              For public companies, add a free <strong style="color:var(--text)">Finnhub API key</strong> in Settings → Financial Data to also see live stock price and market cap.
-            </div>
-          </div>
-
-          <div class="settings-section">
-            <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
-              <span>🎯</span> INTERVIEW PREP
-            </div>
-            <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
-              Open the <strong style="color:var(--text)">Interview Prep tab</strong> on any job and click <strong style="color:var(--text)">Generate questions</strong>. Summit writes role-specific questions across behavioural, technical, culture fit, and "questions to ask them" categories.<br><br>
-              Check off questions as you practice them so you know exactly where you stand before the interview.
-            </div>
-          </div>
-
-          <div class="settings-section">
-            <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
-              <span>📁</span> LIBRARY
-            </div>
-            <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
-              Your resumes and cover letters live in the <strong style="color:var(--text)">Library</strong> (sidebar icon). Upload your master versions once, then attach them to any job with a couple of clicks.<br><br>
-              When you tailor a document for a specific job, it saves as a new version under that job — your originals stay untouched in the Library.
-            </div>
-          </div>
-
-          <div class="settings-section">
-            <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
-              <span>📊</span> ANALYTICS &amp; STALE CHECK
-            </div>
-            <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
-              The <strong style="color:var(--text)">Analytics</strong> view (sidebar) shows your funnel — how many applications at each stage, response rates, and timeline. Useful for spotting patterns like "I keep stalling at phone screen."<br><br>
-              Hit <strong style="color:var(--text)">Check postings</strong> to scan all your active job URLs and flag any that look taken down or expired. Saves you from chasing roles that are already filled.
-            </div>
-          </div>
-
         </div>
       </div>
 
-      <!-- DATA & EXPORT -->
-      <div class="settings-pane" id="spane-data" style="display:none">
+
+      <div class="settings-group-label">YOUR DATA</div>
+      <div class="settings-pane" id="spane-data">
         <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:20px">Data &amp; Export</div>
         <div class="settings-section">
           <div class="settings-section-title">EXPORT ALL DATA</div>
@@ -6759,40 +6672,7 @@ setInterval(() => {
         </div>
       </div>
 
-      <!-- TAILORING -->
-      <div class="settings-pane" id="spane-tailoring" style="display:none">
-        <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:20px">Tailoring</div>
-
-        <div class="settings-section">
-          <div class="settings-section-title">AUTO-SAVE</div>
-          <div class="settings-section-body">
-            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;margin-bottom:14px">
-              <input type="checkbox" id="st-autosave" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent-bg)" onchange="setTailorSetting('tailor_autosave',this.checked)">
-              <div>
-                <div style="font-size:13px;font-weight:600;color:var(--text)">Auto-save every tailored version to vault</div>
-                <div style="font-size:12px;color:var(--text3);margin-top:2px;line-height:1.5">Each time you tailor a document it is automatically saved to your Library with a version number and timestamp. Default: on.</div>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <div class="settings-section">
-          <div class="settings-section-title">CLEANUP</div>
-          <div class="settings-section-body">
-            <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;margin-bottom:14px">
-              <input type="checkbox" id="st-cleanup" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent-bg)" onchange="setTailorSetting('tailor_cleanup_exit',this.checked)">
-              <div>
-                <div style="font-size:13px;font-weight:600;color:var(--text)">Clean up intermediate versions on exit</div>
-                <div style="font-size:12px;color:var(--text3);margin-top:2px;line-height:1.5">When you close the tailoring panel, all versions except the final one are removed from your Library. Keeps the vault tidy. Default: on.</div>
-              </div>
-            </label>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- FEEDBACK -->
-      <div class="settings-pane" id="spane-feedback" style="display:none">
+      <div class="settings-pane" id="spane-feedback">
         <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px">Feedback</div>
         <div style="font-size:13px;color:var(--text3);margin-bottom:24px">Help make Summit better — report bugs or suggest new features directly on GitHub.</div>
 
@@ -6827,8 +6707,7 @@ setInterval(() => {
         </div>
       </div>
 
-      <!-- DANGER ZONE -->
-      <div class="settings-pane" id="spane-danger" style="display:none">
+      <div class="settings-pane" id="spane-danger">
         <div style="font-size:18px;font-weight:600;color:var(--red);margin-bottom:20px">Danger Zone</div>
         <div class="settings-section" style="border-color:rgba(192,57,43,0.25)">
           <div class="settings-section-title" style="color:var(--red)">DELETE ACCOUNT</div>
@@ -6841,7 +6720,9 @@ setInterval(() => {
         </div>
       </div>
 
-      </div>
+
+      <!-- No-matches state (shown when search filters everything out) -->
+      <div id="settings-no-matches" class="settings-no-matches" style="display:none">No settings match your search.</div>
     </div>
   </div>
-</div>>
+</div>

@@ -270,7 +270,9 @@ function parseJson(raw) {
   // Strategy 3: truncate at last complete top-level key-value pair (LOSSY)
   // Walk back from end to find a position where JSON is valid.
   // This silently drops any fields after the truncation point — so we flag it.
-  for (let i = s.length - 1; i > 100; i--) {
+  // Lower bound is i > 1 (not 100 — that was a bug that prevented short
+  // truncated inputs from ever being salvaged; the loop never iterated).
+  for (let i = s.length - 1; i > 1; i--) {
     if (s[i] === ',' || s[i] === '}') {
       const attempt = s.slice(0, i).replace(/,\s*$/, '') + '}';
       try {
