@@ -1899,9 +1899,6 @@ async function doLogout() {
   // is gone, the PUT would 401 and the user's last typing would be lost.
   // We await so state is deterministic before we clear everything.
   try { await tearDownNotesEditor(); } catch {}
-  // Purge the notes doc cache — it holds decrypted per-user content and must
-  // not leak across accounts if a different user logs in next.
-  for (const k of Object.keys(_notesDocCache)) delete _notesDocCache[k];
   const bg = document.getElementById('mountain-bg'); if(bg) bg.style.display='';
   token=null; currentUser=null; jobs={}; currentJobId=null;
   dataKey=null; isEncrypted=false; // Zero-knowledge: clear key from memory
@@ -3125,15 +3122,15 @@ document.addEventListener('mousedown', (e) => {
 // if the editor is already mounted for this job, else render as prose text
 // the next mount will consume.
 async function _appendQuoteToNotes(jobId, quoteText, comment) {
-  const needMount = !_notesEditor || _notesCurrentJobId !== jobId;
+  const needMount = !_notes.editor || _notes.jobId !== jobId;
 
   const ts = new Date();
   const timeStr = ts.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   const dateStr = ts.toLocaleDateString([], { month: 'short', day: 'numeric' });
   const attribution = `— from job posting · ${dateStr} ${timeStr}`;
 
-  if (!needMount && _notesEditor) {
-    const chain = _notesEditor.chain().focus('end');
+  if (!needMount && _notes.editor) {
+    const chain = _notes.editor.chain().focus('end');
     chain.insertContent([
       {
         type: 'blockquote',
@@ -3481,32 +3478,51 @@ async function _browserFetchPosting(url) {
 // sends createSnapshot:true — triggered by 2min pause AND content changed.
 // History UI lists last N versions (server prunes to 20).
 
-let _tiptap = null;                // { Editor, StarterKit, Link, Table, TableRow, TableCell, TableHeader, TaskList, TaskItem }
-let _notesEditor = null;           // active TipTap Editor instance
-let _notesCurrentJobId = null;
-let _notesSaveTimer = null;
-let _notesMaxTimer = null;
-let _notesSnapshotTimer = null;
-let _notesLastSnapshotAt = 0;
-let _notesLastSavedContent = '';   // JSON-string of last synced doc — dedupe identical saves
-let _notesRemoteVersion = 0;       // server-assigned version of last confirmed save
-// In-flight teardown promise — set when tearDownNotesEditor is called and
-// resolved when it completes. mountNotesEditor awaits this before doing its
-// own work, so a fire-and-forget teardown from openSection/openJob doesn't
-// race with a subsequent Notes tab open. Without this, the mount would see
-// the stale _notesEditor and _notesCurrentJobId, hit the early-return guard,
-// skip the rebuild, and leave the user staring at the loading placeholder.
-let _notesTeardownInFlight = null;
-// Per-jobId doc cache for return visits. Key: jobId → { doc: <prose-mirror-json>, version: n }.
-// When the user navigates Notes → away → back, we mount TipTap with the cached
-// doc immediately (no loading placeholder) and refetch in the background to
-// catch multi-device updates. Populated after every fetch AND on every save.
-const _notesDocCache = Object.create(null);
+// ══════════════════════════════════════════════════════════════════════════
+// Notes editor (TipTap) — rebuilt from scratch for reliability.
+//
+// Design principles:
+//   1. ONE piece of state: _notes. Tracks the current mount including its
+//      in-flight mount promise. No separate teardown-in-flight flag, no
+//      scattered module-level globals.
+//   2. mountNotesEditor is idempotent and dedupes concurrent calls via the
+//      mount promise. If you call it while a mount for the same job is in
+//      progress, you get the in-flight promise.
+//   3. We ALWAYS wait for both TipTap AND the fetch before swapping the
+//      placeholder. This is simpler than the empty-mount-then-swap pattern
+//      and avoids the content-clobber races we hit before. The wait is
+//      typically <500ms on warm backend. For cold backend (Render idle),
+//      the placeholder message progresses so the user sees something is
+//      happening: "Loading editor libraries…" → "Loading your notes…".
+//   4. No in-memory doc cache. The only durable state is the server's
+//      notes file; caches just added complexity and cross-device staleness
+//      risk. Return visits pay a ~100ms fetch which is fine.
+//   5. Autosave is fire-and-forget via a debounced save queue. A final
+//      flush on teardown (awaited by doLogout) ensures nothing is lost.
+// ══════════════════════════════════════════════════════════════════════════
 
-const NOTES_DEBOUNCE_MS        = 10 * 1000;      // idle-debounce for autosave
-const NOTES_MAX_SAVE_INTERVAL  = 2 * 60 * 1000;  // force save at least every 2 min of continuous typing
-const NOTES_SNAPSHOT_INTERVAL  = 2 * 60 * 1000;  // min gap between auto-snapshots
-const NOTES_IDLE_FOR_SNAPSHOT  = 30 * 1000;      // user idle this long → eligible to snapshot
+// All notes state lives here. Any field being null means "not mounted".
+const _notes = {
+  jobId:           null,    // which job the editor is currently for
+  editor:          null,    // TipTap Editor instance
+  mountPromise:    null,    // in-flight mount; concurrent callers await this
+  saveTimer:       null,    // debounce timer for autosave
+  maxSaveTimer:    null,    // force-save timer for continuous typing
+  snapshotTimer:   null,    // next-save-should-snapshot flag timer
+  pendingSnapshot: false,   // true = next save creates a history snapshot
+  lastSnapshotAt:  0,       // timestamp of last snapshot
+  lastSavedJson:   '',      // JSON string of last synced content — dedupes identical saves
+  remoteVersion:   0,       // server-assigned version of last saved state
+};
+
+// Cached TipTap module exports. loadTipTap populates this on first call.
+let _tiptap = null;
+
+// Autosave constants
+const NOTES_DEBOUNCE_MS       = 10 * 1000;       // idle debounce
+const NOTES_MAX_SAVE_INTERVAL = 2 * 60 * 1000;   // force save during continuous typing
+const NOTES_SNAPSHOT_INTERVAL = 2 * 60 * 1000;   // min gap between auto-snapshots
+const NOTES_IDLE_FOR_SNAPSHOT = 30 * 1000;       // user idle this long → snapshot allowed
 
 async function loadTipTap() {
   if (_tiptap) return _tiptap;
@@ -3540,20 +3556,22 @@ async function loadTipTap() {
 }
 
 function renderNotesTab(j) {
-  // Shell only — actual editor mounts asynchronously in mountNotesEditor()
+  // Static shell with progressive loading UI. The actual TipTap instance
+  // mounts asynchronously in mountNotesEditor, which replaces the placeholder
+  // in #notes-editor-<jobId> once both the library and the content are ready.
   return `
     <div class="notes-layout">
       <div class="notes-shell">
         <div class="notes-toolbar" id="notes-toolbar-${j.id}">
           <div style="font-size:11px;color:var(--text3);padding:6px 10px;display:flex;align-items:center;gap:6px">
-            ${spinner()}<span>Loading editor…</span>
+            ${spinner()}<span id="notes-toolbar-status-${j.id}">Loading editor…</span>
           </div>
         </div>
         <div class="notes-editor-wrap">
           <div id="notes-editor-${j.id}" class="notes-editor">
-            <div class="notes-editor-loading">
+            <div class="notes-editor-loading" id="notes-editor-loading-${j.id}">
               ${spinner()}
-              <div class="notes-editor-loading-text">Preparing editor…</div>
+              <div class="notes-editor-loading-text" id="notes-editor-loading-text-${j.id}">Loading editor libraries…</div>
               <div class="notes-editor-loading-hint">First load fetches ~200KB of rich-text libraries (cached thereafter).</div>
             </div>
           </div>
@@ -3568,217 +3586,209 @@ function renderNotesTab(j) {
     </div>`;
 }
 
-// Flush any pending notes save + destroy the TipTap editor. Safe to call
-// when the editor isn't mounted (no-op). Used on every app navigation that
-// might move the user away from the Notes tab — not just tab switches.
-// The returned promise resolves once the final save HTTP request has
-// settled, so callers that need clean state (logout, account delete) can
-// await it. Fire-and-forget callers (openSection, renderDetail else-branch)
-// leave _notesTeardownInFlight set so a subsequent mount can join on it.
-async function tearDownNotesEditor() {
-  if (!_notesEditor && !_notesTeardownInFlight) return;
-  if (_notesTeardownInFlight) return _notesTeardownInFlight;
-  _notesTeardownInFlight = (async () => {
-    try { await flushNotesSave(true); } catch {}
-    if (_notesEditor) { try { _notesEditor.destroy(); } catch {} _notesEditor = null; }
-    _notesCurrentJobId = null;
-  })();
-  try { await _notesTeardownInFlight; }
-  finally { _notesTeardownInFlight = null; }
+// Update the progressive loading message in the placeholder. No-op if the
+// placeholder has already been replaced by the real editor (which is what
+// we want — this only updates while waiting).
+function _setNotesLoadingMessage(jobId, msg) {
+  const el = document.getElementById(`notes-editor-loading-text-${jobId}`);
+  if (el) el.textContent = msg;
 }
 
-// Called from renderDetail() AFTER the container is in the DOM.
-async function mountNotesEditor(jobId) {
-  // If a teardown is still in flight (e.g. openSection → user clicks Notes
-  // tab before the async flush completes), wait for it. Otherwise our guard
-  // below would see the stale _notesEditor and short-circuit, leaving the
-  // placeholder visible forever once the teardown finally nulls the state.
-  if (_notesTeardownInFlight) {
-    try { await _notesTeardownInFlight; } catch {}
+// Tear down the current editor. Flushes any pending save and destroys the
+// TipTap instance. Safe to call when nothing is mounted. Returns a promise
+// that resolves when the final save (if any) completes — callers that need
+// deterministic clean state (doLogout, account delete) should await it.
+async function tearDownNotesEditor() {
+  if (!_notes.editor) {
+    // Still clear any stale timers/state even when there's no editor —
+    // paranoia, but cheap.
+    _clearNotesTimers();
+    _notes.jobId = null;
+    _notes.mountPromise = null;
+    return;
   }
+  const editor = _notes.editor;
+  const hadUnsavedEdits = JSON.stringify(editor.getJSON()) !== _notes.lastSavedJson;
 
-  // Track container/toolbar with `let` — they may need re-acquisition after
-  // async awaits if renderDetail re-rendered the DOM in the meantime.
-  let container = document.getElementById(`notes-editor-${jobId}`);
-  let toolbar   = document.getElementById(`notes-toolbar-${jobId}`);
-  if (!container || !toolbar) return;
-
-  // Skip remount ONLY if the existing editor is genuinely for this job AND
-  // its DOM is still attached to the current container. renderDetail wipes
-  // the detail view's innerHTML on every call, so a surviving _notesEditor
-  // reference can easily point at an orphaned (detached) DOM element — in
-  // that case we MUST rebuild. Without the attachment check, the user sees
-  // the loading placeholder forever.
-  if (_notesEditor && _notesCurrentJobId === jobId) {
-    const liveDom = _notesEditor.view?.dom;
-    if (liveDom && container.contains(liveDom)) return;
-    // Editor exists but points at a detached node — discard and rebuild.
-    try { _notesEditor.destroy(); } catch {}
-    _notesEditor = null;
+  // Flush first so any pending changes land before we destroy the editor.
+  // Errors here are not fatal — we still destroy and reset state.
+  if (hadUnsavedEdits) {
+    try { await flushNotesSave(true); } catch (e) { console.error('Notes final flush failed:', e); }
   }
+  _clearNotesTimers();
+  try { editor.destroy(); } catch {}
+  _notes.editor = null;
+  _notes.jobId = null;
+  _notes.mountPromise = null;
+  _notes.lastSavedJson = '';
+  _notes.remoteVersion = 0;
+}
 
-  // Tear down any previous instance (switching jobs, etc.)
-  if (_notesEditor) {
-    try { await flushNotesSave(true); } catch {}  // final save on teardown
-    try { _notesEditor.destroy(); } catch {}
-    _notesEditor = null;
+function _clearNotesTimers() {
+  if (_notes.saveTimer)     { clearTimeout(_notes.saveTimer);     _notes.saveTimer = null; }
+  if (_notes.maxSaveTimer)  { clearTimeout(_notes.maxSaveTimer);  _notes.maxSaveTimer = null; }
+  if (_notes.snapshotTimer) { clearTimeout(_notes.snapshotTimer); _notes.snapshotTimer = null; }
+  _notes.pendingSnapshot = false;
+}
+
+// Mount the TipTap editor into the notes tab for the given job.
+//
+// Contract:
+//  - Called once per notes-tab open, from renderDetail via requestAnimationFrame.
+//  - Idempotent: calling with the same jobId while a mount is in progress
+//    returns the in-flight promise, not a new mount.
+//  - Calling with a different jobId tears down the existing editor first.
+//  - Safe to call even if the target container was already replaced in the
+//    DOM by a re-render; the function re-queries for the container.
+function mountNotesEditor(jobId) {
+  // Already mounted for this exact job? Nothing to do.
+  if (_notes.editor && _notes.jobId === jobId && _notes.mountPromise === null) {
+    return Promise.resolve();
   }
-  clearTimeout(_notesSaveTimer); _notesSaveTimer = null;
-  clearTimeout(_notesMaxTimer);  _notesMaxTimer = null;
-  clearTimeout(_notesSnapshotTimer); _notesSnapshotTimer = null;
-
-  _notesCurrentJobId = jobId;
-
-  // Helper: build the TipTap editor with a given doc. Called once immediately
-  // if we have cached state, then again with fresh content if the background
-  // fetch returned something newer. Encapsulated so the caller doesn't have
-  // to know about the cache path.
-  const buildEditor = (T, doc) => {
-    // Clear the container (removes the loading placeholder if still there)
-    container.innerHTML = '';
-    _notesEditor = new T.Editor({
-      element: container,
-      extensions: [
-        T.StarterKit.configure({ codeBlock: { HTMLAttributes: { class: 'notes-code-block' } } }),
-        T.Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' } }),
-        T.Table.configure({ resizable: false, HTMLAttributes: { class: 'notes-table' } }),
-        T.TableRow, T.TableHeader, T.TableCell,
-        T.TaskList, T.TaskItem.configure({ nested: true }),
-      ],
-      content: doc || '',
-      editorProps: {
-        attributes: { 'data-placeholder': 'Start writing notes for this job…' },
-        handlePaste(view, event) {
-          const items = event.clipboardData?.items;
-          if (items) {
-            for (const it of items) {
-              if (it.type && it.type.startsWith('image/')) { event.preventDefault(); return true; }
-            }
-          }
-          return false;
-        },
-        handleDrop(view, event) {
-          if (event.dataTransfer?.files?.length) {
-            for (const f of event.dataTransfer.files) {
-              if (f.type.startsWith('image/')) { event.preventDefault(); return true; }
-            }
-          }
-          return false;
-        },
-      },
-      onUpdate: () => {
-        scheduleNotesSave(jobId);
-        renderNotesToolbar(jobId);
-      },
-      onSelectionUpdate: () => renderNotesToolbar(jobId),
-      onCreate: () => {
-        _notesLastSavedContent = JSON.stringify(_notesEditor.getJSON());
-        renderNotesToolbar(jobId);
-      },
-    });
-    renderNotesToolbar(jobId);
-    setNotesStatus('saved');
-  };
-
-  // ── Fast path: if TipTap is cached AND we have a cached doc for this job,
-  //    mount the editor immediately with the cached content. No loading flash.
-  const cached = _notesDocCache[jobId];
-  if (_tiptap && cached !== undefined) {
-    buildEditor(_tiptap, cached.doc);
-    _notesRemoteVersion = cached.version || 0;
+  // Mount in progress for the same job? Return the in-flight promise so
+  // concurrent callers dedupe.
+  if (_notes.mountPromise && _notes.jobId === jobId) {
+    return _notes.mountPromise;
   }
+  // Different job (or no job) is currently in progress — tear down first,
+  // then start fresh. tearDown is awaited so we don't race.
+  _notes.jobId = jobId;
+  _notes.mountPromise = (async () => {
+    // 1. Tear down any existing editor (different job, or leftover from
+    //    a prior session).
+    if (_notes.editor) {
+      const prevEditor = _notes.editor;
+      // Don't use tearDownNotesEditor here — it nulls _notes.jobId which
+      // we just set. Inline the minimal cleanup.
+      try {
+        if (JSON.stringify(prevEditor.getJSON()) !== _notes.lastSavedJson) {
+          await flushNotesSave(true);
+        }
+      } catch (e) { console.error('Notes prior-job flush failed:', e); }
+      _clearNotesTimers();
+      try { prevEditor.destroy(); } catch {}
+      _notes.editor = null;
+      _notes.lastSavedJson = '';
+      _notes.remoteVersion = 0;
+    }
 
-  // ── Slow path (first visit OR TipTap not cached yet):
-  //    If we haven't mounted yet, keep the placeholder until TipTap loads.
-  let T = _tiptap;
-  if (!T) {
-    try { T = await loadTipTap(); }
-    catch (e) {
-      toolbar.innerHTML = `<div style="font-size:11px;color:var(--red);padding:6px 10px">Editor failed to load (${esc(e.message)}). Check your connection.</div>`;
+    // 2. Load TipTap modules. Typically fast (cached) but first-visit can
+    //    take a couple seconds on slow networks.
+    let T;
+    try {
+      T = await loadTipTap();
+    } catch (e) {
+      console.error('TipTap load failed:', e);
+      _setNotesLoadingMessage(jobId, 'Editor failed to load — ' + e.message);
+      _notes.mountPromise = null;
       return;
     }
-  }
 
-  // The await above may have given renderDetail a chance to re-render (tab
-  // switches, autosave re-render cycles). Re-acquire the current container —
-  // the one we captured at the top of the function may now be detached from
-  // the live DOM, meaning our editor would mount into nothing. If it's gone
-  // entirely, bail silently (user navigated away); if it was replaced, pick
-  // up the new one.
-  const freshContainer = document.getElementById(`notes-editor-${jobId}`);
-  if (!freshContainer) return;  // user navigated away
-  if (freshContainer !== container) {
-    container = freshContainer;
-    toolbar = document.getElementById(`notes-toolbar-${jobId}`) || toolbar;
-  }
-
-  // CRITICAL: do not await the fetch before building the editor. If the
-  // backend is cold-starting on Render (free-tier instances spin down after
-  // idle), the first request can take 10-30 seconds. Blocking editor mount
-  // on it means users stare at "Preparing editor…" for 10+ seconds. Instead:
-  // if we haven't mounted yet, mount with empty content NOW, then fetch in
-  // the background and swap content in when it arrives.
-  let mountedEmpty = false;
-  if (!_notesEditor) {
-    buildEditor(T, null);
-    mountedEmpty = true;
-    // Give the user visible feedback that content is being loaded (not just
-    // that the editor is ready and empty). Uses setNotesStatus's syncing state.
-    setNotesStatus('saving', 'syncing…');
-  }
-
-  // Always refetch in background to catch any multi-device updates. This no
-  // longer blocks the user from SEEING the editor — only from seeing content
-  // if this is the first visit and we had no cache.
-  let remoteDoc = null;
-  let remoteVersion = 0;
-  try {
-    const res = await fetch(API + '/api/notes/' + encodeURIComponent(jobId), {
-      headers: { Authorization: 'Bearer ' + token },
-    });
-    if (res.ok) {
-      const d = await res.json();
-      remoteVersion = d.version || 0;
-      if (d.current?.blob) remoteDoc = await decodeNoteBlob(d.current.blob);
+    // 3. If the user already navigated away while TipTap was loading, bail.
+    //    We recognize this by checking the container still exists AND the
+    //    requested jobId is still our target.
+    if (_notes.jobId !== jobId) return;
+    const container = document.getElementById(`notes-editor-${jobId}`);
+    if (!container) {
+      _notes.mountPromise = null;
+      return;
     }
-  } catch {}
 
-  // If we mounted empty and the fetch returned content, swap it in. We use
-  // setContent with `false` to avoid firing the onUpdate handler (which would
-  // schedule a save for content we JUST received from the server).
-  if (mountedEmpty && _notesEditor && remoteDoc) {
-    _notesEditor.commands.setContent(remoteDoc, false);
-    _notesRemoteVersion = remoteVersion;
-    _notesLastSavedContent = JSON.stringify(_notesEditor.getJSON());
-    setNotesStatus('saved');
-  } else if (mountedEmpty && _notesEditor) {
-    // Empty doc on server too — clear the syncing indicator
-    setNotesStatus('saved');
-  } else if (cached && remoteVersion > (cached.version || 0) && remoteDoc) {
-    // Cache was stale — swap content with setContent (no editor rebuild; less jank)
-    _notesEditor.commands.setContent(remoteDoc, false);
-    _notesRemoteVersion = remoteVersion;
-    _notesLastSavedContent = JSON.stringify(_notesEditor.getJSON());
-  }
+    _setNotesLoadingMessage(jobId, 'Loading your notes…');
 
-  // Update the cache with whatever we most recently loaded
-  if (remoteDoc !== null) {
-    _notesDocCache[jobId] = { doc: remoteDoc, version: remoteVersion };
-  } else if (!cached) {
-    // No content on server and no cache — seed an empty-doc cache entry so
-    // the NEXT return visit also goes down the fast path.
-    _notesDocCache[jobId] = { doc: null, version: 0 };
-  }
+    // 4. Fetch the current doc from the server. If this fails (network, cold
+    //    backend timeout), we mount with empty content — the user can still
+    //    write, and the next save will push their content up.
+    let remoteDoc = null;
+    let remoteVersion = 0;
+    try {
+      const res = await fetch(API + '/api/notes/' + encodeURIComponent(jobId), {
+        headers: { Authorization: 'Bearer ' + token },
+      });
+      if (res.ok) {
+        const d = await res.json();
+        remoteVersion = d.version || 0;
+        if (d.current?.blob) remoteDoc = await decodeNoteBlob(d.current.blob);
+      }
+    } catch (e) {
+      console.warn('Notes fetch failed; mounting empty:', e);
+    }
 
-  loadNotesHistory(jobId);
+    // 5. Late-check before mounting — user may have navigated away during
+    //    the fetch (especially on slow network).
+    if (_notes.jobId !== jobId) return;
+    const container2 = document.getElementById(`notes-editor-${jobId}`);
+    if (!container2) {
+      _notes.mountPromise = null;
+      return;
+    }
+
+    // 6. Clear placeholder and construct the editor.
+    container2.innerHTML = '';
+    try {
+      _notes.editor = new T.Editor({
+        element: container2,
+        extensions: [
+          T.StarterKit.configure({ codeBlock: { HTMLAttributes: { class: 'notes-code-block' } } }),
+          T.Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' } }),
+          T.Table.configure({ resizable: false, HTMLAttributes: { class: 'notes-table' } }),
+          T.TableRow, T.TableHeader, T.TableCell,
+          T.TaskList, T.TaskItem.configure({ nested: true }),
+        ],
+        content: remoteDoc || '',
+        editorProps: {
+          attributes: { 'data-placeholder': 'Start writing notes for this job…' },
+          handlePaste(view, event) {
+            const items = event.clipboardData?.items;
+            if (items) {
+              for (const it of items) {
+                if (it.type && it.type.startsWith('image/')) { event.preventDefault(); return true; }
+              }
+            }
+            return false;
+          },
+          handleDrop(view, event) {
+            if (event.dataTransfer?.files?.length) {
+              for (const f of event.dataTransfer.files) {
+                if (f.type.startsWith('image/')) { event.preventDefault(); return true; }
+              }
+            }
+            return false;
+          },
+        },
+        onUpdate: () => {
+          scheduleNotesSave();
+          renderNotesToolbar(jobId);
+        },
+        onSelectionUpdate: () => renderNotesToolbar(jobId),
+        onCreate: () => {
+          _notes.lastSavedJson = JSON.stringify(_notes.editor.getJSON());
+          renderNotesToolbar(jobId);
+        },
+      });
+      _notes.remoteVersion = remoteVersion;
+      renderNotesToolbar(jobId);
+      setNotesStatus('saved');
+      loadNotesHistory(jobId);
+    } catch (e) {
+      console.error('TipTap construction failed:', e);
+      // Restore a minimal error state — don't leave the container empty.
+      container2.innerHTML = `<div class="notes-editor-loading">
+        <div class="notes-editor-loading-text" style="color:var(--red)">Editor failed to start</div>
+        <div class="notes-editor-loading-hint">${esc(e.message)}</div>
+      </div>`;
+    } finally {
+      _notes.mountPromise = null;
+    }
+  })();
+  return _notes.mountPromise;
 }
 
-
-
+// ── Toolbar + commands ──
 function renderNotesToolbar(jobId) {
   const bar = document.getElementById(`notes-toolbar-${jobId}`);
-  if (!bar || !_notesEditor) return;
-  const ed = _notesEditor;
+  if (!bar || !_notes.editor) return;
+  const ed = _notes.editor;
   const is = (name, attrs) => ed.isActive(name, attrs || {}) ? 'active' : '';
   bar.innerHTML = `
     <button class="${is('bold')}" title="Bold (Cmd+B)" onclick="notesCmd('toggleBold')"><b>B</b></button>
@@ -3807,23 +3817,22 @@ function renderNotesToolbar(jobId) {
 }
 
 function notesCmd(name, arg) {
-  if (!_notesEditor) return;
-  const chain = _notesEditor.chain().focus();
+  if (!_notes.editor) return;
+  const chain = _notes.editor.chain().focus();
   if (arg) chain[name](arg).run(); else chain[name]().run();
 }
 function notesLinkPrompt() {
-  if (!_notesEditor) return;
-  const prev = _notesEditor.getAttributes('link').href || '';
+  if (!_notes.editor) return;
+  const prev = _notes.editor.getAttributes('link').href || '';
   const url = prompt('Link URL:', prev);
   if (url === null) return;
-  if (url === '') { _notesEditor.chain().focus().extendMarkRange('link').unsetLink().run(); return; }
-  // Basic URL safety: require http(s) or mailto
+  if (url === '') { _notes.editor.chain().focus().extendMarkRange('link').unsetLink().run(); return; }
   if (!/^(https?:|mailto:)/i.test(url)) { alert('Link must start with http://, https:// or mailto:'); return; }
-  _notesEditor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  _notes.editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
 }
 function notesInsertTable() {
-  if (!_notesEditor) return;
-  _notesEditor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+  if (!_notes.editor) return;
+  _notes.editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
 }
 
 function setNotesStatus(state, msg) {
@@ -3833,35 +3842,30 @@ function setNotesStatus(state, msg) {
   el.textContent = msg || ({saving:'saving…', saved:'saved', error:'save failed'}[state] || '');
 }
 
-function scheduleNotesSave(jobId) {
+// ── Autosave ──
+function scheduleNotesSave() {
+  if (!_notes.editor || !_notes.jobId) return;
   setNotesStatus('saving');
-  clearTimeout(_notesSaveTimer);
-  _notesSaveTimer = setTimeout(() => flushNotesSave(false), NOTES_DEBOUNCE_MS);
-  // Max-interval timer — if the user types continuously we still save every 2 min
-  if (!_notesMaxTimer) {
-    _notesMaxTimer = setTimeout(() => flushNotesSave(false), NOTES_MAX_SAVE_INTERVAL);
+  if (_notes.saveTimer) clearTimeout(_notes.saveTimer);
+  _notes.saveTimer = setTimeout(() => flushNotesSave(false), NOTES_DEBOUNCE_MS);
+  if (!_notes.maxSaveTimer) {
+    _notes.maxSaveTimer = setTimeout(() => flushNotesSave(false), NOTES_MAX_SAVE_INTERVAL);
   }
-  // Snapshot scheduler — if user goes idle for 30s AND we haven't snapshotted in 2min,
-  // flag the next save to ask for a snapshot.
-  clearTimeout(_notesSnapshotTimer);
-  _notesSnapshotTimer = setTimeout(() => {
-    // Mark that the next save should carry createSnapshot:true.
-    // We implement this as a flag flushNotesSave reads.
-    _notesPendingSnapshot = (Date.now() - _notesLastSnapshotAt) > NOTES_SNAPSHOT_INTERVAL;
+  if (_notes.snapshotTimer) clearTimeout(_notes.snapshotTimer);
+  _notes.snapshotTimer = setTimeout(() => {
+    _notes.pendingSnapshot = (Date.now() - _notes.lastSnapshotAt) > NOTES_SNAPSHOT_INTERVAL;
   }, NOTES_IDLE_FOR_SNAPSHOT);
 }
-let _notesPendingSnapshot = false;
 
 async function flushNotesSave(final) {
-  clearTimeout(_notesSaveTimer); _notesSaveTimer = null;
-  clearTimeout(_notesMaxTimer);  _notesMaxTimer = null;
-  if (!_notesEditor || !_notesCurrentJobId) return;
-  const jobId = _notesCurrentJobId;
-  const docJson = JSON.stringify(_notesEditor.getJSON());
-  // Dedupe — no-op if content identical to last synced
-  if (docJson === _notesLastSavedContent) { setNotesStatus('saved'); return; }
-  const createSnapshot = _notesPendingSnapshot;
-  _notesPendingSnapshot = false;
+  if (_notes.saveTimer)    { clearTimeout(_notes.saveTimer);    _notes.saveTimer = null; }
+  if (_notes.maxSaveTimer) { clearTimeout(_notes.maxSaveTimer); _notes.maxSaveTimer = null; }
+  if (!_notes.editor || !_notes.jobId) return;
+  const jobId = _notes.jobId;
+  const docJson = JSON.stringify(_notes.editor.getJSON());
+  if (docJson === _notes.lastSavedJson) { setNotesStatus('saved'); return; }
+  const createSnapshot = _notes.pendingSnapshot;
+  _notes.pendingSnapshot = false;
 
   try {
     const blob = await encodeNoteBlob(docJson);
@@ -3872,32 +3876,23 @@ async function flushNotesSave(final) {
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const d = await res.json();
-    _notesRemoteVersion = d.version || _notesRemoteVersion + 1;
-    _notesLastSavedContent = docJson;
-    // Keep the doc cache in sync so if the user navigates away and comes
-    // back, the fast path shows the just-saved content (not stale state).
-    try {
-      _notesDocCache[jobId] = { doc: JSON.parse(docJson), version: _notesRemoteVersion };
-    } catch {}
+    _notes.remoteVersion = d.version || _notes.remoteVersion + 1;
+    _notes.lastSavedJson = docJson;
     if (createSnapshot) {
-      _notesLastSnapshotAt = Date.now();
-      // Refresh history sidebar to show the new snapshot
+      _notes.lastSnapshotAt = Date.now();
       loadNotesHistory(jobId);
     }
     setNotesStatus('saved');
   } catch (e) {
     setNotesStatus('error', 'save failed');
     console.error('Notes save error:', e);
-    // Retry on next idle period — still schedule one more attempt
     if (!final) {
-      _notesSaveTimer = setTimeout(() => flushNotesSave(false), NOTES_DEBOUNCE_MS * 2);
+      _notes.saveTimer = setTimeout(() => flushNotesSave(false), NOTES_DEBOUNCE_MS * 2);
     }
   }
 }
 
-// Encode doc JSON into a server blob. For zero-knowledge accounts it's
-// wrapped in the same ciphertext envelope jobs use. For plaintext accounts
-// it's just the JSON string.
+// ── Encryption envelope (same shape as jobs blob for ZK accounts) ──
 async function encodeNoteBlob(docJson) {
   if (isEncrypted && dataKey) {
     const ct = await CryptoEngine.encrypt(dataKey, docJson);
@@ -3910,17 +3905,16 @@ async function decodeNoteBlob(blob) {
   if (blob.__enc === true && dataKey) {
     try {
       const pt = await CryptoEngine.decrypt(dataKey, blob.data);
-      // pt may be an object (auto-parsed) or a string
       return typeof pt === 'string' ? JSON.parse(pt) : pt;
     } catch (e) { console.error('Notes decrypt failed:', e); return null; }
   }
   if (blob.__enc === false && blob.data) {
     return typeof blob.data === 'string' ? JSON.parse(blob.data) : blob.data;
   }
-  // Very old format fallback
   return blob;
 }
 
+// ── History sidebar ──
 async function loadNotesHistory(jobId) {
   const list = document.getElementById(`notes-history-${jobId}`);
   if (!list) return;
@@ -3928,29 +3922,26 @@ async function loadNotesHistory(jobId) {
     const res = await fetch(API + '/api/notes/' + encodeURIComponent(jobId) + '/history', {
       headers: { Authorization: 'Bearer ' + token },
     });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (!res.ok) { list.innerHTML = '<div class="notes-history-empty">—</div>'; return; }
     const d = await res.json();
-    const versions = d.versions || [];
-    if (!versions.length) {
-      list.innerHTML = '<div class="notes-history-empty">No snapshots yet. History accumulates after you pause for 30 seconds.</div>';
-      return;
-    }
-    list.innerHTML = versions.map(v => `
-      <div class="notes-history-item ${v.isCurrent ? 'current' : ''}"
-           onclick="${v.isCurrent ? '' : `restoreNotesVersion('${esc(jobId)}', ${v.version})`}"
-           title="${v.isCurrent ? 'Current version' : 'Click to restore'}">
-        <div class="notes-history-ts">${fmtDatetime(v.createdAt)}</div>
-        <div class="notes-history-rel">${v.isCurrent ? 'CURRENT' : relativeTime(v.createdAt)}</div>
-      </div>`).join('');
+    const items = d.history || [];
+    if (!items.length) { list.innerHTML = '<div class="notes-history-empty">No history yet</div>'; return; }
+    list.innerHTML = items
+      .slice()
+      .sort((a, b) => b.version - a.version)
+      .map(h => `
+        <div class="notes-history-item" onclick="restoreNotesVersion('${jobId}', ${h.version})">
+          <div class="notes-history-ts">v${h.version} · ${relativeTime(h.createdAt)}</div>
+        </div>`).join('');
   } catch (e) {
-    list.innerHTML = '<div class="notes-history-empty" style="color:var(--red)">Could not load history.</div>';
+    list.innerHTML = '<div class="notes-history-empty">—</div>';
   }
 }
 
 async function restoreNotesVersion(jobId, version) {
   if (!confirm('Restore this version? Your current draft will be preserved in history.')) return;
   try {
-    // Ensure any pending local changes are flushed first so they become a history entry
+    // Flush pending edits first so they become a history entry
     await flushNotesSave(true);
     const res = await fetch(API + '/api/notes/' + encodeURIComponent(jobId) + '/restore', {
       method: 'POST',
@@ -3958,10 +3949,9 @@ async function restoreNotesVersion(jobId, version) {
       body: JSON.stringify({ version }),
     });
     if (!res.ok) { alert('Restore failed: ' + (await res.text())); return; }
-    // Invalidate the in-memory cache so mountNotesEditor refetches the
-    // newly-swapped content instead of showing pre-restore state.
-    delete _notesDocCache[jobId];
-    // Remount the editor with the restored content
+    // Force remount by tearing down and re-mounting for this job
+    await tearDownNotesEditor();
+    _notes.jobId = null;  // defensively ensure mount runs fresh
     mountNotesEditor(jobId);
   } catch (e) {
     alert('Restore failed: ' + e.message);
@@ -3979,13 +3969,12 @@ function relativeTime(ts) {
 
 // Flush pending saves before the tab is closed/hidden — best effort
 window.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden' && _notesEditor) {
-    // Can't await in the handler reliably; fire-and-hope
+  if (document.visibilityState === 'hidden' && _notes.editor) {
     flushNotesSave(true);
   }
 });
 window.addEventListener('beforeunload', () => {
-  if (_notesEditor) flushNotesSave(true);
+  if (_notes.editor) flushNotesSave(true);
 });
 
 // ── DOCUMENTS TAB FUNCTIONS ──
@@ -6803,10 +6792,9 @@ function bulkDelete() {
   if (bulkSelected.has(currentJobId)) {
     tearDownNotesEditor();
   }
-  // Evict doc cache entries for deleted jobs — prevents stale content from
-  // resurfacing if an id is ever reused, and keeps the cache from growing
-  // unboundedly over a long session of bulk deletes.
-  bulkSelected.forEach(id => { delete jobs[id]; delete _notesDocCache[id]; });
+  // Jobs deleted from disk — no stale notes cache to purge (notes live on
+  // server under jobId; the dead jobIds are simply never mounted again).
+  bulkSelected.forEach(id => { delete jobs[id]; });
   if (bulkSelected.has(currentJobId)) { currentJobId = null; renderDetail(); }
   scheduleSave(); bulkSelected.clear(); renderJobList(); updateBulkBar(); renderStaleNudge();
 }

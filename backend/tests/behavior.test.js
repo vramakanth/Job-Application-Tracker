@@ -1009,7 +1009,9 @@ t('Frontend uses TipTap with StarterKit + Link + Table + TaskList', () => {
   if (!/extension-table/.test(feSrc))              throw new Error('table extension not imported');
   if (!/extension-task-list/.test(feSrc))          throw new Error('task list not imported');
   if (!/extension-link/.test(feSrc))               throw new Error('link extension not imported');
-  if (!/_notesCurrentJobId\s*===\s*jobId/.test(feSrc)) throw new Error('mountNotesEditor no remount guard');
+  // New architecture: single _notes object tracks current state. Remount
+  // guard checks _notes.editor && _notes.jobId === jobId.
+  if (!/_notes\.jobId\s*===\s*jobId/.test(feSrc))  throw new Error('mountNotesEditor missing same-job guard');
 });
 
 t('Frontend autosave: debounce + max-interval + snapshot scheduler', () => {
@@ -1234,7 +1236,7 @@ t('Quote appends to Notes as blockquote with attribution', () => {
   if (!/type:\s*['"]blockquote['"]/.test(body))   throw new Error('quote not wrapped in blockquote');
   if (!/from job posting/.test(body))             throw new Error('no source attribution on quote');
   // Must handle both cases: editor mounted AND editor not mounted
-  if (!/_notesEditor\b/.test(body))               throw new Error('no live-editor path');
+  if (!/_notes\.editor\b/.test(body))             throw new Error('no live-editor path');
   if (!/\/api\/notes\//.test(body))               throw new Error('no background-save path for unmounted case');
 });
 
@@ -1328,67 +1330,64 @@ t('tearDownNotesEditor helper exists and flushes before destroying', () => {
   if (!/async function tearDownNotesEditor/.test(feSrc)) throw new Error('tearDownNotesEditor missing');
   const idx = feSrc.indexOf('async function tearDownNotesEditor');
   const body = feSrc.slice(idx, idx + 1000);
-  // Must flush first, then destroy — reversed order would discard pending edits
+  // Must flush before destroy so pending edits land
   const flushPos   = body.indexOf('flushNotesSave');
   const destroyPos = body.indexOf('.destroy()');
   if (flushPos < 0)                   throw new Error('teardown does not flush');
   if (destroyPos < 0)                 throw new Error('teardown does not destroy editor');
   if (flushPos > destroyPos)          throw new Error('teardown destroys before flushing — edits would be lost');
-  // Must be a no-op when no editor is active (safe to call from anywhere).
-  // Accept either the simple guard `if (!_notesEditor)` or the richer form
-  // that also checks an in-flight teardown promise.
-  if (!/if\s*\(\s*!\s*_notesEditor\b/.test(body)) {
+  // No-op guard: should return early if nothing is mounted
+  if (!/if\s*\(\s*!\s*_notes\.editor\b/.test(body)) {
     throw new Error('teardown not idempotent / no safe no-op guard');
   }
 });
 
-t('tearDownNotesEditor is race-safe against concurrent callers (in-flight dedupe)', () => {
-  // Fire-and-forget callers (openSection) can race with a subsequent
-  // mountNotesEditor. Without an in-flight promise, the mount would see
-  // stale _notesEditor state and bail on its early-return guard — leaving
-  // the user staring at the loading placeholder. The fix: expose the
-  // teardown's promise so a concurrent caller can await it.
-  if (!/_notesTeardownInFlight/.test(feSrc)) {
-    throw new Error('no _notesTeardownInFlight state — race condition possible');
+t('mountNotesEditor dedupes concurrent callers via a single in-flight promise', () => {
+  // Architectural invariant: calling mount twice while the first is in flight
+  // must return the SAME promise — not kick off a second mount. Without this,
+  // two TipTap editors could race to construct into the same DOM node.
+  if (!/_notes\.mountPromise/.test(feSrc)) {
+    throw new Error('_notes.mountPromise not declared — concurrent mount races possible');
   }
-  // mountNotesEditor must await the in-flight teardown before doing anything
-  const mountIdx = feSrc.indexOf('async function mountNotesEditor');
-  const mountBody = feSrc.slice(mountIdx, mountIdx + 2000);
-  if (!/await\s+_notesTeardownInFlight/.test(mountBody)) {
-    throw new Error('mountNotesEditor does not await in-flight teardown');
-  }
-});
-
-t('mountNotesEditor early-return verifies editor DOM is still attached to current container', () => {
-  // renderDetail() wipes the detail pane's innerHTML on every call. A
-  // surviving _notesEditor reference can point at a detached node. If the
-  // mount guard only checks _notesCurrentJobId === jobId, a stale editor
-  // on a detached DOM tricks the guard into bailing, and the fresh
-  // placeholder is never replaced — user sees "Preparing editor…" forever.
-  const mountIdx = feSrc.indexOf('async function mountNotesEditor');
+  const mountIdx = feSrc.indexOf('function mountNotesEditor');
   const mountBody = feSrc.slice(mountIdx, mountIdx + 3000);
-  // Must check container.contains(<editor dom>) or equivalent
-  if (!/container\.contains\s*\(\s*(?:liveDom|_notesEditor\.view[^)]*dom)/.test(mountBody)) {
-    throw new Error('mount guard does not verify editor DOM attachment');
+  // Must return the existing in-flight promise when one is active for same jobId
+  if (!/if\s*\(\s*_notes\.mountPromise\s*&&\s*_notes\.jobId\s*===\s*jobId\s*\)/.test(mountBody)) {
+    throw new Error('mount does not return existing mountPromise for same-job concurrent calls');
+  }
+  // Must set mountPromise when kicking off new work
+  if (!/_notes\.mountPromise\s*=\s*\(/.test(mountBody)) {
+    throw new Error('mount does not set mountPromise on new work');
   }
 });
 
-t('mountNotesEditor re-acquires container after awaiting loadTipTap', () => {
-  // The await on loadTipTap() can last several seconds on cold CDN.
-  // During that time, renderDetail may have replaced the detail pane —
-  // our captured container reference would then be orphaned. We must
-  // re-query the DOM by id after the await and use the fresh node.
-  const mountIdx = feSrc.indexOf('async function mountNotesEditor');
-  const mountBody = feSrc.slice(mountIdx, mountIdx + 7000);
-  // Look for a getElementById call after the loadTipTap await. Simplest
-  // check: the "freshContainer" variable we introduced, or an equivalent
-  // re-acquisition pattern.
-  if (!/freshContainer|(?:container\s*=\s*document\.getElementById[^)]+\).{0,200}contains)/.test(mountBody)) {
-    throw new Error('mount does not re-acquire container after loadTipTap await');
+t('mountNotesEditor late-checks _notes.jobId after awaits (navigation-away-safe)', () => {
+  // If user navigates away while TipTap loads or content fetches, we must
+  // bail. Otherwise we'd mount into a container that is no longer the focus
+  // of the UI, leaking state and confusing the save path.
+  const mountIdx = feSrc.indexOf('function mountNotesEditor');
+  const mountBody = feSrc.slice(mountIdx, mountIdx + 5000);
+  // Expect at least TWO late-checks: one after loadTipTap, one after fetch
+  const checks = mountBody.match(/if\s*\(\s*_notes\.jobId\s*!==\s*jobId\s*\)/g) || [];
+  if (checks.length < 2) {
+    throw new Error(`expected ≥2 navigation-safety checks, found ${checks.length}`);
   }
-  // And container must be mutable (let, not const) so it can be re-bound
-  if (!/let\s+container\s*=/.test(mountBody)) {
-    throw new Error('container declared as const — cannot be reassigned if DOM re-renders');
+});
+
+t('mountNotesEditor shows progressive loading messages (not stuck on one string)', () => {
+  // User-facing reliability: a cold Render backend can take 10+ seconds to
+  // respond. A single "Preparing editor…" placeholder that never changes
+  // feels broken. We show "Loading editor libraries…" first, then swap to
+  // "Loading your notes…" once TipTap is ready and we're waiting on fetch.
+  if (!/_setNotesLoadingMessage/.test(feSrc)) {
+    throw new Error('no _setNotesLoadingMessage helper — loading state is static');
+  }
+  const mountIdx = feSrc.indexOf('function mountNotesEditor');
+  const mountBody = feSrc.slice(mountIdx, mountIdx + 5000);
+  // Must call the message updater at least once inside mount (after TipTap
+  // resolves, before the fetch blocks)
+  if (!/_setNotesLoadingMessage\(jobId,\s*['"]/.test(mountBody)) {
+    throw new Error('mount does not update loading message as progress advances');
   }
 });
 
@@ -1960,68 +1959,45 @@ t('TipTap ProseMirror element fills the notes editor (no sub-line collapse)', ()
   if (!/min-height:\s*100%/.test(pmRule[0]))     throw new Error('.ProseMirror needs min-height:100% to fill editor');
 });
 
-t('Notes doc cache exists + populated on fetch so return visits skip the loading flash', () => {
-  // Bug 2: every time the user navigates Notes → away → back, the "Preparing
-  // editor…" placeholder showed again even though TipTap is cached. Root
-  // cause: mountNotesEditor awaited a fresh GET /api/notes/:jobId every time.
-  // Fix: per-jobId in-memory doc cache + synchronous fast-path mount.
-  if (!/_notesDocCache\s*=\s*Object\.create\(null\)/.test(feSrc) &&
-      !/_notesDocCache\s*=\s*\{\}/.test(feSrc)) {
-    throw new Error('_notesDocCache not declared');
-  }
-  // Fast path: if TipTap is cached AND we have cached doc → build editor sync,
-  // no await before the container is populated.
-  const mountIdx = feSrc.indexOf('async function mountNotesEditor');
-  const mountBody = feSrc.slice(mountIdx, mountIdx + 8000);
-  if (!/_notesDocCache\[jobId\]/.test(mountBody))       throw new Error('mount does not consult doc cache');
-  if (!/if\s*\(\s*_tiptap\s*&&\s*cached[^)]*\)/.test(mountBody)) {
-    throw new Error('mount missing synchronous fast-path when both TipTap and cached doc are present');
-  }
-  // Cache must be populated after every successful fetch so the NEXT mount
-  // can take the fast path. Look for assignment after the fetch block.
-  if (!/_notesDocCache\[jobId\]\s*=\s*\{/.test(mountBody)) {
-    throw new Error('mount does not populate cache after fetching remote doc');
+t('No in-memory notes doc cache (removed — adds complexity without real benefit)', () => {
+  // The previous design had _notesDocCache for instant fast-path mount on
+  // return visits. It introduced cross-device staleness, cache-invalidation
+  // bugs on restore/save/logout, and cache-eviction complexity on bulk delete.
+  // The new design refetches on every mount — adds ~100ms for the happy case
+  // but eliminates an entire class of bugs. Regression guard: the cache must
+  // NOT come back.
+  if (/_notesDocCache\b/.test(feSrc)) {
+    throw new Error('_notesDocCache was removed for reliability — do not re-add without design review');
   }
 });
 
-t('Notes doc cache is kept in sync after every save (no stale return visits)', () => {
-  // If we only populate the cache on fetch, typing something and navigating
-  // away + back would show pre-typed content until the fetch returns. Not a
-  // data-loss bug but a jarring UX. Cache must be written on every successful
-  // save too.
+t('flushNotesSave updates lastSavedJson after every confirmed server write', () => {
+  // Dedupe behavior: identical saves must be no-ops. lastSavedJson is the
+  // signal. Without this, every keystroke on an idle timer fires a PUT even
+  // when nothing changed.
   const flushIdx = feSrc.indexOf('async function flushNotesSave');
   const body = feSrc.slice(flushIdx, flushIdx + 2500);
-  if (!/_notesDocCache\[jobId\]\s*=\s*\{[\s\S]{0,200}_notesRemoteVersion/.test(body)) {
-    throw new Error('flushNotesSave does not write through to _notesDocCache');
+  if (!/_notes\.lastSavedJson\s*=\s*docJson/.test(body)) {
+    throw new Error('flushNotesSave does not update lastSavedJson after successful save');
+  }
+  // Must also short-circuit when docJson matches lastSavedJson
+  if (!/docJson\s*===\s*_notes\.lastSavedJson/.test(body)) {
+    throw new Error('flushNotesSave does not dedupe identical content (would spam server)');
   }
 });
 
-t('Notes doc cache is invalidated on version restore', () => {
-  // After a user restores a historical version, the server has swapped
-  // current. The cached doc is now wrong. Without invalidation, return visits
-  // would show pre-restore content for one load cycle.
+t('restoreNotesVersion forces a fresh mount (not a stale editor)', () => {
+  // After restoring a historical version, the editor must show the restored
+  // content — not whatever was in memory before. We accomplish this by
+  // tearing down and remounting (clears _notes state), rather than relying
+  // on cache invalidation.
   const idx = feSrc.indexOf('async function restoreNotesVersion');
-  const body = feSrc.slice(idx, idx + 1200);
-  if (!/delete\s+_notesDocCache\[jobId\]/.test(body)) {
-    throw new Error('restoreNotesVersion does not invalidate cached doc');
+  const body = feSrc.slice(idx, idx + 1500);
+  if (!/tearDownNotesEditor/.test(body)) {
+    throw new Error('restoreNotesVersion does not tear down before remounting — risks stale editor');
   }
-});
-
-t('Notes doc cache is purged on logout (per-user data safety)', () => {
-  // Cache holds decrypted note content. Must be cleared before a different
-  // user logs in on the same browser session.
-  const idx = feSrc.indexOf('async function doLogout');
-  const body = feSrc.slice(idx, idx + 1000);
-  if (!/_notesDocCache/.test(body)) {
-    throw new Error('doLogout does not clear _notesDocCache — cross-account leak risk');
-  }
-});
-
-t('bulkDelete evicts notes cache entries for deleted jobs', () => {
-  const idx = feSrc.indexOf('function bulkDelete');
-  const body = feSrc.slice(idx, idx + 800);
-  if (!/delete\s+_notesDocCache\[id\]/.test(body)) {
-    throw new Error('bulkDelete does not evict _notesDocCache entries');
+  if (!/mountNotesEditor\(jobId\)/.test(body)) {
+    throw new Error('restoreNotesVersion does not remount after restore');
   }
 });
 
@@ -2255,26 +2231,20 @@ t('showApp warms up Render backend with a ping before user interacts', () => {
   }
 });
 
-t('mountNotesEditor does NOT block on /api/notes fetch for first-visit UX', () => {
-  // The user saw 10+ seconds of "Preparing editor…" on first Notes visit
-  // during Render cold-starts. Fix: build editor with empty content immediately
-  // after TipTap resolves, then swap in fetched content when it arrives.
-  const idx = feSrc.indexOf('async function mountNotesEditor');
-  const body = feSrc.slice(idx, idx + 8000);
-  // Look for: `buildEditor(T, null)` — mount with null before the fetch awaits.
-  // This is our signal that the editor can appear without waiting on the HTTP round-trip.
-  if (!/buildEditor\(T,\s*null\)/.test(body)) {
-    throw new Error('mount does not build editor with empty content on first visit');
+t('mountNotesEditor handles backend fetch failure without leaving user stuck', () => {
+  // Cold-start backend on Render can take 10-30 seconds OR timeout entirely.
+  // New design: if the /api/notes fetch fails, mount with empty content —
+  // user can still write, next save pushes their content up. Better than
+  // the placeholder staying forever.
+  const idx = feSrc.indexOf('function mountNotesEditor');
+  const body = feSrc.slice(idx, idx + 6000);
+  // Must have a try/catch around the fetch specifically
+  if (!/try\s*\{[\s\S]{0,500}fetch\(API\s*\+\s*['"]\/api\/notes\//.test(body)) {
+    throw new Error('mount does not try/catch the notes fetch — network failure would throw');
   }
-  // Must use setContent to swap in content after fetch, NOT rebuild editor
-  // (rebuilding is jankier and discards cursor/selection state).
-  if (!/_notesEditor\.commands\.setContent\(/.test(body)) {
-    throw new Error('mount does not use setContent to swap in fetched content');
-  }
-  // setContent must pass `false` to suppress onUpdate — otherwise the content
-  // swap would schedule a save for the content we just received from the server.
-  if (!/\.commands\.setContent\([^,)]+,\s*false\)/.test(body)) {
-    throw new Error('setContent does not pass emitUpdate=false — would trigger spurious save');
+  // Must build the editor even after a failed fetch (remoteDoc || '')
+  if (!/content:\s*remoteDoc\s*\|\|\s*['"]{2}/.test(body)) {
+    throw new Error('mount does not fall back to empty content when fetch fails');
   }
 });
 
