@@ -72,20 +72,55 @@ t('No referral pipeline',      () => not('referralPipeline'));
 console.log(`\n${pass}/${pass+fail} passed${fail ? ' ← FAILURES' : '  ✓'}`);
 if (fail) process.exit(1);
 
-// ── Landing page feature tiles ──────────────────────────────────────────────
-console.log('\n── Feature tiles');
-t('Tile 1: Company intelligence', () => has('Company intelligence'));
-t('Tile 2: Compensation Research', () => has('Compensation Research'));
-t('Tile 3: AI resume tailoring',  () => has('AI resume tailoring'));
-t('Tile 4: Interview Prep tile',  () => {
-  // Confirm "Interview Prep" tile comes after "AI resume tailoring" in the HTML
-  const ai  = src.indexOf('AI resume tailoring');
-  const ip  = src.indexOf('Interview Prep</div>', ai);
-  if (ip < 0) throw new Error('Interview Prep not after AI tailoring');
+// ── Landing page features (editorial layout) ────────────────────────────────
+console.log('\n── Feature sections');
+t('I. Company intelligence',      () => has('Company intelligence'));
+t('II. Compensation research',    () => has('Compensation research'));
+t('III. Resume tailoring',        () => has('Resume tailoring'));
+t('IV. Interview prep',           () => has('Interview prep'));
+t('V. Pipeline tracking',         () => has('Pipeline tracking'));
+t('VI. Library section',          () => has('>Library</h3>'));
+t('Features ordered I → II → III → IV → V → VI', () => {
+  const order = ['Company intelligence','Compensation research','Resume tailoring','Interview prep','Pipeline tracking','>Library</h3>'];
+  const idxs = order.map(s => src.indexOf(s));
+  for (let i = 1; i < idxs.length; i++) {
+    if (idxs[i] < 0)          throw new Error('missing: ' + order[i]);
+    if (idxs[i] <= idxs[i-1]) throw new Error('order wrong at ' + order[i]);
+  }
 });
-t('Tile 5: Pipeline tracking',    () => has('Pipeline tracking'));
+t('Roman numerals present as section markers (I, II, III, IV, V, VI)', () => {
+  for (const n of ['>I<','>II<','>III<','>IV<','>V<','>VI<']) {
+    if (!src.includes(n)) throw new Error('missing roman numeral: ' + n);
+  }
+});
+t('No feature cards (glass/backdrop-filter tile pattern removed)', () => {
+  // The old cards all had this signature backdrop-filter:blur(14px) combo
+  if (src.includes('backdrop-filter:blur(14px)')) throw new Error('old card pattern still present');
+});
+t('No legacy tile SVG icons in landing features', () => {
+  // Old tiles had M3 9l9-7 (house icon) — no longer present in landing
+  if (src.includes('M3 9l9-7 9 7v11')) throw new Error('old house icon still in source');
+});
+t('Section-opening hairline rule above features', () => {
+  // The rule that opens the whole section
+  if (!src.includes('border-top:1px solid rgba(242,234,216,0.12)')) throw new Error('section hairline missing');
+});
 t('No "Formatting preserved"',    () => not('Formatting preserved'));
 t('No "Salary intelligence"',     () => not('Salary intelligence'));
+
+// ── Landing hero tagline (mountaineering, not SaaS product-bullets) ─────────
+console.log('\n── Hero tagline');
+t('New tagline: Study the mountain',   () => has('Study the mountain'));
+t('New tagline: Prepare the climb',    () => has('Prepare the climb'));
+t('New tagline: Reach the summit',     () => has('Reach the summit'));
+t('Old SaaS tagline removed: "Track every application"', () => not('Track every application'));
+t('Old SaaS tagline removed: "Tailor every resume"',     () => not('Tailor every resume'));
+t('Old SaaS tagline removed: "Land the role"',           () => not('Land the role'));
+
+// ── Footer CTA ──────────────────────────────────────────────────────────────
+console.log('\n── Footer CTA');
+t('CTA reads "Begin the climb"',       () => has('Begin the climb'));
+t('Old CTA removed: "Get started for free"', () => not('Get started for free'));
 
 // ── People & Diversity section ──────────────────────────────────────────────
 console.log('\n── People & Diversity section');

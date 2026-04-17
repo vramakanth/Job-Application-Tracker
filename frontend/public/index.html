@@ -617,60 +617,71 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <!-- Hero -->
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 24px 80px;min-height:80vh">
       <h1 style="font-family:var(--font-display);font-size:clamp(64px,10vw,112px);font-weight:500;color:#f2ead8;letter-spacing:-0.03em;line-height:0.95;margin:0 0 22px">Summit</h1>
-      <p style="font-family:var(--font-display);font-size:clamp(18px,2.2vw,22px);font-weight:300;font-style:italic;color:rgba(242,234,216,0.72);max-width:480px;line-height:1.45;margin:0 0 44px;letter-spacing:-0.005em">Track every application.<br>Tailor every resume. Land the role.</p>
+      <p style="font-family:var(--font-display);font-size:clamp(18px,2.2vw,22px);font-weight:300;font-style:italic;color:rgba(242,234,216,0.72);max-width:520px;line-height:1.5;margin:0 0 44px;letter-spacing:-0.005em">Study the mountain. Prepare the climb.<br>Reach the summit.</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
         <button onclick="showScreen('register')" style="padding:14px 30px;background:#e8a838;border:none;border-radius:10px;font-family:var(--font);font-size:15px;font-weight:700;color:#1a0d00;cursor:pointer;box-shadow:0 0 48px rgba(232,168,56,0.28)" onmouseover="this.style.background='#f0b84a'" onmouseout="this.style.background='#e8a838'">Get started</button>
         <button onclick="showScreen('login')" style="padding:14px 30px;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.18);border-radius:10px;font-family:var(--font);font-size:15px;color:rgba(255,255,255,0.82);cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.16)'" onmouseout="this.style.background='rgba(255,255,255,0.09)'">Sign in</button>
       </div>
     </div>
 
-    <!-- Feature grid -->
-    <div style="padding:0 24px 80px;max-width:1040px;margin:0 auto">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px">
+    <!-- Feature list (editorial) -->
+    <div style="padding:0 32px 40px;max-width:1040px;margin:0 auto">
 
-        <!-- Company intel -->
-        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px);color:rgba(232,168,56,0.9)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-          <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Company intelligence</div>
-          <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Glassdoor ratings, salary ranges, culture and news — all in one click.</div>
-        </div>
-        <!-- Salary -->
-        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px);color:rgba(232,168,56,0.9)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
-          <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Compensation Research</div>
-          <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Market benchmarks, live salary data, and negotiation signals.</div>
-        </div>
-        <!-- AI tailoring -->
-        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px);color:rgba(232,168,56,0.9)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6z"/></svg>
-          <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">AI resume tailoring</div>
-          <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Instantly tailor your resume and cover letter to each role.</div>
-        </div>
-        <!-- Interview -->
-        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px);color:rgba(232,168,56,0.9)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-          <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Interview Prep</div>
-          <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">AI-generated role-specific questions. Track what you've practiced.</div>
-        </div>
-        <!-- Pipeline -->
-        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px);color:rgba(232,168,56,0.9)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M4 20V14M8 20V10M12 20V4M16 20V10M20 20V14"/></svg>
-          <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Pipeline tracking</div>
-          <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Kanban-style status from wishlist to offer. See your full funnel at a glance.</div>
-        </div>
-        <!-- Documents -->
-        <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px);color:rgba(232,168,56,0.9)">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Library</div>
-          <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Store resumes and cover letters. Pick and tailor per application.</div>
+      <!-- Hairline rule that opens the section -->
+      <div style="border-top:1px solid rgba(242,234,216,0.12);padding-top:64px">
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:52px 56px">
+
+          <!-- I. Company intel -->
+          <div style="border-top:1px solid rgba(232,168,56,0.3);padding-top:18px">
+            <div style="font-family:var(--mono);font-size:10px;color:#e8a838;letter-spacing:0.25em;margin-bottom:14px">I</div>
+            <h3 style="font-family:var(--font-display);font-size:22px;font-weight:500;color:#f2ead8;letter-spacing:-0.015em;margin:0 0 10px;line-height:1.2">Company intelligence</h3>
+            <p style="font-family:var(--font);font-size:14px;color:rgba(242,234,216,0.6);line-height:1.75;margin:0">Culture, news, ratings, and salary ranges &mdash; gathered in one view.</p>
+          </div>
+
+          <!-- II. Compensation -->
+          <div style="border-top:1px solid rgba(232,168,56,0.3);padding-top:18px">
+            <div style="font-family:var(--mono);font-size:10px;color:#e8a838;letter-spacing:0.25em;margin-bottom:14px">II</div>
+            <h3 style="font-family:var(--font-display);font-size:22px;font-weight:500;color:#f2ead8;letter-spacing:-0.015em;margin:0 0 10px;line-height:1.2">Compensation research</h3>
+            <p style="font-family:var(--font);font-size:14px;color:rgba(242,234,216,0.6);line-height:1.75;margin:0">Market benchmarks, live salary data, and negotiation signals when the offer lands.</p>
+          </div>
+
+          <!-- III. Resume tailoring -->
+          <div style="border-top:1px solid rgba(232,168,56,0.3);padding-top:18px">
+            <div style="font-family:var(--mono);font-size:10px;color:#e8a838;letter-spacing:0.25em;margin-bottom:14px">III</div>
+            <h3 style="font-family:var(--font-display);font-size:22px;font-weight:500;color:#f2ead8;letter-spacing:-0.015em;margin:0 0 10px;line-height:1.2">Resume tailoring</h3>
+            <p style="font-family:var(--font);font-size:14px;color:rgba(242,234,216,0.6);line-height:1.75;margin:0">Shape every resume and cover letter to the role in front of you &mdash; without starting over.</p>
+          </div>
+
+          <!-- IV. Interview prep -->
+          <div style="border-top:1px solid rgba(232,168,56,0.3);padding-top:18px">
+            <div style="font-family:var(--mono);font-size:10px;color:#e8a838;letter-spacing:0.25em;margin-bottom:14px">IV</div>
+            <h3 style="font-family:var(--font-display);font-size:22px;font-weight:500;color:#f2ead8;letter-spacing:-0.015em;margin:0 0 10px;line-height:1.2">Interview prep</h3>
+            <p style="font-family:var(--font);font-size:14px;color:rgba(242,234,216,0.6);line-height:1.75;margin:0">Role-specific questions on demand. Track what you&rsquo;ve practiced, and what still needs work.</p>
+          </div>
+
+          <!-- V. Pipeline -->
+          <div style="border-top:1px solid rgba(232,168,56,0.3);padding-top:18px">
+            <div style="font-family:var(--mono);font-size:10px;color:#e8a838;letter-spacing:0.25em;margin-bottom:14px">V</div>
+            <h3 style="font-family:var(--font-display);font-size:22px;font-weight:500;color:#f2ead8;letter-spacing:-0.015em;margin:0 0 10px;line-height:1.2">Pipeline tracking</h3>
+            <p style="font-family:var(--font);font-size:14px;color:rgba(242,234,216,0.6);line-height:1.75;margin:0">From wishlist to offer &mdash; the full route, on one page, with no applications forgotten.</p>
+          </div>
+
+          <!-- VI. Library -->
+          <div style="border-top:1px solid rgba(232,168,56,0.3);padding-top:18px">
+            <div style="font-family:var(--mono);font-size:10px;color:#e8a838;letter-spacing:0.25em;margin-bottom:14px">VI</div>
+            <h3 style="font-family:var(--font-display);font-size:22px;font-weight:500;color:#f2ead8;letter-spacing:-0.015em;margin:0 0 10px;line-height:1.2">Library</h3>
+            <p style="font-family:var(--font);font-size:14px;color:rgba(242,234,216,0.6);line-height:1.75;margin:0">Your resumes and cover letters, in one place. Draw from them, tailor per application.</p>
+          </div>
+
         </div>
 
       </div>
 
       <!-- Footer CTA -->
-      <div style="text-align:center;margin-top:56px">
-        <button onclick="showScreen('register')" style="padding:14px 32px;background:#e8a838;border:none;border-radius:10px;font-family:var(--font);font-size:15px;font-weight:700;color:#1a0d00;cursor:pointer" onmouseover="this.style.background='#f0b84a'" onmouseout="this.style.background='#e8a838'">Get started for free →</button>
-        <div style="margin-top:14px;font-size:11px;color:rgba(242,234,216,0.25);letter-spacing:0.5px">jobsummit.app · No credit card required</div>
+      <div style="text-align:center;margin-top:88px;padding-top:64px;border-top:1px solid rgba(242,234,216,0.08)">
+        <button onclick="showScreen('register')" style="padding:14px 32px;background:#e8a838;border:none;border-radius:10px;font-family:var(--font);font-size:15px;font-weight:700;color:#1a0d00;cursor:pointer" onmouseover="this.style.background='#f0b84a'" onmouseout="this.style.background='#e8a838'">Begin the climb &rarr;</button>
+        <div style="margin-top:16px;font-family:var(--mono);font-size:11px;color:rgba(242,234,216,0.32);letter-spacing:0.15em">JOBSUMMIT.APP &middot; NO CREDIT CARD</div>
       </div>
     </div>
 

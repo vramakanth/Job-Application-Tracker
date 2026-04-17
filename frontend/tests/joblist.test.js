@@ -186,13 +186,13 @@ t('sidebar Library button present with data-section="library"', () => {
   if (!bar.includes('showDocumentsPage'))       throw new Error('showDocumentsPage not in sidebar');
 });
 
-t('landing page feature tile says "Library" not "Document library"', () => {
-  // Find the landing page feature grid
-  const grid = src.slice(src.indexOf('<!-- Feature grid'), src.indexOf('<!-- Footer CTA'));
-  if (grid.includes('Document library') || grid.includes('Document Library')) {
-    throw new Error('landing page tile still says "Document library"');
+t('landing page feature says "Library" not "Document library"', () => {
+  // Find the landing page feature section (editorial layout)
+  const section = src.slice(src.indexOf('<!-- Feature list (editorial)'), src.indexOf('<!-- Footer CTA'));
+  if (section.includes('Document library') || section.includes('Document Library')) {
+    throw new Error('landing page still says "Document library"');
   }
-  if (!grid.includes('Library')) throw new Error('"Library" not on landing page');
+  if (!section.includes('Library')) throw new Error('"Library" not on landing page');
 });
 
 t('docs section header says "Library"', () => {
