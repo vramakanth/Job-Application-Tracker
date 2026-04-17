@@ -1327,15 +1327,69 @@ t('Rate-limiter consts declared BEFORE any route that references them (TDZ guard
 t('tearDownNotesEditor helper exists and flushes before destroying', () => {
   if (!/async function tearDownNotesEditor/.test(feSrc)) throw new Error('tearDownNotesEditor missing');
   const idx = feSrc.indexOf('async function tearDownNotesEditor');
-  const body = feSrc.slice(idx, idx + 600);
+  const body = feSrc.slice(idx, idx + 1000);
   // Must flush first, then destroy — reversed order would discard pending edits
   const flushPos   = body.indexOf('flushNotesSave');
   const destroyPos = body.indexOf('.destroy()');
   if (flushPos < 0)                   throw new Error('teardown does not flush');
   if (destroyPos < 0)                 throw new Error('teardown does not destroy editor');
   if (flushPos > destroyPos)          throw new Error('teardown destroys before flushing — edits would be lost');
-  // Must be a no-op when no editor is active (safe to call from anywhere)
-  if (!/if\s*\(\s*!\s*_notesEditor\s*\)/.test(body)) throw new Error('teardown not idempotent / no safe no-op guard');
+  // Must be a no-op when no editor is active (safe to call from anywhere).
+  // Accept either the simple guard `if (!_notesEditor)` or the richer form
+  // that also checks an in-flight teardown promise.
+  if (!/if\s*\(\s*!\s*_notesEditor\b/.test(body)) {
+    throw new Error('teardown not idempotent / no safe no-op guard');
+  }
+});
+
+t('tearDownNotesEditor is race-safe against concurrent callers (in-flight dedupe)', () => {
+  // Fire-and-forget callers (openSection) can race with a subsequent
+  // mountNotesEditor. Without an in-flight promise, the mount would see
+  // stale _notesEditor state and bail on its early-return guard — leaving
+  // the user staring at the loading placeholder. The fix: expose the
+  // teardown's promise so a concurrent caller can await it.
+  if (!/_notesTeardownInFlight/.test(feSrc)) {
+    throw new Error('no _notesTeardownInFlight state — race condition possible');
+  }
+  // mountNotesEditor must await the in-flight teardown before doing anything
+  const mountIdx = feSrc.indexOf('async function mountNotesEditor');
+  const mountBody = feSrc.slice(mountIdx, mountIdx + 2000);
+  if (!/await\s+_notesTeardownInFlight/.test(mountBody)) {
+    throw new Error('mountNotesEditor does not await in-flight teardown');
+  }
+});
+
+t('mountNotesEditor early-return verifies editor DOM is still attached to current container', () => {
+  // renderDetail() wipes the detail pane's innerHTML on every call. A
+  // surviving _notesEditor reference can point at a detached node. If the
+  // mount guard only checks _notesCurrentJobId === jobId, a stale editor
+  // on a detached DOM tricks the guard into bailing, and the fresh
+  // placeholder is never replaced — user sees "Preparing editor…" forever.
+  const mountIdx = feSrc.indexOf('async function mountNotesEditor');
+  const mountBody = feSrc.slice(mountIdx, mountIdx + 3000);
+  // Must check container.contains(<editor dom>) or equivalent
+  if (!/container\.contains\s*\(\s*(?:liveDom|_notesEditor\.view[^)]*dom)/.test(mountBody)) {
+    throw new Error('mount guard does not verify editor DOM attachment');
+  }
+});
+
+t('mountNotesEditor re-acquires container after awaiting loadTipTap', () => {
+  // The await on loadTipTap() can last several seconds on cold CDN.
+  // During that time, renderDetail may have replaced the detail pane —
+  // our captured container reference would then be orphaned. We must
+  // re-query the DOM by id after the await and use the fresh node.
+  const mountIdx = feSrc.indexOf('async function mountNotesEditor');
+  const mountBody = feSrc.slice(mountIdx, mountIdx + 7000);
+  // Look for a getElementById call after the loadTipTap await. Simplest
+  // check: the "freshContainer" variable we introduced, or an equivalent
+  // re-acquisition pattern.
+  if (!/freshContainer|(?:container\s*=\s*document\.getElementById[^)]+\).{0,200}contains)/.test(mountBody)) {
+    throw new Error('mount does not re-acquire container after loadTipTap await');
+  }
+  // And container must be mutable (let, not const) so it can be re-bound
+  if (!/let\s+container\s*=/.test(mountBody)) {
+    throw new Error('container declared as const — cannot be reassigned if DOM re-renders');
+  }
 });
 
 t('openSection tears down notes editor before switching to a different section', () => {
