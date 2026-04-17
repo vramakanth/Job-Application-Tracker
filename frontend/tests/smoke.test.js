@@ -238,3 +238,45 @@ t('Settings Help pane has redirect to sidebar', () => {
   const body = src.slice(idx, idx + 600);
   if (!body.includes('showHelp()')) throw new Error('no showHelp link in settings pane');
 });
+
+// ── Typography (Fraunces + Lato) ────────────────────────────────────────────
+console.log('\n── Typography');
+t('Google Fonts loads Fraunces',        () => has('family=Fraunces'));
+t('Google Fonts loads Lato',            () => has('Lato:'));
+t('Google Fonts loads DM Mono',         () => has('DM+Mono'));
+t('No DM Sans reference',               () => not('DM+Sans'));
+t('No Geist font reference',            () => { if (/'Geist'|"Geist"/.test(src)) throw new Error('Geist still referenced'); });
+t('--font-display CSS var declared',    () => has('--font-display:'));
+t('--font uses Lato',                   () => { if (!/--font:\s*'Lato'/.test(src)) throw new Error('--font not Lato'); });
+t('.detail-title uses display serif',   () => {
+  const m = src.match(/\.detail-title\s*\{[^}]*\}/);
+  if (!m || !m[0].includes('var(--font-display)')) throw new Error('.detail-title missing font-display');
+});
+t('.auth-heading uses display serif',   () => {
+  const m = src.match(/\.auth-heading\s*\{[^}]*\}/);
+  if (!m || !m[0].includes('var(--font-display)')) throw new Error('.auth-heading missing font-display');
+});
+t('.modal-title uses display serif',    () => {
+  const m = src.match(/\.modal-title\s*\{[^}]*\}/);
+  if (!m || !m[0].includes('var(--font-display)')) throw new Error('.modal-title missing font-display');
+});
+t('.insight-card-value uses display serif', () => {
+  const m = src.match(/\.insight-card-value\s*\{[^}]*\}/);
+  if (!m || !m[0].includes('var(--font-display)')) throw new Error('.insight-card-value missing font-display');
+});
+t('.auth-logo-text uses display serif', () => {
+  const m = src.match(/\.auth-logo-text\s*\{[^}]*\}/);
+  if (!m || !m[0].includes('var(--font-display)')) throw new Error('.auth-logo-text missing font-display');
+});
+t('.empty-state h2 uses display serif', () => {
+  const m = src.match(/\.empty-state h2\s*\{[^}]*\}/);
+  if (!m || !m[0].includes('var(--font-display)')) throw new Error('.empty-state h2 missing font-display');
+});
+t('Landing hero <h1>Summit uses display serif', () => {
+  const idx = src.indexOf('>Summit</h1>');
+  if (idx < 0) throw new Error('Summit <h1> not found');
+  const tag = src.slice(Math.max(0, idx - 400), idx);
+  if (!tag.includes('var(--font-display)')) throw new Error('hero h1 missing font-display');
+});
+t('font-optical-sizing enabled on body', () => has('font-optical-sizing: auto'));
+t('text-rendering optimizeLegibility on body', () => has('text-rendering: optimizeLegibility'));

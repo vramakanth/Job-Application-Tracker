@@ -6,11 +6,12 @@
   <title>Pursuit — Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Lato:wght@300;400;700;900&family=DM+Mono:wght@400;500&display=swap">
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --font: 'DM Sans', -apple-system, sans-serif;
+  --font: 'Lato', -apple-system, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
   --mono: 'DM Mono', monospace;
   --radius: 8px; --radius-sm: 5px;
   --bg:#1a1714;--bg2:#222017;--bg3:#2c291f;--bg4:#38342a;
@@ -19,7 +20,7 @@
   --accent-bg:#e8a838;--accent-bg2:#d4922a;
   --green:#60c888;--red:#e86060;--amber:#e0a040;--blue:#70aaee;--purple:#b08ae0;
 }
-html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;-webkit-font-smoothing:antialiased;}
+html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;font-optical-sizing:auto;text-rendering:optimizeLegibility;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 
@@ -54,7 +55,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 .topbar{height:54px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;
   gap:12px;padding:0 24px;flex-shrink:0;position:sticky;top:0;z-index:100;}
 .topbar-brand{display:flex;align-items:center;gap:9px;}
-.topbar-name{font-size:14px;font-weight:600;color:var(--text);}
+.topbar-name{font-size:17px;font-weight:500;color:var(--text);font-family:var(--font-display);letter-spacing:-0.015em;}
 .topbar-pill{font-size:9px;font-family:var(--mono);font-weight:600;letter-spacing:.8px;padding:2px 8px;
   background:rgba(232,168,56,0.12);color:var(--amber);border:1px solid rgba(232,168,56,0.25);border-radius:100px;}
 .topbar-version{font-size:10px;font-family:var(--mono);color:var(--text3);}
@@ -71,7 +72,7 @@ html,body{height:100%;font-family:var(--font);background:var(--bg);color:var(--t
 .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:28px;}
 .stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;}
 .stat-label{font-size:10px;font-family:var(--mono);color:var(--text3);letter-spacing:.6px;font-weight:600;margin-bottom:8px;}
-.stat-value{font-size:28px;font-weight:700;letter-spacing:-1px;line-height:1;}
+.stat-value{font-size:32px;font-weight:500;letter-spacing:-0.02em;line-height:1;font-family:var(--font-display);}
 
 .section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:12px;}
 .section-title{font-size:14px;font-weight:600;color:var(--text);}

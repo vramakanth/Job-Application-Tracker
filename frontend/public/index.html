@@ -28,7 +28,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Lato:ital,wght@0,300;0,400;0,700;0,900;1,400;1,700&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap">
 
 <style>
 
@@ -36,8 +36,9 @@
 
 /* ── LIGHT THEME (default) ── */
 :root {
-  --font: 'Geist', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  --mono: 'Geist Mono', 'DM Mono', monospace;
+  --font: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-display: 'Fraunces', 'Lato', Georgia, serif;
+  --mono: 'DM Mono', 'Geist Mono', ui-monospace, monospace;
   --radius: 8px;
   --radius-sm: 5px;
   --safe-top:    env(safe-area-inset-top, 0px);
@@ -86,7 +87,7 @@
   }
 }
 
-html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; letter-spacing: -0.01em; }
+html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; letter-spacing: -0.005em; font-optical-sizing: auto; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 
 /* ── AUTH ── */
@@ -95,9 +96,9 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .auth-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 36px; }
 .auth-logo-mark { width: 36px; height: 36px; background: var(--accent-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .auth-logo-mark svg { width: 20px; height: 20px; }
-.auth-logo-text { font-size: 20px; font-weight: 500; letter-spacing: -0.5px; color: #ffffff; }
+.auth-logo-text { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; color: #ffffff; font-family: var(--font-display); }
 .auth-logo-sub { font-size: 11px; color: rgba(195,240,96,0.7); font-family: var(--mono); }
-.auth-heading { font-size: 24px; font-weight: 500; letter-spacing: -0.5px; margin-bottom: 6px; color: #ffffff; }
+.auth-heading { font-size: 28px; font-weight: 500; letter-spacing: -0.02em; margin-bottom: 8px; color: #ffffff; font-family: var(--font-display); line-height: 1.15; }
 .auth-sub { font-size: 13px; color: rgba(255,255,255,0.55); margin-bottom: 28px; line-height: 1.6; }
 .auth-field { margin-bottom: 14px; }
 .auth-field label { display: block; font-size: 11px; font-family: var(--mono); color: rgba(242,234,216,0.45); margin-bottom: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
@@ -170,7 +171,7 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 
 .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px; color: var(--text2); }
 .empty-state svg { width: 64px; height: 64px; opacity: 0.15; margin-bottom: 20px; }
-.empty-state h2 { font-size: 18px; font-weight: 500; color: var(--text); margin-bottom: 8px; }
+.empty-state h2 { font-size: 22px; font-weight: 400; color: var(--text); margin-bottom: 10px; font-family: var(--font-display); letter-spacing: -0.015em; }
 .empty-state p { font-size: 13px; line-height: 1.7; max-width: 320px; }
 
 .detail-view { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
@@ -182,7 +183,7 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .detail-company { font-size: 12px; font-family: var(--mono); color: var(--text2); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
 .detail-company a { color: var(--blue); text-decoration: none; font-size: 11px; }
 .detail-company a:hover { text-decoration: underline; }
-.detail-title { font-size: 22px; font-weight: 500; letter-spacing: -0.5px; margin-bottom: 12px; }
+.detail-title { font-size: 26px; font-weight: 500; letter-spacing: -0.015em; margin-bottom: 12px; font-family: var(--font-display); line-height: 1.15; }
 .detail-meta { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
 .status-select { padding: 5px 10px; background: var(--bg3); border: 0.5px solid var(--border); border-radius: 100px; font-family: var(--mono); font-size: 11px; color: var(--text); cursor: pointer; outline: none; appearance: none; padding-right: 24px; background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235c5a57' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\"); background-repeat: no-repeat; background-position: right 8px center; }
@@ -258,7 +259,7 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 /* ADD MODAL */
 .modal-overlay { position: fixed; top:0;right:0;bottom:0;left:0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
 .modal { background: var(--bg2); border: 0.5px solid var(--border2); border-radius: 14px; width: 100%; max-width: 520px; padding: 28px; }
-.modal-title { font-size: 17px; font-weight: 500; margin-bottom: 6px; letter-spacing: -0.3px; }
+.modal-title { font-size: 20px; font-weight: 500; margin-bottom: 6px; letter-spacing: -0.015em; font-family: var(--font-display); }
 .modal-sub { font-size: 12px; color: var(--text2); margin-bottom: 24px; }
 .field { margin-bottom: 16px; }
 .field label { display: block; font-size: 11px; font-family: var(--mono); color: var(--text2); margin-bottom: 6px; letter-spacing: 0.5px; }
@@ -361,7 +362,7 @@ input[type=\"file\"] { display: none; }
 .insight-card { padding: 14px 16px; background: var(--bg2); border-right: 1px solid var(--border); }
 .insight-card:last-child { border-right: none; }
 .insight-card-label { font-size: 9px; font-family: var(--mono); color: var(--text3); letter-spacing: .6px; margin-bottom: 5px; text-transform: uppercase; }
-.insight-card-value { font-size: 14px; font-weight: 600; color: var(--text); }
+.insight-card-value { font-size: 18px; font-weight: 500; color: var(--text); font-family: var(--font-display); letter-spacing: -0.01em; }
 .insight-card-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
 /* Section: flat text-based layout — no card borders */
 .insight-section { margin-bottom: 28px; padding-bottom: 28px; border-bottom: 1px solid var(--border); flex-shrink: 0; width: 100%; }
@@ -615,8 +616,8 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
     <!-- Hero -->
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 24px 80px;min-height:80vh">
-      <h1 style="font-size:clamp(56px,9vw,96px);font-weight:800;color:#f2ead8;letter-spacing:-3px;line-height:0.92;margin:0 0 22px">Summit</h1>
-      <p style="font-size:clamp(15px,2vw,18px);color:rgba(242,234,216,0.6);max-width:420px;line-height:1.6;margin:0 0 44px">Track every application.<br>Tailor every resume. Land the role.</p>
+      <h1 style="font-family:var(--font-display);font-size:clamp(64px,10vw,112px);font-weight:500;color:#f2ead8;letter-spacing:-0.03em;line-height:0.95;margin:0 0 22px">Summit</h1>
+      <p style="font-family:var(--font-display);font-size:clamp(18px,2.2vw,22px);font-weight:300;font-style:italic;color:rgba(242,234,216,0.72);max-width:480px;line-height:1.45;margin:0 0 44px;letter-spacing:-0.005em">Track every application.<br>Tailor every resume. Land the role.</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
         <button onclick="showScreen('register')" style="padding:14px 30px;background:#e8a838;border:none;border-radius:10px;font-family:var(--font);font-size:15px;font-weight:700;color:#1a0d00;cursor:pointer;box-shadow:0 0 48px rgba(232,168,56,0.28)" onmouseover="this.style.background='#f0b84a'" onmouseout="this.style.background='#e8a838'">Get started</button>
         <button onclick="showScreen('login')" style="padding:14px 30px;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.18);border-radius:10px;font-family:var(--font);font-size:15px;color:rgba(255,255,255,0.82);cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.16)'" onmouseout="this.style.background='rgba(255,255,255,0.09)'">Sign in</button>
