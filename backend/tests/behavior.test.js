@@ -1002,47 +1002,50 @@ t('Account deletion cleans up user notes dir', () => {
   if (!/rmSync.*recursive/.test(body)) throw new Error('delete does not recursively clean');
 });
 
-t('Frontend uses TipTap with StarterKit + Link (minimal reliable extension set)', () => {
-  if (!/loadTipTap/.test(feSrc))                   throw new Error('loadTipTap missing');
-  if (!/@tiptap\/core/.test(feSrc))                throw new Error('tiptap core not imported');
-  if (!/@tiptap\/starter-kit/.test(feSrc))         throw new Error('starter-kit not imported');
-  if (!/@tiptap\/extension-link/.test(feSrc))      throw new Error('link extension not imported');
-  // Table and TaskList extensions were deliberately dropped — each
-  // additional module is another CDN-bundle failure mode. StarterKit alone
-  // covers headings, bold/italic/strike, lists, blockquote, code blocks,
-  // and horizontal rules. Adding extensions back requires a deliberate
-  // decision to trade reliability for feature richness.
-  if (/@tiptap\/extension-table/.test(feSrc))      throw new Error('table extension re-added — reliability risk');
-  if (/@tiptap\/extension-task-list/.test(feSrc))  throw new Error('task-list extension re-added — reliability risk');
-  // New architecture: single _notes object tracks current state.
+t('Frontend Notes editor is native contenteditable (no external editor library)', () => {
+  // We dropped TipTap after repeated CDN/import issues caused "editor failed
+  // to start" on multiple users. The new editor is a <div contenteditable>
+  // built directly — zero network dependency, can't fail to start.
+  if (/loadTipTap/.test(feSrc))                    throw new Error('loadTipTap should be removed');
+  if (/@tiptap\//.test(feSrc))                     throw new Error('@tiptap/* imports should be gone');
+  if (!/contentEditable\s*=\s*['"]true['"]/.test(feSrc)) {
+    throw new Error('no contentEditable=true — editor not using native approach');
+  }
+  // execCommand is the rich-text API — we should rely on it rather than
+  // hand-rolling format commands
+  if (!/document\.execCommand/.test(feSrc))        throw new Error('no document.execCommand calls');
+  // Must still use the same _notes state object as the previous iteration
   if (!/_notes\.jobId\s*===\s*jobId/.test(feSrc))  throw new Error('mountNotesEditor missing same-job guard');
 });
 
-t('loadTipTap validates each module exports before returning', () => {
-  // "undefined is not a function" from deep inside TipTap is useless. Before
-  // constructing the _tiptap object, validate each expected export so we can
-  // throw with a specific message pointing at the broken module.
-  const idx = feSrc.indexOf('async function loadTipTap');
-  const body = feSrc.slice(idx, idx + 3000);
-  if (!/typeof\s+Editor\s*!==\s*['"]function['"]/.test(body)) {
-    throw new Error('loadTipTap does not validate Editor export');
+t('Notes editor content is stored as {v:1, html: string} envelope', () => {
+  // The storage format. Previous TipTap iterations stored ProseMirror JSON;
+  // new design stores HTML wrapped in a version-tagged envelope so we can
+  // evolve the schema later without ambiguous decode.
+  if (!/v:\s*1,\s*html:/.test(feSrc)) {
+    throw new Error('storage envelope shape {v:1, html} not found');
   }
-  if (!/starter-kit\s+export\s+missing|StarterKit.*missing/i.test(body)) {
-    throw new Error('loadTipTap does not validate StarterKit export');
+  // Decoder must be tolerant of legacy TipTap JSON for graceful migration
+  if (!/doc\.type\s*===\s*['"]doc['"]|legacy\s+TipTap/.test(feSrc)) {
+    throw new Error('no legacy TipTap-format tolerance in decode path');
   }
 });
 
-t('loadTipTap has a fallback CDN (resilience to single-CDN outages)', () => {
-  // esm.sh has had outages. jsdelivr is a reasonable fallback. Without a
-  // fallback, a CDN hiccup is a hard break for the feature.
-  const idx = feSrc.indexOf('async function loadTipTap');
-  const body = feSrc.slice(idx, idx + 3000);
-  if (!/cdn\.jsdelivr\.net|unpkg\.com|skypack\.dev/.test(body)) {
-    throw new Error('loadTipTap has no fallback CDN configured');
+t('Notes toolbar uses execCommand-compatible command names', () => {
+  // Regression guard: a previous iteration used TipTap command names
+  // (`toggleBold`, `toggleBulletList`) that won't work with execCommand.
+  // The contenteditable editor needs the standard names.
+  const toolbarIdx = feSrc.indexOf('function renderNotesToolbar');
+  const body = feSrc.slice(toolbarIdx, toolbarIdx + 3000);
+  if (/toggleBold|toggleItalic|toggleHeading|toggleBulletList/.test(body)) {
+    throw new Error('toolbar still uses TipTap command names — will fail on contenteditable');
   }
-  // Must actually iterate the CDN list, not just have both URLs written
-  if (!/for\s*\(\s*const\s+\w+\s+of\s+\w+\s*\)/.test(body)) {
-    throw new Error('loadTipTap does not actually try multiple CDNs in sequence');
+  // Must use execCommand names
+  const expected = ['bold', 'italic', 'insertUnorderedList', 'insertOrderedList'];
+  for (const cmd of expected) {
+    if (!new RegExp(`notesCmd\\(['"]${cmd}['"]\\)`).test(body)) {
+      throw new Error(`toolbar missing execCommand name: ${cmd}`);
+    }
   }
 });
 
@@ -1060,9 +1063,12 @@ t('Frontend autosave: debounce + max-interval + snapshot scheduler', () => {
 });
 
 t('Frontend blocks pasted + dropped images', () => {
-  if (!/handlePaste/.test(feSrc))                 throw new Error('no handlePaste handler');
-  if (!/handleDrop/.test(feSrc))                  throw new Error('no handleDrop handler');
-  if (!/startsWith\(['"]image\//.test(feSrc))     throw new Error('image MIME check missing');
+  // Paste: we listen for 'paste' events and always insert plain text (which
+  // naturally strips image data from the clipboard). Drop: we explicitly
+  // prevent default when the dropped item is an image file.
+  if (!/addEventListener\(['"]paste['"]/.test(feSrc)) throw new Error('no paste handler');
+  if (!/addEventListener\(['"]drop['"]/.test(feSrc))  throw new Error('no drop handler');
+  if (!/startsWith\(['"]image\//.test(feSrc))         throw new Error('image MIME check missing');
 });
 
 t('Frontend encrypts note blobs with CryptoEngine envelope for ZK accounts', () => {
@@ -1097,25 +1103,16 @@ t('renderDetail triggers mountNotesEditor when notes tab is active', () => {
   }
 });
 
-t('showApp prefetches TipTap modules (warms cache for Notes tab)', () => {
-  // Performance: first Notes open previously required a ~9-module ESM
-  // download (~200KB gz). Prefetching during showApp's idle window makes
-  // subsequent Notes opens feel instant for the user.
-  const idx = feSrc.indexOf('function showApp');
-  if (idx < 0) throw new Error('showApp not found');
-  const body = feSrc.slice(idx, idx + 3000);
-  // Must call loadTipTap (fire-and-forget OK) inside a setTimeout — not at
-  // the synchronous top of showApp, because that would compete with the
-  // initial jobs/settings fetches for network bandwidth.
-  if (!/setTimeout\([\s\S]{0,500}loadTipTap/.test(body)) {
-    throw new Error('showApp does not defer-prefetch loadTipTap');
+t('showApp no longer prefetches TipTap (native editor — nothing to preload)', () => {
+  // We previously prefetched TipTap modules in showApp to warm the Notes
+  // tab. The new editor is inline — no modules to load — so the prefetch
+  // was removed. Regression guard: it should stay removed.
+  if (/loadTipTap/.test(feSrc)) {
+    throw new Error('loadTipTap still referenced — should have been removed with TipTap');
   }
-  // Delay must be ≥ 500ms so it sits past the critical-path fetches
-  const timerMatch = body.match(/setTimeout\(\(\)\s*=>\s*\{[\s\S]{0,500}?loadTipTap[\s\S]{0,300}?\},\s*(\d+)\s*\)/);
-  if (!timerMatch)    throw new Error('prefetch setTimeout not in expected shape');
-  const delay = parseInt(timerMatch[1], 10);
-  if (delay < 500)    throw new Error(`prefetch delay ${delay}ms too eager — should be ≥ 500ms`);
-  if (delay > 5000)   throw new Error(`prefetch delay ${delay}ms too long — user may click Notes first`);
+  if (/_tiptap\b/.test(feSrc)) {
+    throw new Error('_tiptap global still referenced — should be gone');
+  }
 });
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1265,11 +1262,14 @@ t('Refresh button warns user that highlights will be lost', () => {
 t('Quote appends to Notes as blockquote with attribution', () => {
   const idx = feSrc.indexOf('function _appendQuoteToNotes');
   const body = feSrc.slice(idx, idx + 3000);
-  if (!/type:\s*['"]blockquote['"]/.test(body))   throw new Error('quote not wrapped in blockquote');
+  // New editor stores HTML, so blockquote is literal `<blockquote>` string
+  if (!/<blockquote>/.test(body))                 throw new Error('quote not wrapped in blockquote');
   if (!/from job posting/.test(body))             throw new Error('no source attribution on quote');
   // Must handle both cases: editor mounted AND editor not mounted
   if (!/_notes\.editor\b/.test(body))             throw new Error('no live-editor path');
   if (!/\/api\/notes\//.test(body))               throw new Error('no background-save path for unmounted case');
+  // Quote text must be escaped (posting content can contain HTML chars)
+  if (!/esc\(quoteText\)/.test(body))             throw new Error('quote text not escaped — HTML injection risk');
 });
 
 t('Quote save triggers autosave (save is not silently dropped)', () => {
@@ -1358,16 +1358,16 @@ t('Rate-limiter consts declared BEFORE any route that references them (TDZ guard
   }
 });
 
-t('tearDownNotesEditor helper exists and flushes before destroying', () => {
+t('tearDownNotesEditor helper exists and flushes before removing', () => {
   if (!/async function tearDownNotesEditor/.test(feSrc)) throw new Error('tearDownNotesEditor missing');
   const idx = feSrc.indexOf('async function tearDownNotesEditor');
   const body = feSrc.slice(idx, idx + 1000);
-  // Must flush before destroy so pending edits land
-  const flushPos   = body.indexOf('flushNotesSave');
-  const destroyPos = body.indexOf('.destroy()');
+  // Must flush before removing the element so pending edits land
+  const flushPos  = body.indexOf('flushNotesSave');
+  const removePos = body.indexOf('.remove()');
   if (flushPos < 0)                   throw new Error('teardown does not flush');
-  if (destroyPos < 0)                 throw new Error('teardown does not destroy editor');
-  if (flushPos > destroyPos)          throw new Error('teardown destroys before flushing — edits would be lost');
+  if (removePos < 0)                  throw new Error('teardown does not remove editor element');
+  if (flushPos > removePos)           throw new Error('teardown removes before flushing — edits would be lost');
   // No-op guard: should return early if nothing is mounted
   if (!/if\s*\(\s*!\s*_notes\.editor\b/.test(body)) {
     throw new Error('teardown not idempotent / no safe no-op guard');
@@ -1377,7 +1377,7 @@ t('tearDownNotesEditor helper exists and flushes before destroying', () => {
 t('mountNotesEditor dedupes concurrent callers via a single in-flight promise', () => {
   // Architectural invariant: calling mount twice while the first is in flight
   // must return the SAME promise — not kick off a second mount. Without this,
-  // two TipTap editors could race to construct into the same DOM node.
+  // two editors could race to construct into the same DOM node.
   if (!/_notes\.mountPromise/.test(feSrc)) {
     throw new Error('_notes.mountPromise not declared — concurrent mount races possible');
   }
@@ -1393,33 +1393,17 @@ t('mountNotesEditor dedupes concurrent callers via a single in-flight promise', 
   }
 });
 
-t('mountNotesEditor late-checks _notes.jobId after awaits (navigation-away-safe)', () => {
-  // If user navigates away while TipTap loads or content fetches, we must
-  // bail. Otherwise we'd mount into a container that is no longer the focus
-  // of the UI, leaking state and confusing the save path.
+t('mountNotesEditor late-checks _notes.jobId after fetch (navigation-away-safe)', () => {
+  // If the user navigates away during the /api/notes fetch (slow / cold
+  // backend), we must not then mount the editor into a stale container.
+  // The check `if (_notes.jobId !== jobId) return;` after the fetch await
+  // guards against this. One check is sufficient in the new design — there
+  // is no separate TipTap-load step (no external library).
   const mountIdx = feSrc.indexOf('function mountNotesEditor');
   const mountBody = feSrc.slice(mountIdx, mountIdx + 5000);
-  // Expect at least TWO late-checks: one after loadTipTap, one after fetch
   const checks = mountBody.match(/if\s*\(\s*_notes\.jobId\s*!==\s*jobId\s*\)/g) || [];
-  if (checks.length < 2) {
-    throw new Error(`expected ≥2 navigation-safety checks, found ${checks.length}`);
-  }
-});
-
-t('mountNotesEditor shows progressive loading messages (not stuck on one string)', () => {
-  // User-facing reliability: a cold Render backend can take 10+ seconds to
-  // respond. A single "Preparing editor…" placeholder that never changes
-  // feels broken. We show "Loading editor libraries…" first, then swap to
-  // "Loading your notes…" once TipTap is ready and we're waiting on fetch.
-  if (!/_setNotesLoadingMessage/.test(feSrc)) {
-    throw new Error('no _setNotesLoadingMessage helper — loading state is static');
-  }
-  const mountIdx = feSrc.indexOf('function mountNotesEditor');
-  const mountBody = feSrc.slice(mountIdx, mountIdx + 5000);
-  // Must call the message updater at least once inside mount (after TipTap
-  // resolves, before the fetch blocks)
-  if (!/_setNotesLoadingMessage\(jobId,\s*['"]/.test(mountBody)) {
-    throw new Error('mount does not update loading message as progress advances');
+  if (checks.length < 1) {
+    throw new Error(`expected ≥1 navigation-safety check, found ${checks.length}`);
   }
 });
 
@@ -2274,9 +2258,14 @@ t('mountNotesEditor handles backend fetch failure without leaving user stuck', (
   if (!/try\s*\{[\s\S]{0,500}fetch\(API\s*\+\s*['"]\/api\/notes\//.test(body)) {
     throw new Error('mount does not try/catch the notes fetch — network failure would throw');
   }
-  // Must build the editor even after a failed fetch (remoteDoc || '')
-  if (!/content:\s*remoteDoc\s*\|\|\s*['"]{2}/.test(body)) {
-    throw new Error('mount does not fall back to empty content when fetch fails');
+  // Must build the editor even after a failed fetch. We initialize `html`
+  // to an empty string before the try/catch; on success it gets populated,
+  // on failure it stays empty and the editor mounts with innerHTML = ''.
+  if (!/let\s+html\s*=\s*['"]{2}/.test(body)) {
+    throw new Error('mount does not initialize html to empty before fetch — would crash on failure');
+  }
+  if (!/editor\.innerHTML\s*=\s*html/.test(body)) {
+    throw new Error('mount does not apply fetched/empty html to editor');
   }
 });
 

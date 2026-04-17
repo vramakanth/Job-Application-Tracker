@@ -14,7 +14,6 @@
 <!-- PWA manifest -->
 <link rel="manifest" href="/manifest.json">
 
-<!-- TipTap rich editor (Notes feature). Loaded lazily on first use via loadTipTap() in JS. -->
 <!-- iOS PWA meta tags -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -234,7 +233,20 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
   border: 0.5px solid var(--border); border-radius: 0 0 var(--radius) var(--radius);
   background: var(--bg2); cursor: text; }
 .notes-editor:focus-within { border-color: var(--border2); }
-/* TipTap injects .ProseMirror as a direct child of .notes-editor — fill the space */
+/* Native contenteditable div fills the notes-editor container */
+.notes-editor-content { flex: 1; outline: none; min-height: 100%; }
+.notes-editor-content:focus { outline: none; }
+/* Placeholder for empty contenteditable — :empty hits when no nodes at all.
+   We also show placeholder when content is just a single empty <p> or <br>,
+   which is the default state after clearing everything. */
+.notes-editor-content:empty::before,
+.notes-editor-content:has(> p:only-child:empty)::before {
+  content: attr(data-placeholder);
+  color: var(--text3);
+  pointer-events: none;
+  display: block;
+}
+/* TipTap legacy — kept so transitional docs don't lose styling if any exist */
 .notes-editor .ProseMirror { flex: 1; outline: none; min-height: 100%; }
 .notes-editor .ProseMirror:focus { outline: none; }
 /* Centered cold-load state — only visible until TipTap initializes */
@@ -833,7 +845,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       Don't have an account? <a onclick="showScreen('register')">Create one</a>
       <br><a onclick="showScreen('forgot')" style="font-size:12px;color:var(--text3)">Forgot password?</a>
     </div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.5.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.6.0 · private beta</div>
   </div>
 </div>
 
@@ -873,7 +885,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     </div>
     <button id="register-btn" class="auth-btn" onclick="doRegister()">Create account</button>
     <div class="auth-switch">Already have an account? <a onclick="showScreen('login')">Sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.5.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.6.0 · private beta</div>
   </div>
 </div>
 
@@ -889,7 +901,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <div class="auth-field"><label>CONFIRM PASSWORD</label><input id="recover-confirmpw" type="password" placeholder="Confirm new password"></div>
     <button id="recover-btn" class="auth-btn" onclick="recoverAccount()">Reset password</button>
     <div class="auth-switch"><a onclick="showScreen('login')">Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.5.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.6.0 · private beta</div>
   </div>
 </div>
 
@@ -966,7 +978,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       <div class="user-avatar" id="user-avatar" style="display:flex">VR</div>
       <div style="flex:1;min-width:0">
         <div class="user-name" id="user-name-display">user</div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.5.0</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.6.0</div>
       </div>
 
       <button class="user-bar-settings" onclick="doLogout()" title="Sign out" style="color:var(--text3)" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">
@@ -1173,7 +1185,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
 <script>
 const API = '';
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0';
 let token = localStorage.getItem('applied_token');
 let currentUser = localStorage.getItem('applied_user');
 let jobs = {}, currentJobId = null, currentFilter = 'all', activeDetailTab = 'notes';
@@ -1397,16 +1409,7 @@ function showApp() {
   // to block critical paths on its cold-start time.
   fetch(API + '/api/ping').catch(() => {});
 
-  // Prefetch TipTap modules ~1s after login so the Notes tab opens instantly
-  // for most users. The import is fire-and-forget — if the user never opens
-  // Notes this session, the bandwidth was wasted, but the modules are small
-  // (~200KB gz total) and esm.sh caches aggressively so repeat visits are free.
-  // We defer past showApp to avoid competing with the initial jobs fetch.
-  setTimeout(() => {
-    // loadTipTap is idempotent (caches via _tiptap global), so it's safe to
-    // call again when the user actually opens Notes — this just warms the cache.
-    try { loadTipTap(); } catch {}
-  }, 1000);
+  // Notes editor is now inline (no CDN / no module imports) — nothing to prefetch.
 }
 
 // ── AUTH ──
@@ -3135,48 +3138,36 @@ async function _appendQuoteToNotes(jobId, quoteText, comment) {
   const dateStr = ts.toLocaleDateString([], { month: 'short', day: 'numeric' });
   const attribution = `— from job posting · ${dateStr} ${timeStr}`;
 
+  // Build the quote as HTML fragments. esc() escapes any HTML in the user's
+  // selection so we don't inject arbitrary markup from job-posting content.
+  let frag = `<blockquote><p>${esc(quoteText)}</p></blockquote><p><em>${esc(attribution)}</em></p>`;
+  if (comment) frag += `<p>${esc(comment)}</p>`;
+
+  // Fast path: editor is mounted for this job → append directly.
   if (!needMount && _notes.editor) {
-    const chain = _notes.editor.chain().focus('end');
-    chain.insertContent([
-      {
-        type: 'blockquote',
-        content: [{ type: 'paragraph', content: [{ type: 'text', text: quoteText }] }],
-      },
-      {
-        type: 'paragraph',
-        content: [{ type: 'text', marks: [{ type: 'italic' }], text: attribution }],
-      },
-    ]);
-    if (comment) {
-      chain.insertContent({
-        type: 'paragraph',
-        content: [{ type: 'text', text: comment }],
-      });
-    }
-    chain.run();
+    // Append as a detached fragment so innerHTML mutation is atomic.
+    const tmp = document.createElement('div');
+    tmp.innerHTML = frag;
+    while (tmp.firstChild) _notes.editor.appendChild(tmp.firstChild);
     setTimeout(() => flushNotesSave(false), 100);
     return true;
   }
 
+  // Slow path: editor not mounted → fetch current doc, append, put back.
   try {
     const getRes = await fetch(API + '/api/notes/' + encodeURIComponent(jobId), {
       headers: { Authorization: 'Bearer ' + token },
     });
-    let doc = null;
+    let html = '';
     if (getRes.ok) {
       const d = await getRes.json();
-      if (d.current?.blob) doc = await decodeNoteBlob(d.current.blob);
+      if (d.current?.blob) {
+        const doc = await decodeNoteBlob(d.current.blob);
+        html = _extractHtmlFromDoc(doc);
+      }
     }
-    if (!doc || typeof doc !== 'object') doc = { type: 'doc', content: [] };
-    if (!Array.isArray(doc.content)) doc.content = [];
-    doc.content.push(
-      { type: 'blockquote', content: [{ type: 'paragraph', content: [{ type: 'text', text: quoteText }] }] },
-      { type: 'paragraph', content: [{ type: 'text', marks: [{ type: 'italic' }], text: attribution }] },
-    );
-    if (comment) {
-      doc.content.push({ type: 'paragraph', content: [{ type: 'text', text: comment }] });
-    }
-    const blob = await encodeNoteBlob(JSON.stringify(doc));
+    const newHtml = html + frag;
+    const blob = await encodeNoteBlob(JSON.stringify({ v: 1, html: newHtml }));
     const putRes = await fetch(API + '/api/notes/' + encodeURIComponent(jobId), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
@@ -3526,107 +3517,30 @@ const _notes = {
 window._notes = _notes;
 console.log('[notes] module initialized (v' + (typeof APP_VERSION !== 'undefined' ? APP_VERSION : '?') + ')');
 
-// Cached TipTap module exports. loadTipTap populates this on first call.
-let _tiptap = null;
-
 // Autosave constants
 const NOTES_DEBOUNCE_MS       = 10 * 1000;       // idle debounce
 const NOTES_MAX_SAVE_INTERVAL = 2 * 60 * 1000;   // force save during continuous typing
 const NOTES_SNAPSHOT_INTERVAL = 2 * 60 * 1000;   // min gap between auto-snapshots
 const NOTES_IDLE_FOR_SNAPSHOT = 30 * 1000;       // user idle this long → snapshot allowed
 
-async function loadTipTap() {
-  if (_tiptap) return _tiptap;
-  console.log('[notes] loadTipTap starting');
-
-  // Load only what we absolutely need: core + starter-kit + link. Fewer
-  // modules = fewer failure modes. We previously loaded 9 modules (table,
-  // task-list, etc.) which added complexity without being essential to
-  // jotting notes for a job application. The basic editor gives headings,
-  // bold/italic, lists, quotes, code blocks, horizontal rules — more than
-  // enough for the use case.
-  const CDNS = [
-    'https://esm.sh',
-    'https://cdn.jsdelivr.net/npm',
-  ];
-  const ver = '2.11.7';
-
-  // Helper: dynamic import with a hard timeout. The user has reported
-  // "stuck on loading" — if a CDN slow-rolls a response (TCP connection
-  // opens but body never completes), a plain `await import()` would hang
-  // the notes mount forever. This races the import against a 12-second
-  // timer; if timer wins, we reject and the caller tries the next CDN.
-  const importWithTimeout = (url, ms = 12000) => {
-    let timer;
-    const timeoutP = new Promise((_, rej) => {
-      timer = setTimeout(() => rej(new Error(`import timeout (${ms}ms): ${url}`)), ms);
-    });
-    return Promise.race([
-      import(/* @vite-ignore */ url).finally(() => clearTimeout(timer)),
-      timeoutP,
-    ]);
-  };
-
-  // Try each CDN in order. esm.sh has been the default; jsdelivr is the
-  // fallback for cases where esm.sh is slow/blocked. If both fail the
-  // thrown error carries enough info for the user's network admin to debug.
-  let lastErr = null;
-  for (const base of CDNS) {
-    try {
-      console.log('[notes] trying CDN', base);
-      const suffix = base.includes('esm.sh') ? '?bundle' : '/+esm';
-      const [core, starter, link] = await Promise.all([
-        importWithTimeout(`${base}/@tiptap/core@${ver}${suffix}`),
-        importWithTimeout(`${base}/@tiptap/starter-kit@${ver}${suffix}`),
-        importWithTimeout(`${base}/@tiptap/extension-link@${ver}${suffix}`),
-      ]);
-
-      // Validate each export. If any is missing, throw with a specific
-      // message pointing at the broken module — much easier to debug than
-      // "undefined is not a function" deep inside TipTap.
-      const Editor     = core.Editor;
-      const StarterKit = starter.default || starter.StarterKit;
-      const Link       = link.default   || link.Link;
-      const issues = [];
-      if (typeof Editor     !== 'function') issues.push(`core.Editor missing (keys: ${Object.keys(core).slice(0,8).join(',')})`);
-      if (typeof StarterKit !== 'function' && typeof StarterKit !== 'object') issues.push(`starter-kit export missing (keys: ${Object.keys(starter).slice(0,8).join(',')})`);
-      if (typeof Link       !== 'function' && typeof Link       !== 'object') issues.push(`link export missing (keys: ${Object.keys(link).slice(0,8).join(',')})`);
-      if (issues.length) throw new Error('TipTap module validation failed: ' + issues.join('; '));
-
-      _tiptap = { Editor, StarterKit, Link, _cdn: base };
-      // Expose for post-mortem debugging from devtools — users/testers
-      // can inspect the module shapes if something still breaks.
-      window.__tiptap_raw = { core, starter, link, cdn: base };
-      console.log('[notes] TipTap loaded from', base, '— exports:',
-                  { Editor: typeof Editor, StarterKit: typeof StarterKit, Link: typeof Link });
-      return _tiptap;
-    } catch (e) {
-      console.warn(`[notes] TipTap load from ${base} failed:`, e.message);
-      lastErr = e;
-      // Try next CDN
-    }
-  }
-  throw lastErr || new Error('TipTap failed to load from all CDNs');
-}
+// NOTE: No external editor library, no CDN imports. The editor
+// is a native contenteditable div styled with CSS. Everything is inline in
+// this file; there is no network dependency for the editor to start.
 
 function renderNotesTab(j) {
-  // Static shell with progressive loading UI. The actual TipTap instance
-  // mounts asynchronously in mountNotesEditor, which replaces the placeholder
-  // in #notes-editor-<jobId> once both the library and the content are ready.
   return `
     <div class="notes-layout">
       <div class="notes-shell">
         <div class="notes-toolbar" id="notes-toolbar-${j.id}">
           <div style="font-size:11px;color:var(--text3);padding:6px 10px;display:flex;align-items:center;gap:6px">
-            ${spinner()}<span id="notes-toolbar-status-${j.id}">Loading editor…</span>
+            ${spinner()}<span id="notes-toolbar-status-${j.id}">Loading…</span>
           </div>
         </div>
         <div class="notes-editor-wrap">
           <div id="notes-editor-${j.id}" class="notes-editor">
             <div class="notes-editor-loading" id="notes-editor-loading-${j.id}">
               ${spinner()}
-              <div class="notes-editor-loading-text" id="notes-editor-loading-text-${j.id}">Loading editor libraries…</div>
-              <div class="notes-editor-loading-hint">First load fetches ~200KB of rich-text libraries (cached thereafter).</div>
+              <div class="notes-editor-loading-text" id="notes-editor-loading-text-${j.id}">Loading your notes…</div>
             </div>
           </div>
         </div>
@@ -3640,37 +3554,24 @@ function renderNotesTab(j) {
     </div>`;
 }
 
-// Update the progressive loading message in the placeholder. No-op if the
-// placeholder has already been replaced by the real editor (which is what
-// we want — this only updates while waiting).
 function _setNotesLoadingMessage(jobId, msg) {
   const el = document.getElementById(`notes-editor-loading-text-${jobId}`);
   if (el) el.textContent = msg;
 }
 
-// Tear down the current editor. Flushes any pending save and destroys the
-// TipTap instance. Safe to call when nothing is mounted. Returns a promise
-// that resolves when the final save (if any) completes — callers that need
-// deterministic clean state (doLogout, account delete) should await it.
 async function tearDownNotesEditor() {
   if (!_notes.editor) {
-    // Still clear any stale timers/state even when there's no editor —
-    // paranoia, but cheap.
     _clearNotesTimers();
     _notes.jobId = null;
     _notes.mountPromise = null;
     return;
   }
-  const editor = _notes.editor;
-  const hadUnsavedEdits = JSON.stringify(editor.getJSON()) !== _notes.lastSavedJson;
-
-  // Flush first so any pending changes land before we destroy the editor.
-  // Errors here are not fatal — we still destroy and reset state.
+  const hadUnsavedEdits = _getNotesDocJson() !== _notes.lastSavedJson;
   if (hadUnsavedEdits) {
     try { await flushNotesSave(true); } catch (e) { console.error('Notes final flush failed:', e); }
   }
   _clearNotesTimers();
-  try { editor.destroy(); } catch {}
+  try { _notes.editor.remove(); } catch {}
   _notes.editor = null;
   _notes.jobId = null;
   _notes.mountPromise = null;
@@ -3685,75 +3586,51 @@ function _clearNotesTimers() {
   _notes.pendingSnapshot = false;
 }
 
-// Mount the TipTap editor into the notes tab for the given job.
-//
-// Contract:
-//  - Called once per notes-tab open, from renderDetail via requestAnimationFrame.
-//  - Idempotent: calling with the same jobId while a mount is in progress
-//    returns the in-flight promise, not a new mount.
-//  - Calling with a different jobId tears down the existing editor first.
-//  - Safe to call even if the target container was already replaced in the
-//    DOM by a re-render; the function re-queries for the container.
+// Serialize the editor's current content as a JSON string. This is the
+// canonical "doc" format we persist and diff against _notes.lastSavedJson.
+function _getNotesDocJson() {
+  if (!_notes.editor) return '';
+  return JSON.stringify({ v: 1, html: _notes.editor.innerHTML });
+}
+
+// Get the HTML string from a decoded doc, tolerant of legacy TipTap JSON.
+function _extractHtmlFromDoc(doc) {
+  if (!doc) return '';
+  if (doc.v === 1 && typeof doc.html === 'string') return doc.html;
+  if (doc.type === 'doc' && Array.isArray(doc.content)) {
+    console.warn('[notes] legacy TipTap doc format — showing empty; next save writes new format');
+    return '';
+  }
+  return '';
+}
+
+// Mount the notes editor for a given job. Idempotent; concurrent callers
+// get the in-flight mountPromise.
 function mountNotesEditor(jobId) {
-  // Already mounted for this exact job? Nothing to do.
+  console.log('[notes] mountNotesEditor', jobId, 'existing state:',
+              { existingJob: _notes.jobId, hasEditor: !!_notes.editor, hasPromise: !!_notes.mountPromise });
   if (_notes.editor && _notes.jobId === jobId && _notes.mountPromise === null) {
     return Promise.resolve();
   }
-  // Mount in progress for the same job? Return the in-flight promise so
-  // concurrent callers dedupe.
   if (_notes.mountPromise && _notes.jobId === jobId) {
     return _notes.mountPromise;
   }
-  // Different job (or no job) is currently in progress — tear down first,
-  // then start fresh. tearDown is awaited so we don't race.
   _notes.jobId = jobId;
   _notes.mountPromise = (async () => {
-    // 1. Tear down any existing editor (different job, or leftover from
-    //    a prior session).
     if (_notes.editor) {
-      const prevEditor = _notes.editor;
-      // Don't use tearDownNotesEditor here — it nulls _notes.jobId which
-      // we just set. Inline the minimal cleanup.
       try {
-        if (JSON.stringify(prevEditor.getJSON()) !== _notes.lastSavedJson) {
+        if (_getNotesDocJson() !== _notes.lastSavedJson) {
           await flushNotesSave(true);
         }
-      } catch (e) { console.error('Notes prior-job flush failed:', e); }
+      } catch (e) { console.error('[notes] prior-job flush failed:', e); }
       _clearNotesTimers();
-      try { prevEditor.destroy(); } catch {}
+      try { _notes.editor.remove(); } catch {}
       _notes.editor = null;
       _notes.lastSavedJson = '';
       _notes.remoteVersion = 0;
     }
 
-    // 2. Load TipTap modules. Typically fast (cached) but first-visit can
-    //    take a couple seconds on slow networks.
-    let T;
-    try {
-      T = await loadTipTap();
-    } catch (e) {
-      console.error('TipTap load failed:', e);
-      _setNotesLoadingMessage(jobId, 'Editor failed to load — ' + e.message);
-      _notes.mountPromise = null;
-      return;
-    }
-
-    // 3. If the user already navigated away while TipTap was loading, bail.
-    //    We recognize this by checking the container still exists AND the
-    //    requested jobId is still our target.
-    if (_notes.jobId !== jobId) return;
-    const container = document.getElementById(`notes-editor-${jobId}`);
-    if (!container) {
-      _notes.mountPromise = null;
-      return;
-    }
-
-    _setNotesLoadingMessage(jobId, 'Loading your notes…');
-
-    // 4. Fetch the current doc from the server. If this fails (network, cold
-    //    backend timeout), we mount with empty content — the user can still
-    //    write, and the next save will push their content up.
-    let remoteDoc = null;
+    let html = '';
     let remoteVersion = 0;
     try {
       const res = await fetch(API + '/api/notes/' + encodeURIComponent(jobId), {
@@ -3762,79 +3639,56 @@ function mountNotesEditor(jobId) {
       if (res.ok) {
         const d = await res.json();
         remoteVersion = d.version || 0;
-        if (d.current?.blob) remoteDoc = await decodeNoteBlob(d.current.blob);
+        if (d.current?.blob) {
+          const doc = await decodeNoteBlob(d.current.blob);
+          html = _extractHtmlFromDoc(doc);
+        }
       }
     } catch (e) {
-      console.warn('Notes fetch failed; mounting empty:', e);
+      console.warn('[notes] fetch failed; mounting empty:', e);
     }
 
-    // 5. Late-check before mounting — user may have navigated away during
-    //    the fetch (especially on slow network).
-    if (_notes.jobId !== jobId) return;
-    const container2 = document.getElementById(`notes-editor-${jobId}`);
-    if (!container2) {
-      _notes.mountPromise = null;
-      return;
-    }
+    if (_notes.jobId !== jobId) { _notes.mountPromise = null; return; }
+    const container = document.getElementById(`notes-editor-${jobId}`);
+    if (!container) { _notes.mountPromise = null; return; }
 
-    // 6. Clear placeholder and construct the editor.
-    container2.innerHTML = '';
-    try {
-      _notes.editor = new T.Editor({
-        element: container2,
-        extensions: [
-          T.StarterKit.configure({ codeBlock: { HTMLAttributes: { class: 'notes-code-block' } } }),
-          T.Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' } }),
-        ],
-        content: remoteDoc || '',
-        editorProps: {
-          attributes: { 'data-placeholder': 'Start writing notes for this job…' },
-          handlePaste(view, event) {
-            const items = event.clipboardData?.items;
-            if (items) {
-              for (const it of items) {
-                if (it.type && it.type.startsWith('image/')) { event.preventDefault(); return true; }
-              }
-            }
-            return false;
-          },
-          handleDrop(view, event) {
-            if (event.dataTransfer?.files?.length) {
-              for (const f of event.dataTransfer.files) {
-                if (f.type.startsWith('image/')) { event.preventDefault(); return true; }
-              }
-            }
-            return false;
-          },
-        },
-        onUpdate: () => {
-          scheduleNotesSave();
-          renderNotesToolbar(jobId);
-        },
-        onSelectionUpdate: () => renderNotesToolbar(jobId),
-        onCreate: () => {
-          _notes.lastSavedJson = JSON.stringify(_notes.editor.getJSON());
-          renderNotesToolbar(jobId);
-        },
-      });
-      _notes.remoteVersion = remoteVersion;
+    container.innerHTML = '';
+    const editor = document.createElement('div');
+    editor.className = 'notes-editor-content';
+    editor.contentEditable = 'true';
+    editor.spellcheck = true;
+    editor.setAttribute('data-placeholder', 'Start writing notes for this job…');
+    editor.innerHTML = html || '';
+    container.appendChild(editor);
+
+    editor.addEventListener('input', () => {
+      scheduleNotesSave();
       renderNotesToolbar(jobId);
-      setNotesStatus('saved');
-      loadNotesHistory(jobId);
-    } catch (e) {
-      console.error('TipTap construction failed:', e);
-      console.error('TipTap module state:', window.__tiptap_raw);
-      // Show a clear error with a RETRY button so the user isn't permanently
-      // stuck. Also log the raw module state for post-mortem debugging.
-      container2.innerHTML = `<div class="notes-editor-loading" style="padding:24px">
-        <div class="notes-editor-loading-text" style="color:var(--red);margin-bottom:8px">Editor failed to start</div>
-        <div class="notes-editor-loading-hint" style="margin-bottom:16px;max-width:400px">${esc(e.message)}</div>
-        <button onclick="_notes.jobId = null; mountNotesEditor('${jobId}')" style="padding:8px 16px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer">Retry</button>
-        <div class="notes-editor-loading-hint" style="margin-top:12px;font-size:10px;opacity:0.7">Open DevTools console for diagnostic details</div>
-      </div>`;
-    } finally {
-      _notes.mountPromise = null;
-    }
+    });
+    editor.addEventListener('keyup',   () => renderNotesToolbar(jobId));
+    editor.addEventListener('mouseup', () => renderNotesToolbar(jobId));
+    // Paste as plain text — avoids pulling weird formatting from Gmail/Word
+    editor.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, text);
+    });
+    editor.addEventListener('drop', (e) => {
+      if (e.dataTransfer?.files?.length) {
+        for (const f of e.dataTransfer.files) {
+          if (f.type?.startsWith('image/')) { e.preventDefault(); return; }
+        }
+      }
+    });
+
+    _notes.editor = editor;
+    _notes.remoteVersion = remoteVersion;
+    _notes.lastSavedJson = _getNotesDocJson();
+    renderNotesToolbar(jobId);
+    setNotesStatus('saved');
+    loadNotesHistory(jobId);
+    _notes.mountPromise = null;
+    console.log('[notes] editor mounted for job', jobId);
   })();
   return _notes.mountPromise;
 }
@@ -3843,45 +3697,74 @@ function mountNotesEditor(jobId) {
 function renderNotesToolbar(jobId) {
   const bar = document.getElementById(`notes-toolbar-${jobId}`);
   if (!bar || !_notes.editor) return;
-  const ed = _notes.editor;
-  const is = (name, attrs) => ed.isActive(name, attrs || {}) ? 'active' : '';
+  const qs = (cmd) => { try { return document.queryCommandState(cmd); } catch { return false; } };
+  const qv = (cmd) => { try { return document.queryCommandValue(cmd) || ''; } catch { return ''; } };
+  const is = (cmd) => qs(cmd) ? 'active' : '';
+  const block = (qv('formatBlock') || '').toLowerCase().replace(/[<>]/g, '');
+  const isBlock = (tag) => block === tag ? 'active' : '';
   bar.innerHTML = `
-    <button class="${is('bold')}" title="Bold (Cmd+B)" onclick="notesCmd('toggleBold')"><b>B</b></button>
-    <button class="${is('italic')}" title="Italic (Cmd+I)" onclick="notesCmd('toggleItalic')"><i>I</i></button>
-    <button class="${is('strike')}" title="Strikethrough" onclick="notesCmd('toggleStrike')"><s>S</s></button>
-    <button class="${is('code')}" title="Inline code" onclick="notesCmd('toggleCode')" style="font-family:var(--mono);font-size:11px">{ }</button>
+    <button class="${is('bold')}" title="Bold (Cmd+B)" onclick="notesCmd('bold')"><b>B</b></button>
+    <button class="${is('italic')}" title="Italic (Cmd+I)" onclick="notesCmd('italic')"><i>I</i></button>
+    <button class="${is('underline')}" title="Underline (Cmd+U)" onclick="notesCmd('underline')"><u>U</u></button>
+    <button class="${is('strikeThrough')}" title="Strikethrough" onclick="notesCmd('strikeThrough')"><s>S</s></button>
     <div class="sep"></div>
-    <button class="${is('heading',{level:1})}" title="Heading 1" onclick="notesCmd('toggleHeading',{level:1})">H1</button>
-    <button class="${is('heading',{level:2})}" title="Heading 2" onclick="notesCmd('toggleHeading',{level:2})">H2</button>
-    <button class="${is('heading',{level:3})}" title="Heading 3" onclick="notesCmd('toggleHeading',{level:3})">H3</button>
+    <button class="${isBlock('h1')}" title="Heading 1" onclick="notesFormatBlock('h1')">H1</button>
+    <button class="${isBlock('h2')}" title="Heading 2" onclick="notesFormatBlock('h2')">H2</button>
+    <button class="${isBlock('h3')}" title="Heading 3" onclick="notesFormatBlock('h3')">H3</button>
     <div class="sep"></div>
-    <button class="${is('bulletList')}" title="Bullet list" onclick="notesCmd('toggleBulletList')">•</button>
-    <button class="${is('orderedList')}" title="Numbered list" onclick="notesCmd('toggleOrderedList')">1.</button>
+    <button class="${is('insertUnorderedList')}" title="Bullet list" onclick="notesCmd('insertUnorderedList')">•</button>
+    <button class="${is('insertOrderedList')}" title="Numbered list" onclick="notesCmd('insertOrderedList')">1.</button>
     <div class="sep"></div>
-    <button class="${is('blockquote')}" title="Quote" onclick="notesCmd('toggleBlockquote')">&rdquo;</button>
-    <button class="${is('codeBlock')}" title="Code block" onclick="notesCmd('toggleCodeBlock')" style="font-family:var(--mono);font-size:10px">&lt;/&gt;</button>
-    <button title="Horizontal rule" onclick="notesCmd('setHorizontalRule')">—</button>
+    <button class="${isBlock('blockquote')}" title="Quote" onclick="notesFormatBlock('blockquote')">&rdquo;</button>
+    <button title="Horizontal rule" onclick="notesCmd('insertHorizontalRule')">—</button>
     <div class="sep"></div>
     <button title="Link" onclick="notesLinkPrompt()">🔗</button>
+    <button title="Unlink" onclick="notesCmd('unlink')">⌧</button>
     <div class="sep"></div>
-    <button title="Undo (Cmd+Z)" onclick="notesCmd('undo')" ${ed.can().undo() ? '' : 'disabled'}>↶</button>
-    <button title="Redo (Cmd+Shift+Z)" onclick="notesCmd('redo')" ${ed.can().redo() ? '' : 'disabled'}>↷</button>
+    <button title="Undo (Cmd+Z)" onclick="notesCmd('undo')">↶</button>
+    <button title="Redo (Cmd+Shift+Z)" onclick="notesCmd('redo')">↷</button>
     <span class="notes-toolbar-status" id="notes-status">saved</span>`;
 }
 
-function notesCmd(name, arg) {
+function notesCmd(cmd, arg) {
   if (!_notes.editor) return;
-  const chain = _notes.editor.chain().focus();
-  if (arg) chain[name](arg).run(); else chain[name]().run();
+  _notes.editor.focus();
+  try { document.execCommand(cmd, false, arg || null); }
+  catch (e) { console.warn('[notes] execCommand failed:', cmd, e); }
+  scheduleNotesSave();
+  renderNotesToolbar(_notes.jobId);
 }
+
+function notesFormatBlock(tag) {
+  if (!_notes.editor) return;
+  _notes.editor.focus();
+  const cur = (document.queryCommandValue('formatBlock') || '').toLowerCase().replace(/[<>]/g, '');
+  const target = cur === tag ? 'p' : tag;
+  try { document.execCommand('formatBlock', false, '<' + target + '>'); }
+  catch (e) { console.warn('[notes] formatBlock failed:', e); }
+  scheduleNotesSave();
+  renderNotesToolbar(_notes.jobId);
+}
+
 function notesLinkPrompt() {
   if (!_notes.editor) return;
-  const prev = _notes.editor.getAttributes('link').href || '';
-  const url = prompt('Link URL:', prev);
+  const url = prompt('Link URL:', 'https://');
   if (url === null) return;
-  if (url === '') { _notes.editor.chain().focus().extendMarkRange('link').unsetLink().run(); return; }
-  if (!/^(https?:|mailto:)/i.test(url)) { alert('Link must start with http://, https:// or mailto:'); return; }
-  _notes.editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+  if (url === '' || url === 'https://') {
+    try { document.execCommand('unlink'); } catch {}
+    return;
+  }
+  if (!/^(https?:|mailto:)/i.test(url)) {
+    alert('Link must start with http://, https:// or mailto:');
+    return;
+  }
+  _notes.editor.focus();
+  try { document.execCommand('createLink', false, url); } catch (e) { console.warn('[notes] createLink failed:', e); }
+  _notes.editor.querySelectorAll('a').forEach(a => {
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer nofollow';
+  });
+  scheduleNotesSave();
 }
 
 function setNotesStatus(state, msg) {
@@ -3911,7 +3794,7 @@ async function flushNotesSave(final) {
   if (_notes.maxSaveTimer) { clearTimeout(_notes.maxSaveTimer); _notes.maxSaveTimer = null; }
   if (!_notes.editor || !_notes.jobId) return;
   const jobId = _notes.jobId;
-  const docJson = JSON.stringify(_notes.editor.getJSON());
+  const docJson = _getNotesDocJson();
   if (docJson === _notes.lastSavedJson) { setNotesStatus('saved'); return; }
   const createSnapshot = _notes.pendingSnapshot;
   _notes.pendingSnapshot = false;
@@ -3934,7 +3817,7 @@ async function flushNotesSave(final) {
     setNotesStatus('saved');
   } catch (e) {
     setNotesStatus('error', 'save failed');
-    console.error('Notes save error:', e);
+    console.error('[notes] save error:', e);
     if (!final) {
       _notes.saveTimer = setTimeout(() => flushNotesSave(false), NOTES_DEBOUNCE_MS * 2);
     }
@@ -3955,7 +3838,7 @@ async function decodeNoteBlob(blob) {
     try {
       const pt = await CryptoEngine.decrypt(dataKey, blob.data);
       return typeof pt === 'string' ? JSON.parse(pt) : pt;
-    } catch (e) { console.error('Notes decrypt failed:', e); return null; }
+    } catch (e) { console.error('[notes] decrypt failed:', e); return null; }
   }
   if (blob.__enc === false && blob.data) {
     return typeof blob.data === 'string' ? JSON.parse(blob.data) : blob.data;
@@ -3990,7 +3873,6 @@ async function loadNotesHistory(jobId) {
 async function restoreNotesVersion(jobId, version) {
   if (!confirm('Restore this version? Your current draft will be preserved in history.')) return;
   try {
-    // Flush pending edits first so they become a history entry
     await flushNotesSave(true);
     const res = await fetch(API + '/api/notes/' + encodeURIComponent(jobId) + '/restore', {
       method: 'POST',
@@ -3998,9 +3880,8 @@ async function restoreNotesVersion(jobId, version) {
       body: JSON.stringify({ version }),
     });
     if (!res.ok) { alert('Restore failed: ' + (await res.text())); return; }
-    // Force remount by tearing down and re-mounting for this job
     await tearDownNotesEditor();
-    _notes.jobId = null;  // defensively ensure mount runs fresh
+    _notes.jobId = null;
     mountNotesEditor(jobId);
   } catch (e) {
     alert('Restore failed: ' + e.message);
@@ -4018,9 +3899,7 @@ function relativeTime(ts) {
 
 // Flush pending saves before the tab is closed/hidden — best effort
 window.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden' && _notes.editor) {
-    flushNotesSave(true);
-  }
+  if (document.visibilityState === 'hidden' && _notes.editor) flushNotesSave(true);
 });
 window.addEventListener('beforeunload', () => {
   if (_notes.editor) flushNotesSave(true);
@@ -7910,7 +7789,7 @@ setInterval(() => {
     </div>
     <button class="auth-btn" id="forgot-btn" onclick="doForgot()">Send recovery email</button>
     <div class="auth-switch" style="margin-top:12px"><a onclick="showScreen('login')">← Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.5.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.6.0 · private beta</div>
   </div>
 </div>
 
