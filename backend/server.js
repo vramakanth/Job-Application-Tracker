@@ -162,8 +162,14 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, '../frontend/public'), {
   setHeaders(res, fp) {
-    if (fp.endsWith('sw.js'))          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    if (fp.endsWith('sw.js'))              res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     else if (fp.endsWith('manifest.json')) res.setHeader('Cache-Control', 'no-cache');
+    // HTML files are our single source of truth for the app's JS — they must
+    // NEVER be stale. A cached index.html serving old inline JS against a new
+    // backend is how users end up with a Frankenstein state. Force
+    // revalidation on every request; browsers will still use If-Modified-Since
+    // so the response is typically a cheap 304.
+    else if (fp.endsWith('.html'))         res.setHeader('Cache-Control', 'no-cache, must-revalidate');
   }
 }));
 

@@ -3,6 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- Cache-busting: the app ships as a single HTML file with inline JS. Users
+     on older builds can otherwise get a Frankenstein state (new HTML, cached
+     old JS) when subresources are cached differently than the document. -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Summit — Job Tracker</title>
 
 <!-- PWA manifest -->
