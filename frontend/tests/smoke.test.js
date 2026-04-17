@@ -165,3 +165,53 @@ t('Star+trash in aligned column in detail header', () => {
   if (!dh.includes('toggleWatchlist') || !dh.includes('deleteJob')) throw new Error('missing buttons');
 });
 t('★ watchlist label on filter tab',   () => has('★ watchlist'));
+
+// ── Finnhub key fix ──────────────────────────────────────────────────────────
+console.log('\n── Finnhub key');
+t('saveFinnhubKeySetting calls renderDetail after save', () => {
+  const idx = src.indexOf('function saveFinnhubKeySetting');
+  const body = src.slice(idx, idx + 400);
+  if (!body.includes('renderDetail')) throw new Error('renderDetail not called after save — insights tab stays stale');
+});
+t('clearFinnhubKey calls renderDetail after clear', () => {
+  const idx = src.indexOf('function clearFinnhubKey');
+  const body = src.slice(idx, idx + 400);
+  if (!body.includes('renderDetail')) throw new Error('renderDetail not called after clear');
+});
+t('hasFinnhub reads from localStorage in renderInsightsTab', () => {
+  const idx = src.indexOf('function renderInsightsTab');
+  const body = src.slice(idx, idx + 300);
+  if (!body.includes("localStorage.getItem('finnhub_key')")) throw new Error('hasFinnhub not reading from localStorage');
+});
+
+// ── Browser fetch fallback ───────────────────────────────────────────────────
+console.log('\n── Browser fetch fallback (job posting)');
+t('refetchPosting tries server first then browser', () => {
+  const idx = src.indexOf('async function refetchPosting');
+  const body = src.slice(idx, idx + 4000);
+  if (!body.includes('/api/parse-job')) throw new Error('missing server-side parse-job call');
+  if (!body.includes('_browserFetchPosting')) throw new Error('missing browser fetch fallback');
+});
+t('_browserFetchPosting defined with chrome.tabs', () => {
+  has('async function _browserFetchPosting');
+  const idx = src.indexOf('async function _browserFetchPosting');
+  const body = src.slice(idx, idx + 600);
+  if (!body.includes('chrome.tabs')) throw new Error('chrome.tabs not used');
+  // extractJob message is in _browserFetchPosting (separate function)
+});
+t('_browserFetchPosting checks chrome availability', () => {
+  const idx = src.indexOf('async function _browserFetchPosting');
+  const body = src.slice(idx, idx + 300);
+  if (!body.includes("typeof chrome === 'undefined'")) throw new Error('no chrome availability check');
+});
+t('refetchPosting has helpful fallback UI for blocked sites', () => {
+  const idx = src.indexOf('async function refetchPosting');
+  const body = src.slice(idx, idx + 4000);
+  if (!body.includes('Open job page')) throw new Error('no helpful fallback message');
+  if (!body.includes("target=\"_blank\"")) throw new Error('no open-in-tab link');
+});
+t('refetchPosting closes background tab after extraction', () => {
+  const idx = src.indexOf('async function _browserFetchPosting');
+  const body = src.slice(idx, idx + 800);
+  if (!body.includes('chrome.tabs.remove')) throw new Error('background tab not closed');
+});

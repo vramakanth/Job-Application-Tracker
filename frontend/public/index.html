@@ -297,7 +297,7 @@ input[type=\"file\"] { display: none; }
 
 /* ── MOBILE BOTTOM BAR ── */
 .mobile-back-btn { display: none; align-items: center; gap: 8px; background: none; border: none; color: var(--text2); font-family: var(--font); font-size: 13px; cursor: pointer; padding: 0; }
-.mobile-bottom-bar { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 56px; background: var(--bg2); border-top: 1px solid var(--border); z-index: 1100; align-items: center; justify-content: space-around; padding: 0 8px; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.mobile-bottom-bar { display: none; position: fixed; bottom: 0; left: 0; right: 0; height: 56px; background: var(--bg2); border-top: 1px solid var(--border); z-index: 300; align-items: center; justify-content: space-around; padding: 0 8px; padding-bottom: env(safe-area-inset-bottom, 0px); }
 .mobile-bottom-btn { display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; color: var(--text3); font-family: var(--font); font-size: 10px; cursor: pointer; padding: 8px 12px; border-radius: var(--radius-sm); transition: color 0.15s; min-width: 60px; }
 .mobile-bottom-btn.active { color: var(--accent-bg) !important; }
 .mobile-bottom-btn svg { width: 20px; height: 20px; }
@@ -533,6 +533,10 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
   .main.visible-mobile { transform: translateX(0); }
   .mobile-back-btn { display: flex !important; }
   body.in-app .mobile-bottom-bar { display: flex !important; }
+  /* Prevent bottom bar from covering content */
+  #job-list { padding-bottom: 64px; }
+  #detail-view { padding-bottom: 64px; }
+  #section-view { padding-bottom: 64px; }
   .mobile-bottom-btn.active { color: var(--accent-bg) !important; }
   .sidebar { padding-bottom: 56px; }
   .sidebar-header { padding: 16px 16px 10px; }
@@ -546,6 +550,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
   .sidebar-nav-btns { display: none !important; }
   .sidebar-user-bar { display: none !important; }
   #mobile-avatar-btn { display: flex !important; }
+  #user-avatar { display: none !important; }
   .mobile-close-hidden { display: none !important; }
   .docs-overlay, #analytics-overlay, #settings-overlay > div, #tailor-overlay, .settings-overlay { padding-bottom: 56px !important; }
   .tailor-toggle-label { display: none !important; }
@@ -702,7 +707,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       Don't have an account? <a onclick="showScreen('register')">Create one</a>
       <br><a onclick="showScreen('forgot')" style="font-size:12px;color:var(--text3)">Forgot password?</a>
     </div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.4.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.5.0 · private beta</div>
   </div>
 </div>
 
@@ -742,7 +747,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     </div>
     <button id="register-btn" class="auth-btn" onclick="doRegister()">Create account</button>
     <div class="auth-switch">Already have an account? <a onclick="showScreen('login')">Sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.4.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.5.0 · private beta</div>
   </div>
 </div>
 
@@ -758,7 +763,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <div class="auth-field"><label>CONFIRM PASSWORD</label><input id="recover-confirmpw" type="password" placeholder="Confirm new password"></div>
     <button id="recover-btn" class="auth-btn" onclick="recoverAccount()">Reset password</button>
     <div class="auth-switch"><a onclick="showScreen('login')">Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.4.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.5.0 · private beta</div>
   </div>
 </div>
 
@@ -817,13 +822,13 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
     <!-- User bar -->
     <div class="user-bar">
-      <button id="mobile-avatar-btn" onclick="openSettings()" style="display:none;width:28px;height:28px;border-radius:50%;background:var(--accent-bg);border:none;cursor:pointer;font-size:11px;font-weight:700;color:#1a1917;font-family:var(--mono);flex-shrink:0;align-items:center;justify-content:center" id="mobile-avatar-btn">
+      <button id="mobile-avatar-btn" onclick="openSettings()" style="display:none;width:28px;height:28px;border-radius:50%;background:var(--accent-bg);border:none;cursor:pointer;font-size:11px;font-weight:700;color:#1a1917;font-family:var(--mono);flex-shrink:0;align-items:center;justify-content:center">
         <span id="mobile-avatar">VR</span>
       </button>
-      <div class="user-avatar" id="user-avatar">VR</div>
+      <div class="user-avatar" id="user-avatar" style="display:flex">VR</div>
       <div style="flex:1;min-width:0">
         <div class="user-name" id="user-name-display">user</div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.4.0</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.5.0</div>
       </div>
 
       <button class="user-bar-settings" onclick="doLogout()" title="Sign out" style="color:var(--text3)" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">
@@ -2053,10 +2058,11 @@ function deleteJob(id) {
 }
 
 // ── FILTERS / LIST ──
-function setFilter(f, el) {
+function setFilter(f) {
   currentFilter = f;
-  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
+  document.querySelectorAll('.filter-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.filter === f);
+  });
   renderJobList();
 }
 
@@ -2476,28 +2482,96 @@ async function refetchPosting(jobId) {
   const area = document.getElementById('posting-content-area');
   if (area) area.innerHTML = `<div class="fetch-loading">${spinner()} Fetching job posting...</div>`;
 
+  // Step 1: try server-side fetch (Jina reader + direct fetch)
   try {
     const res = await fetch(API + '/api/parse-job', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       body: JSON.stringify({ url: j.url })
     });
-    if (!res.ok) throw new Error('Server error');
+    if (!res.ok) throw new Error('Server error ' + res.status);
     const data = await res.json();
-
-    if (data.html || data.text) {
-      j.postingHtml = data.html;
+    if (data.text && data.text.length > 200) {
+      j.postingHtml = data.html || '';
       j.postingText = data.text;
       scheduleSave();
       if (area) area.innerHTML = buildPostingHtml(j);
-    } else {
-      throw new Error('No content returned');
+      return;
     }
+    // Server returned but no useful content — fall through to browser fetch
+    throw new Error('no-content');
   } catch(e) {
-    if (area) area.innerHTML = `<div class="posting-empty">
-      <p style="color:var(--red)">Could not fetch the posting — the site may require a browser to render content.<br>Try the "↗ open original" link instead.</p>
+    // Server fetch failed or returned empty (Cloudflare, bot-blocking, etc.)
+    // Step 2: browser-side fetch via extension tab capture
+    if (area) area.innerHTML = `<div class="fetch-loading">${spinner()} Server blocked — trying browser fetch...</div>`;
+    const captured = await _browserFetchPosting(j.url);
+    if (captured && captured.length > 200) {
+      j.postingHtml = '';
+      j.postingText = captured;
+      scheduleSave();
+      if (area) area.innerHTML = buildPostingHtml(j);
+      return;
+    }
+
+    // Step 3: both failed — show helpful fallback
+    if (area) area.innerHTML = `<div class="posting-empty" style="padding:20px">
+      <p style="color:var(--text2);margin-bottom:16px;line-height:1.6">
+        This site blocks automated fetching (Cloudflare protection).<br>
+        <strong style="color:var(--text)">Two ways to capture this posting:</strong>
+      </p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <a href="${esc(j.url)}" target="_blank" style="display:inline-flex;align-items:center;gap:8px;padding:10px 14px;background:var(--accent-bg);color:#1a0d00;border-radius:var(--radius-sm);font-size:13px;font-weight:600;text-decoration:none">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          Open job page, then click Summit extension
+        </a>
+        <div style="font-size:11px;color:var(--text3);line-height:1.5">
+          Or paste the job description text directly into the <strong style="color:var(--text2)">Notes</strong> tab.
+        </div>
+      </div>
     </div>`;
   }
+}
+
+// Browser-side fetch via Chrome extension tab capture.
+// Opens the URL in a background tab, waits for content.js to be ready,
+// requests the page text, then closes the tab.
+// Returns the extracted text, or null if extension is not available.
+async function _browserFetchPosting(url) {
+  // Check if Chrome extension API is available
+  if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.tabs) return null;
+
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => resolve(null), 20000); // 20s max
+
+    chrome.tabs.create({ url, active: false }, (tab) => {
+      if (!tab) { clearTimeout(timeout); resolve(null); return; }
+
+      // Poll until the tab is loaded, then ask content.js for the page text
+      let attempts = 0;
+      const poll = setInterval(() => {
+        attempts++;
+        if (attempts > 40) { // 20s max (40 × 500ms)
+          clearInterval(poll);
+          clearTimeout(timeout);
+          chrome.tabs.remove(tab.id).catch(() => {});
+          resolve(null);
+          return;
+        }
+        chrome.tabs.get(tab.id, (t) => {
+          if (chrome.runtime.lastError || !t) return; // tab gone
+          if (t.status !== 'complete') return; // still loading
+          clearInterval(poll);
+          clearTimeout(timeout);
+          // Ask content.js for the rendered page text
+          chrome.tabs.sendMessage(tab.id, { action: 'extractJob' }, (resp) => {
+            chrome.tabs.remove(tab.id).catch(() => {});
+            if (chrome.runtime.lastError || !resp) { resolve(null); return; }
+            resolve(resp.bodyText || null);
+          });
+        });
+      }, 500);
+    });
+  });
 }
 
 // ── NOTES TAB ──
@@ -5830,6 +5904,7 @@ function saveFinnhubKeySetting() {
   if (key) {
     localStorage.setItem('finnhub_key', key);
     setSettingsStatus('finnhub-status','success','Finnhub API key saved.');
+    renderDetail(); // refresh insights tab so "API key required" prompt disappears immediately
   } else {
     setSettingsStatus('finnhub-status','error','Please enter a key, or use "Clear key" to remove it.');
   }
@@ -5839,6 +5914,7 @@ function clearFinnhubKey() {
   localStorage.removeItem('finnhub_key');
   document.getElementById('s-finnhub-key').value = '';
   setSettingsStatus('finnhub-status','success','Finnhub key removed.');
+  renderDetail(); // refresh insights tab so it reflects cleared state
 }
 
 async function exportData(format = 'zip') {
@@ -6043,7 +6119,7 @@ setInterval(() => {
     </div>
     <button class="auth-btn" id="forgot-btn" onclick="doForgot()">Send recovery email</button>
     <div class="auth-switch" style="margin-top:12px"><a onclick="showScreen('login')">← Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.4.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.5.0 · private beta</div>
   </div>
 </div>
 
@@ -6063,7 +6139,7 @@ setInterval(() => {
         <button id="snav-tailoring" onclick="showSettingsSection('tailoring')" class="snav-btn">Tailoring</button>
         <button id="snav-financial" onclick="showSettingsSection('financial')" class="snav-btn">Financial Data</button>
         <button id="snav-data"      onclick="showSettingsSection('data')"      class="snav-btn">Data &amp; Export</button>
-        <button id="snav-help"      onclick="showSettingsSection('help')"      class="snav-btn">Help &amp; Support</button>
+        <button id="snav-help"      onclick="showSettingsSection('help')"      class="snav-btn">Help</button>
         <button id="snav-feedback"  onclick="showSettingsSection('feedback')"  class="snav-btn">Feedback</button>
         <button id="snav-recovery"  onclick="showSettingsSection('recovery')"  class="snav-btn">Recovery Codes</button>
         <!-- Mobile-only quick actions -->
@@ -6237,31 +6313,83 @@ setInterval(() => {
 
       <!-- HELP & SUPPORT -->
       <div class="settings-pane" id="spane-help" style="display:none">
-        <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:20px">Help &amp; Support</div>
-        <div class="settings-section">
-          <div class="settings-section-title">USER GUIDE</div>
-          <div class="settings-section-body">
-            <div style="font-size:13px;color:var(--text2);line-height:1.8">
-              <strong style="color:var(--text)">AI Resume Tailoring</strong><br>
-              Click <strong>Tailor ✦</strong> on any document in the Documents tab — it opens as a focused full-screen overlay. Tailored documents are saved as <strong>.docx</strong> and fully editable. Each re-tailor creates a new version (v1, v2, v3…). With cleanup on, only the final version is kept.<br><br>
-              <strong style="color:var(--text)">Adding a job</strong><br>
-              Click <strong>+ Add application</strong> &rarr; paste a job URL and click <strong>Open</strong> to auto-parse title, company, and location. Fill in Work Type and click Save.<br><br>
-              <strong style="color:var(--text)">Tailoring tab</strong><br>
-              1. Select Resume or Cover Letter &rarr; 2. Upload or pick from Library &rarr; 3. Add optional context &rarr; click <strong>Tailor</strong> &rarr; 4. Edit result &rarr; Download .docx or .txt.<br><br>
-              <strong style="color:var(--text)">Documents tab (per job)</strong><br>
-              All documents for each application. Upload files, add from your Library, and mark one as <strong>Used for application</strong>. Syncs to Document Library.<br><br>
-              <strong style="color:var(--text)">Document Library</strong><br>
-              Sidebar button. Search and filter all resumes and cover letters. Upload, create blank docs, or edit in the built-in editor.<br><br>
-              <strong style="color:var(--text)">Insights tab</strong><br>
-              Click <strong>Research this role</strong> for AI-powered company research &mdash; culture, red/green flags, LinkedIn strategy, news, interview tips. Add a Finnhub key for live stock data.<br><br>
-              <strong style="color:var(--text)">Analytics &amp; Check Postings</strong><br>
-              Open Analytics from the sidebar. Click <strong>&circlearrowleft; Check postings</strong> in the Analytics header to scan all active job URLs for expired signals. Expired jobs are tagged orange.<br><br>
-              <strong style="color:var(--text)">Browser Extensions</strong><br>
-              Install from Settings &rarr; Browser Extensions to add jobs directly from any job site in one click.
+        <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px">Help</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:28px">How to get the most out of Summit.</div>
+
+        <!-- Workflow cards -->
+        <div style="display:flex;flex-direction:column;gap:16px">
+
+          <div class="settings-section">
+            <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
+              <span>🔍</span> FINDING &amp; ADDING JOBS
+            </div>
+            <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
+              Hit <strong style="color:var(--text)">+ Add</strong> and paste any job URL — Summit will try to pull the title, company, and salary automatically. You can edit anything it gets wrong.<br><br>
+              Even better: install the <strong style="color:var(--text)">browser extension</strong> (Settings → Browser Extensions) and you'll get a one-click button on every job page. It grabs the full posting text, which makes AI tailoring a lot more accurate.
             </div>
           </div>
-        </div>
 
+          <div class="settings-section">
+            <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
+              <span>📋</span> TRACKING YOUR PIPELINE
+            </div>
+            <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
+              Every job moves through statuses — <em>to apply → applied → interview → offer</em>. Change the status from the dropdown at the top of any job.<br><br>
+              Use the <strong style="color:var(--text)">filter bar</strong> at the top of the job list to quickly see just what you're interviewing for, or just the jobs you've starred (★ watchlist). The <strong style="color:var(--text)">stale</strong> tag appears on postings that look expired — Summit checks these automatically in the background.
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
+              <span>✦</span> AI RESUME TAILORING
+            </div>
+            <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
+              Go to the <strong style="color:var(--text)">Documents tab</strong> on any job, then click <strong style="color:var(--text)">Tailor ✦</strong>. Summit reads the job posting and rewrites your resume or cover letter to match. It takes about 10–20 seconds.<br><br>
+              The result is fully editable before you download. If you don't love it, tweak the context field and tailor again — each version is saved separately so you never lose the original.
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
+              <span>🏢</span> COMPANY RESEARCH
+            </div>
+            <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
+              Click the <strong style="color:var(--text)">Insights tab</strong> on any job and hit <strong style="color:var(--text)">Research this role</strong>. You'll get a rundown on the company culture, Glassdoor ratings, recent news, workforce data, and a breakdown of green flags vs. things to watch out for.<br><br>
+              For public companies, add a free <strong style="color:var(--text)">Finnhub API key</strong> in Settings → Financial Data to also see live stock price and market cap.
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
+              <span>🎯</span> INTERVIEW PREP
+            </div>
+            <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
+              Open the <strong style="color:var(--text)">Interview Prep tab</strong> on any job and click <strong style="color:var(--text)">Generate questions</strong>. Summit writes role-specific questions across behavioural, technical, culture fit, and "questions to ask them" categories.<br><br>
+              Check off questions as you practice them so you know exactly where you stand before the interview.
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
+              <span>📁</span> DOCUMENT LIBRARY
+            </div>
+            <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
+              Your resumes and cover letters live in the <strong style="color:var(--text)">Library</strong> (sidebar icon). Upload your master versions once, then attach them to any job with a couple of clicks.<br><br>
+              When you tailor a document for a specific job, it saves as a new version under that job — your originals stay untouched in the Library.
+            </div>
+          </div>
+
+          <div class="settings-section">
+            <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
+              <span>📊</span> ANALYTICS &amp; STALE CHECK
+            </div>
+            <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
+              The <strong style="color:var(--text)">Analytics</strong> view (sidebar) shows your funnel — how many applications at each stage, response rates, and timeline. Useful for spotting patterns like "I keep stalling at phone screen."<br><br>
+              Hit <strong style="color:var(--text)">Check postings</strong> to scan all your active job URLs and flag any that look taken down or expired. Saves you from chasing roles that are already filled.
+            </div>
+          </div>
+
+        </div>
       </div>
 
       <!-- DATA & EXPORT -->

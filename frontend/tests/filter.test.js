@@ -52,6 +52,7 @@ global.renderDetail  = () => {};
 eval(extractFn('getFilteredJobs'));
 eval(extractFn('toggleWatchlist'));
 eval(extractFn('toggleStale'));
+eval(extractFn('setFilter'));
 
 // Helper — build a minimal job object
 let _id = 0;
@@ -415,6 +416,92 @@ t('detail header has both star and trash in column layout', () => {
   if (!dh.includes('deleteJob'))             throw new Error('no trash button');
 });
 
+
+// ── setFilter ────────────────────────────────────────────────────────────────
+// Regression: setFilter(f, el) was called with ONE arg from onclick="setFilter('x')"
+// causing el.classList.add to throw TypeError: Cannot read properties of undefined
+console.log('\n── setFilter');
+
+// Build a minimal DOM shim with .filter-tab elements that have data-filter attributes
+function makeFilterDOM(activeFilter) {
+  const filters = ['all', 'to apply', 'applied', 'interview', 'stale', 'watchlist'];
+  const tabs = filters.map(f => ({
+    dataset: { filter: f },
+    classList: {
+      _classes: new Set(f === activeFilter ? ['filter-tab','active'] : ['filter-tab']),
+      add(c)    { this._classes.add(c); },
+      remove(c) { this._classes.delete(c); },
+      toggle(c, force) { force ? this._classes.add(c) : this._classes.delete(c); },
+      contains(c) { return this._classes.has(c); },
+    },
+  }));
+  return tabs;
+}
+
+{
+  let tabs = makeFilterDOM('all');
+  global.document.querySelectorAll = (sel) =>
+    sel === '.filter-tab' ? { forEach: (fn) => tabs.forEach(fn) } : { forEach: () => {} };
+
+  t('setFilter("applied") works with ONE argument (no el param)', () => {
+    // This is the exact call pattern used by onclick="setFilter('applied')"
+    // Previously crashed: TypeError: Cannot read properties of undefined (reading 'classList')
+    try {
+      setFilter('applied');  // ONE argument — must not throw
+    } catch(e) {
+      throw new Error('setFilter threw with 1 arg: ' + e.message);
+    }
+    eq(global.currentFilter, 'applied');
+  });
+
+  t('setFilter sets correct currentFilter', () => {
+    ['all','to apply','applied','interview','stale','watchlist'].forEach(f => {
+      setFilter(f);
+      eq(global.currentFilter, f);
+    });
+  });
+
+  t('setFilter marks matching tab active via data-filter', () => {
+    setFilter('stale');
+    const staleTab = tabs.find(t => t.dataset.filter === 'stale');
+    eq(staleTab.classList.contains('active'), true);
+  });
+
+  t('setFilter removes active from all other tabs', () => {
+    setFilter('interview');
+    tabs.filter(t => t.dataset.filter !== 'interview').forEach(tab => {
+      if (tab.classList.contains('active')) {
+        throw new Error(`tab "${tab.dataset.filter}" still has active class`);
+      }
+    });
+  });
+
+  t('setFilter calls renderJobList', () => {
+    let called = false;
+    global.renderJobList = () => { called = true; };
+    setFilter('applied');
+    eq(called, true);
+    global.renderJobList = () => {};
+  });
+
+  t('filter tabs use single-arg onclick format (no el parameter)', () => {
+    // Verify the HTML uses setFilter('x') not setFilter('x', this) or setFilter('x', el)
+    const src2 = require('fs').readFileSync(require('path').join(__dirname,'../public/index.html'),'utf8');
+    const badCalls = src2.match(/setFilter\('[^']+',\s*(?:this|el)[^)]*\)/g);
+    if (badCalls) throw new Error('Found two-arg setFilter calls: ' + badCalls.join(', '));
+  });
+
+  // Restore querySelectorAll
+  global.document.querySelectorAll = () => ({ forEach: () => {} });
+}
+
+// ── Version ──────────────────────────────────────────────────────────────────
+console.log('\n── version');
+t('App version is v1.5.0', () => {
+  const src2 = require('fs').readFileSync(require('path').join(__dirname,'../public/index.html'),'utf8');
+  if (!src2.includes('v1.5.0')) throw new Error('version not updated to v1.5.0');
+  if (src2.includes('v1.4.0')) throw new Error('old version v1.4.0 still present');
+});
 // ── Summary ──────────────────────────────────────────────────────────────────
 console.log(`\n${pass}/${pass + fail} passed${fail ? ' ← FAILURES' : '  ✓'}`);
 if (fail) process.exit(1);

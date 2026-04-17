@@ -50,3 +50,7 @@ jobs:
       - name: Filter & watchlist unit tests
         working-directory: frontend
         run: node tests/filter.test.js
+
+      - name: Mobile layout tests
+        working-directory: frontend
+        run: node tests/mobile.test.js
