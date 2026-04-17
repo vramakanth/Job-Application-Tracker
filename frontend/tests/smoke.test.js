@@ -504,17 +504,20 @@ t('Settings sidebar has 3 group labels (Security, Preferences, Your data)', () =
 
 // ── Help redesign: mountain-bg + editorial layout ───────────────────────────
 console.log('\n── Help redesign');
-t('showHelp shows the mountain-bg', () => {
+t('showHelp does NOT touch mountain-bg (causes sidebar overlap)', () => {
   const idx = src.indexOf('function showHelp');
   const body = src.slice(idx, idx + 8000);
-  if (!/getElementById\('mountain-bg'\)/.test(body)) throw new Error('showHelp does not reference mountain-bg');
-  if (!/bg\.style\.display\s*=\s*''/.test(body)) throw new Error('showHelp does not show mountain-bg');
+  if (/getElementById\('mountain-bg'\)/.test(body)) {
+    throw new Error('showHelp still references mountain-bg — this breaks the sidebar via CSS stacking (positioned z-index:0 > unpositioned static)');
+  }
 });
-t('closeHelp hides the mountain-bg', () => {
+t('closeHelp does NOT touch mountain-bg', () => {
   const idx = src.indexOf('function closeHelp');
   if (idx < 0) throw new Error('closeHelp not defined');
   const body = src.slice(idx, idx + 400);
-  if (!body.includes("bg.style.display = 'none'")) throw new Error('closeHelp does not hide mountain-bg');
+  if (/getElementById\('mountain-bg'\)/.test(body)) {
+    throw new Error('closeHelp still toggles mountain-bg');
+  }
 });
 t('Help has "FIELD GUIDE" mono eyebrow', () => {
   const idx = src.indexOf('function showHelp');
@@ -525,6 +528,15 @@ t('Help uses Fraunces display for the "Help" title', () => {
   const idx = src.indexOf('function showHelp');
   const body = src.slice(idx, idx + 8000);
   if (!/font-family:var\(--font-display\).*?>Help</s.test(body)) throw new Error('Help title not in display serif');
+});
+t('Help uses theme vars (var(--text), var(--accent-bg)) — not hardcoded hex', () => {
+  const idx = src.indexOf('function showHelp');
+  const body = src.slice(idx, idx + 8000);
+  // The old implementation hardcoded #f2ead8 and #e8a838 because it was designed
+  // against the mountain image. With the mountain gone we should use theme vars
+  // so the page looks right against the normal app surface.
+  if (/#f2ead8/.test(body)) throw new Error('hardcoded #f2ead8 still present — should be var(--text)');
+  if (!/var\(--accent-bg\)/.test(body)) throw new Error('amber ticks should use var(--accent-bg)');
 });
 
 // ── Analytics redesign: de-boxed + refined metrics ──────────────────────────

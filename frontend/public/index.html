@@ -5577,30 +5577,28 @@ function showHelp() {
       `Open <strong>Analytics</strong> from the sidebar to see your application funnel — how many jobs at each stage, trends over time, response rate patterns. It's useful for noticing things like consistently stalling at the phone screen. The <strong>Check postings</strong> button scans all your active job URLs and flags any that appear taken down or filled, so you don't chase closed roles.` },
   ];
 
-  // Show the mountain background behind Help for atmosphere — toned down with a scrim
-  const bg = document.getElementById('mountain-bg');
-  if (bg) bg.style.display = '';
+  // Render on the standard app surface — NO mountain-bg. The mountain sits at
+  // position:fixed; z-index:0 and paints above unpositioned elements like the
+  // sidebar (CSS stacking rule: positioned z-index:0 > non-positioned static),
+  // so showing it inside the app covers the sidebar. We keep the editorial
+  // typography but use app theme colors.
 
-  sv.style.position = 'relative';
   sv.innerHTML = `
-    <!-- Dark parchment scrim over the mountain so body copy stays legible -->
-    <div id="help-scrim" style="position:absolute;inset:0;background:linear-gradient(to bottom,rgba(18,10,4,0.88) 0%,rgba(18,10,4,0.93) 100%);z-index:0;pointer-events:none"></div>
-
-    <div style="position:relative;z-index:1;display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
 
       <!-- Header -->
       <div style="display:flex;align-items:baseline;justify-content:space-between;padding:36px 40px 8px;flex-shrink:0">
         <div>
-          <div style="font-family:var(--mono);font-size:11px;color:#e8a838;letter-spacing:0.25em;margin-bottom:14px">FIELD GUIDE</div>
-          <div style="font-family:var(--font-display);font-size:34px;font-weight:500;color:#f2ead8;letter-spacing:-0.02em;line-height:1.1">Help</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--accent-bg);letter-spacing:0.25em;margin-bottom:14px">FIELD GUIDE</div>
+          <div style="font-family:var(--font-display);font-size:34px;font-weight:500;color:var(--text);letter-spacing:-0.02em;line-height:1.1">Help</div>
         </div>
-        <button onclick="closeHelp()" style="width:32px;height:32px;background:rgba(255,255,255,0.06);border:1px solid rgba(242,234,216,0.18);border-radius:var(--radius-sm);cursor:pointer;color:rgba(242,234,216,0.7);font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.12)';this.style.color='#f2ead8'" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.color='rgba(242,234,216,0.7)'">×</button>
+        <button onclick="closeHelp()" style="width:32px;height:32px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--text2);font-size:16px;display:flex;align-items:center;justify-content:center;transition:all 0.15s" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text2)'">×</button>
       </div>
 
       <!-- Tagline -->
       <div style="padding:0 40px;flex-shrink:0">
-        <div style="font-family:var(--font-display);font-style:italic;font-weight:300;font-size:17px;color:rgba(242,234,216,0.6);letter-spacing:-0.005em;max-width:560px;line-height:1.5;margin-bottom:32px">A brief field guide to Summit — what every tab does, and how the pieces fit together.</div>
-        <div style="border-top:1px solid rgba(242,234,216,0.12);margin-bottom:0"></div>
+        <div style="font-family:var(--font-display);font-style:italic;font-weight:300;font-size:17px;color:var(--text3);letter-spacing:-0.005em;max-width:560px;line-height:1.5;margin-bottom:32px">A brief field guide to Summit — what every tab does, and how the pieces fit together.</div>
+        <div style="border-top:1px solid var(--border);margin-bottom:0"></div>
       </div>
 
       <!-- Body -->
@@ -5609,39 +5607,37 @@ function showHelp() {
           ${helpSections.map((s, i) => `
             <section id="${s.id}" style="margin-bottom:40px">
               <div style="display:flex;align-items:center;margin-bottom:14px">
-                <div style="width:3px;height:14px;background:#e8a838;border-radius:1px;margin-right:12px;flex-shrink:0"></div>
-                <div style="font-family:var(--mono);font-size:11px;color:#e8a838;letter-spacing:0.2em;margin-right:14px">${String(i+1).padStart(2,'0')}</div>
-                <h3 style="font-family:var(--font-display);font-size:22px;font-weight:500;color:#f2ead8;letter-spacing:-0.015em;margin:0;line-height:1.2">${s.title}</h3>
+                <div style="width:3px;height:14px;background:var(--accent-bg);border-radius:1px;margin-right:12px;flex-shrink:0"></div>
+                <div style="font-family:var(--mono);font-size:11px;color:var(--accent-bg);letter-spacing:0.2em;margin-right:14px">${String(i+1).padStart(2,'0')}</div>
+                <h3 style="font-family:var(--font-display);font-size:22px;font-weight:500;color:var(--text);letter-spacing:-0.015em;margin:0;line-height:1.2">${s.title}</h3>
               </div>
-              <p style="font-family:var(--font);font-size:15px;line-height:1.8;color:rgba(242,234,216,0.72);margin:0 0 0 29px">${s.body}</p>
+              <p style="font-family:var(--font);font-size:15px;line-height:1.8;color:var(--text2);margin:0 0 0 29px">${s.body}</p>
             </section>
           `).join('')}
 
           <!-- Colophon -->
-          <div style="margin-top:72px;padding-top:36px;border-top:1px solid rgba(242,234,216,0.12);text-align:center">
-            <div style="font-family:var(--mono);font-size:10px;color:rgba(242,234,216,0.32);letter-spacing:0.35em">JOBSUMMIT.APP</div>
+          <div style="margin-top:72px;padding-top:36px;border-top:1px solid var(--border);text-align:center">
+            <div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.35em">JOBSUMMIT.APP</div>
           </div>
         </div>
       </div>
 
     </div>`;
 
-  // Style strong / em tags inside the help body — brighter text for strong, accent for em
+  // Style strong / em inside help body — subtle, theme-aware (no hardcoded hex)
   const helpStyle = document.getElementById('help-style-scoped') || document.createElement('style');
   helpStyle.id = 'help-style-scoped';
   helpStyle.textContent = `
-    #section-view section strong { color: #f2ead8; font-weight: 600; }
-    #section-view section em { color: #e8a838; font-style: italic; font-family: var(--font-display); }
+    #section-view section strong { color: var(--text); font-weight: 600; }
+    #section-view section em { color: var(--accent-bg); font-style: italic; font-family: var(--font-display); }
   `;
   if (!helpStyle.parentElement) document.head.appendChild(helpStyle);
 
   _setMobileActiveBtn('help');
 }
 
-// Close Help — hides the mountain bg (in-app pages don't show it) before returning
+// Close Help — just returns to the previous view (no more mountain-bg to reset)
 function closeHelp() {
-  const bg = document.getElementById('mountain-bg');
-  if (bg) bg.style.display = 'none';
   const scoped = document.getElementById('help-style-scoped');
   if (scoped) scoped.remove();
   closeSection();
