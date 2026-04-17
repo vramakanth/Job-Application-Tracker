@@ -1258,6 +1258,51 @@ t('setPostingJobId is called from renderPostingTab so popover knows the target',
 // ════════════════════════════════════════════════════════════════════════════
 console.log('\n── Notes editor teardown');
 
+// ════════════════════════════════════════════════════════════════════════════
+// Module load / temporal dead zone regression checks
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── Module-load ordering');
+
+t('Rate-limiter consts declared BEFORE any route that references them (TDZ guard)', () => {
+  // Real-world failure: `app.post('/api/login', _loginLimiter, …)` at line 625
+  // but `const _loginLimiter = …` at line 731 → ReferenceError at module load.
+  // Generalize: every rate-limit middleware const must precede its first use.
+  const lines = serverSrc.split('\n');
+  // Returns {line, kind} where kind is 'const' | 'let' | 'var' | 'function'.
+  // `function` declarations are HOISTED so they're safe to reference anywhere
+  // in the enclosing scope. const/let are NOT hoisted past their declaration
+  // line — referencing them earlier throws at runtime (temporal dead zone).
+  const declOf = (name) => {
+    for (let i = 0; i < lines.length; i++) {
+      let m;
+      if ((m = lines[i].match(new RegExp(`^\\s*(const|let|var)\\s+${name}\\s*=`))))      return { line: i, kind: m[1] };
+      if (lines[i].match(new RegExp(`^\\s*(?:async\\s+)?function\\s+${name}\\s*\\(`)))    return { line: i, kind: 'function' };
+    }
+    return null;
+  };
+  const firstUseLine = (name) => {
+    for (let i = 0; i < lines.length; i++) {
+      // Match usage inside app.post/get/use middleware-chain position
+      if (new RegExp(`app\\.(post|get|put|delete|use)\\([^)]*\\b${name}\\b`).test(lines[i])) return i;
+    }
+    return -1;
+  };
+  for (const name of ['_rateBuckets', '_recoverLimiter', '_loginLimiter', 'authMiddleware', 'adminMiddleware', 'tokenCapMiddleware']) {
+    const decl = declOf(name);
+    const u = firstUseLine(name);
+    if (!decl) throw new Error(`declaration of ${name} not found`);
+    if (u === -1) continue; // not referenced in any route — fine
+    // Only const/let trigger TDZ. var and function are hoisted and safe.
+    if ((decl.kind === 'const' || decl.kind === 'let') && u < decl.line) {
+      throw new Error(
+        `${name} (${decl.kind}) is referenced at line ${u + 1} but declared at line ${decl.line + 1} — ` +
+        `const/let bindings cannot be used before initialization (TDZ). ` +
+        `Move the declaration above its first use.`
+      );
+    }
+  }
+});
+
 t('tearDownNotesEditor helper exists and flushes before destroying', () => {
   if (!/async function tearDownNotesEditor/.test(feSrc)) throw new Error('tearDownNotesEditor missing');
   const idx = feSrc.indexOf('async function tearDownNotesEditor');
@@ -1310,6 +1355,488 @@ t('bulkDelete tears down notes editor when deleting the currently-open job', () 
   const tearPos   = body.indexOf('tearDownNotesEditor');
   const deletePos = body.indexOf('delete jobs[id]');
   if (tearPos > deletePos) throw new Error('bulkDelete removes job before tearing down editor');
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// A. Duplicate declarations — function or const shadowing
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── Duplicate-declaration regression');
+
+t('No top-level function is defined twice in server.js (silent-shadow hazard)', () => {
+  // Same function name appearing as `function foo(…)` more than once at column 0
+  // means the second silently replaces the first. We hit this exact bug with
+  // the duplicate `rateLimit` function earlier this session — both had different
+  // signatures and callers were unknowingly hitting whichever JS hoisted last.
+  const lines = serverSrc.split('\n');
+  const counts = {};
+  const firstSeen = {};
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^(?:async\s+)?function\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*\(/);
+    if (m) {
+      const name = m[1];
+      counts[name] = (counts[name] || 0) + 1;
+      if (!(name in firstSeen)) firstSeen[name] = i + 1;
+    }
+  }
+  const dups = Object.entries(counts).filter(([, n]) => n > 1);
+  if (dups.length) {
+    const details = dups.map(([n, count]) => `${n} (${count}× — first at line ${firstSeen[n]})`).join(', ');
+    throw new Error(`duplicate top-level function declarations: ${details}`);
+  }
+});
+
+t('No top-level const is declared twice in server.js', () => {
+  const lines = serverSrc.split('\n');
+  const counts = {};
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^const\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=/);
+    if (m) counts[m[1]] = (counts[m[1]] || 0) + 1;
+  }
+  const dups = Object.entries(counts).filter(([, n]) => n > 1);
+  if (dups.length) {
+    throw new Error(`duplicate top-level const: ${dups.map(([n, c]) => `${n} (${c}×)`).join(', ')}`);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// D. Every require() must be in package.json (or Node builtin)
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── Dependency manifest vs actual require()s');
+
+t('Every required module is declared in package.json or is a Node builtin', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+  const declared = new Set([
+    ...Object.keys(pkg.dependencies || {}),
+    ...Object.keys(pkg.devDependencies || {}),
+  ]);
+  // Node built-ins we care about. Conservative list — `assert` and friends could
+  // be added if we ever need them.
+  const builtins = new Set([
+    'fs', 'path', 'crypto', 'http', 'https', 'url', 'os', 'util', 'stream',
+    'events', 'child_process', 'cluster', 'zlib', 'buffer', 'querystring',
+    'readline', 'net', 'dgram', 'dns', 'tls', 'worker_threads',
+  ]);
+
+  // Collect all require() targets from server.js and ats-helpers.js
+  const srcs = [
+    fs.readFileSync(path.join(__dirname, '../server.js'), 'utf8'),
+    fs.readFileSync(path.join(__dirname, '../ats-helpers.js'), 'utf8'),
+  ];
+  const missing = [];
+  for (const src of srcs) {
+    const re = /require\(['"]([^'"]+)['"]\)/g;
+    let m;
+    while ((m = re.exec(src)) !== null) {
+      const spec = m[1];
+      if (spec.startsWith('.') || spec.startsWith('/')) continue;  // local path
+      // Strip subpath imports like 'pdf-parse/lib/pdf-parse.js' → 'pdf-parse'
+      // but preserve scoped packages like '@scope/pkg'
+      const root = spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0];
+      if (builtins.has(root)) continue;
+      if (!declared.has(root)) missing.push(root);
+    }
+  }
+  if (missing.length) {
+    throw new Error(`modules required but not in package.json: ${[...new Set(missing)].join(', ')}`);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// H. No sensitive material logged to console
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── Secrets leakage in logs');
+
+t('console.* statements do not interpolate sensitive user fields', () => {
+  // We care about: passwordHash, encryptedDataKey, recoveryKeySlots, dataKey,
+  // slot, blob. We match these as accessors (`user.X` or `${X}`), not as
+  // substrings inside prose messages. "password → passwordHash" in a migration
+  // log is a description, not a value leak.
+  const SENSITIVE = [
+    // Match either `foo.passwordHash` OR `${passwordHash}` — i.e. the binding
+    // accessed as a value, not mentioned by name in a log message
+    '\\.(passwordHash|encryptedDataKey|recoveryKeySlots|wrappedKey)\\b',
+    '\\$\\{[^}]*\\b(passwordHash|encryptedDataKey|recoveryKeySlots|wrappedKey|dataKey)\\b[^}]*\\}',
+  ];
+
+  const lines = serverSrc.split('\n');
+  const hits = [];
+  for (let i = 0; i < lines.length; i++) {
+    const ln = lines[i];
+    if (!/console\.(log|warn|error)\s*\(/.test(ln)) continue;
+    for (const pat of SENSITIVE) {
+      if (new RegExp(pat).test(ln)) {
+        hits.push(`line ${i + 1}: ${ln.trim().slice(0, 100)}`);
+      }
+    }
+  }
+  if (hits.length) {
+    throw new Error(`sensitive fields appear in console.* calls:\n  ${hits.join('\n  ')}`);
+  }
+});
+
+t('No password reset URLs logged to console (info-disclosure via logs)', () => {
+  // Render captures server logs. Logging a reset URL means anyone with log
+  // access (or a log aggregator integration) can reset any account.
+  const lines = serverSrc.split('\n');
+  const hits = [];
+  for (let i = 0; i < lines.length; i++) {
+    const ln = lines[i];
+    if (!/console\.(log|warn|error)\s*\(/.test(ln)) continue;
+    // resetUrl, resetToken, recoveryCode string literals all problematic
+    if (/\bresetUrl\b/.test(ln) || /\bresetToken\b/.test(ln)) {
+      hits.push(`line ${i + 1}: ${ln.trim().slice(0, 100)}`);
+    }
+  }
+  if (hits.length) {
+    throw new Error(`reset tokens/URLs being logged:\n  ${hits.join('\n  ')}`);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// J. Frontend fetch() calls — Authorization header audit
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── Frontend fetch Authorization audit');
+
+t('Every fetch(API + ...) to a protected endpoint sends Authorization: Bearer', () => {
+  const PUBLIC_ENDPOINTS = new Set([
+    '/api/register',
+    '/api/login',
+    '/api/forgot',
+    '/api/recover',
+    '/api/reset-password',
+    '/api/ping',
+    '/api/extension',    // served without auth so install flow works
+  ]);
+
+  // Paren-balanced walk. `fetch(...)` calls where the URL starts with `API + `.
+  // Naive regex fails on `fetch(API + '/x/' + encodeURIComponent(id), {...})`
+  // because the inner `(` breaks the match. We iterate character by character
+  // to find matching parens.
+  const offenders = [];
+  const src = feSrc;
+  let idx = 0;
+  while ((idx = src.indexOf('fetch(', idx)) !== -1) {
+    const openParen = idx + 'fetch('.length - 1;
+    // Walk to the matching close paren
+    let depth = 0;
+    let end = -1;
+    for (let j = openParen; j < src.length; j++) {
+      const c = src[j];
+      if (c === '(') depth++;
+      else if (c === ')') { depth--; if (depth === 0) { end = j; break; } }
+      else if (c === '"' || c === "'" || c === '`') {
+        // Skip to matching quote (respect backslash escapes)
+        const quote = c;
+        j++;
+        while (j < src.length) {
+          if (src[j] === '\\') { j += 2; continue; }
+          if (src[j] === quote) break;
+          if (quote === '`' && src[j] === '$' && src[j+1] === '{') {
+            // Template literal expression — walk back into paren-balance mode
+            let td = 1; j += 2;
+            while (j < src.length && td > 0) {
+              if (src[j] === '{') td++;
+              else if (src[j] === '}') td--;
+              j++;
+            }
+            j--;
+          }
+          j++;
+        }
+      }
+    }
+    if (end === -1) { idx++; continue; }
+    const call = src.slice(openParen + 1, end);
+    idx = end + 1;
+
+    // Only care about fetch(API + ...) shapes
+    if (!/^\s*API\s*\+/.test(call)) continue;
+
+    // Split into URL expression (up to top-level comma) and options object (after)
+    let depth2 = 0, commaAt = -1;
+    for (let j = 0; j < call.length; j++) {
+      const c = call[j];
+      if (c === '(' || c === '{' || c === '[') depth2++;
+      else if (c === ')' || c === '}' || c === ']') depth2--;
+      else if (c === '"' || c === "'" || c === '`') {
+        const quote = c; j++;
+        while (j < call.length && call[j] !== quote) {
+          if (call[j] === '\\') j++;
+          j++;
+        }
+      } else if (c === ',' && depth2 === 0) { commaAt = j; break; }
+    }
+    const urlExpr = commaAt === -1 ? call : call.slice(0, commaAt);
+    const optsExpr = commaAt === -1 ? '' : call.slice(commaAt + 1);
+
+    // Extract all string literals from the URL expression to match against public list
+    const pathLiterals = urlExpr.match(/['"`](\/api\/[^'"`?]*)['"`]/g) || [];
+    const paths = pathLiterals.map(p => p.replace(/['"`]/g, '').split('?')[0]);
+    const isPublic = paths.some(p => {
+      // Match by first 2 segments for parametric routes
+      const root = p.split('/').slice(0, 3).join('/');
+      return PUBLIC_ENDPOINTS.has(root) || PUBLIC_ENDPOINTS.has(p);
+    });
+    if (isPublic) continue;
+
+    if (!/Authorization\s*:\s*['"`]Bearer\s+['"`]\s*\+\s*token/.test(optsExpr)) {
+      offenders.push(('fetch(' + call).replace(/\s+/g, ' ').slice(0, 150));
+    }
+  }
+  if (offenders.length) {
+    throw new Error(`fetch calls to protected endpoints missing Authorization header:\n  ${offenders.slice(0, 5).join('\n  ')}${offenders.length > 5 ? `\n  ...and ${offenders.length - 5} more` : ''}`);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// F. Authorization matrix — middleware coverage per route
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── Authorization matrix (per-route middleware coverage)');
+
+t('Every /api/admin/* route is behind adminMiddleware', () => {
+  const lines = serverSrc.split('\n');
+  const offenders = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^app\.(get|post|put|delete)\(['"]\/api\/admin\/[^'"]*['"]\s*,\s*(.+)/);
+    if (!m) continue;
+    const chain = m[2];
+    if (!/\badminMiddleware\b/.test(chain)) {
+      offenders.push(`line ${i + 1}: ${lines[i].trim().slice(0, 120)}`);
+    }
+  }
+  if (offenders.length) {
+    throw new Error(`admin routes without adminMiddleware:\n  ${offenders.join('\n  ')}`);
+  }
+});
+
+t('Every non-public /api route has authMiddleware OR an explicit allowlist entry', () => {
+  // Public endpoints are ones that anonymous clients MUST reach: login/register/
+  // forgot/recover/reset-password/ping. Admin routes use adminMiddleware instead
+  // of authMiddleware (different auth mechanism — secret header).
+  const PUBLIC = new Set([
+    '/api/register', '/api/login', '/api/forgot', '/api/recover',
+    '/api/reset-password', '/api/ping',
+  ]);
+  const lines = serverSrc.split('\n');
+  const offenders = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^app\.(get|post|put|delete)\(['"]([^'"]+)['"]\s*,\s*(.+)/);
+    if (!m) continue;
+    const routePath = m[2];
+    const chain = m[3];
+    if (!routePath.startsWith('/api/')) continue;    // non-API routes we don't audit
+    if (routePath.startsWith('/api/admin/')) continue;  // admin audit covered above
+    if (PUBLIC.has(routePath)) continue;             // explicitly public
+    if (!/\bauthMiddleware\b/.test(chain)) {
+      offenders.push(`line ${i + 1}: ${routePath}`);
+    }
+  }
+  if (offenders.length) {
+    throw new Error(`protected routes missing authMiddleware:\n  ${offenders.join('\n  ')}`);
+  }
+});
+
+t('Every AI-consuming route has tokenCapMiddleware (covers the daily cap)', () => {
+  // List maintained in sync with /api/*-consuming-callAI. If a new AI endpoint
+  // is added without the cap middleware, the daily token budget can be blown
+  // past by a single runaway request chain. Test enumerates known AI routes.
+  const AI_ROUTES = [
+    '/api/extract-fields',
+    '/api/tailor',
+    '/api/tailor-docx',
+    '/api/insights',
+    '/api/outreach-targets',
+    '/api/interview-questions',
+    '/api/keyword-gap',
+    '/api/email-template',
+    '/api/salary-benchmark',
+    '/api/find-posting-mirror',
+    '/api/parse-job',
+  ];
+  const offenders = [];
+  for (const r of AI_ROUTES) {
+    const pattern = new RegExp(`app\\.post\\(['"]${r.replace(/\//g, '\\/')}['"][^)]*tokenCapMiddleware`);
+    if (!pattern.test(serverSrc)) offenders.push(r);
+  }
+  if (offenders.length) {
+    throw new Error(`AI routes missing tokenCapMiddleware:\n  ${offenders.join('\n  ')}`);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// C. Module-load smoke — can server.js actually load without TDZ/typo crashes?
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── Module-load smoke (with stubbed dependencies)');
+
+t('server.js loads cleanly with stubbed deps (catches TDZ, typos, missing imports)', () => {
+  // The test uses Module._cache to inject shims for each require()d package
+  // before loading server.js. This simulates npm install without actually
+  // needing network or disk. If server.js has:
+  //   - a TDZ violation (const used before init line)
+  //   - a typo in a variable name
+  //   - a syntax-valid-but-semantic error at load time
+  //   - a missing require() for a module it uses at top level
+  // …this test fails. Runtime errors inside route handlers are NOT caught
+  // here — we only exercise the module's top-level code.
+  const Module = require('module');
+  const origResolve = Module._resolveFilename;
+  const origLoad = Module._load;
+
+  // Minimal shims — just enough to satisfy server.js's top-level usage.
+  // None of these shims need to do anything useful; the goal is just to
+  // return an object that has the chainable/callable methods server.js uses.
+  const express = () => {
+    const app = {};
+    const noop = () => app;
+    for (const m of ['use', 'get', 'post', 'put', 'delete', 'listen', 'set']) app[m] = noop;
+    return app;
+  };
+  express.json = () => (req, res, next) => next && next();
+  express.urlencoded = () => (req, res, next) => next && next();
+  express.static = () => (req, res, next) => next && next();
+  express.Router = () => ({ use: () => {}, get: () => {}, post: () => {} });
+
+  const stubs = {
+    'express': express,
+    'cors': () => (req, res, next) => next && next(),
+    'bcryptjs': { hash: async () => '', compare: async () => true },
+    'jsonwebtoken': { sign: () => 'token', verify: () => ({}) },
+    'multer': Object.assign(
+      () => ({ single: () => (req,res,next)=>next&&next(), any: () => (req,res,next)=>next&&next() }),
+      {
+        diskStorage: () => ({}),
+        memoryStorage: () => ({}),
+      },
+    ),
+    'pdf-parse': async () => ({ text: '' }),
+    'mammoth': { extractRawText: async () => ({ value: '' }), convertToHtml: async () => ({ value: '' }) },
+    'archiver': () => ({ append: ()=>{}, pipe: ()=>{}, finalize: ()=>{}, on: ()=>{} }),
+    'adm-zip': function AdmZip() { return { addLocalFile: ()=>{}, toBuffer: ()=>Buffer.alloc(0), getEntries: ()=>[] }; },
+  };
+
+  // Hook Module._load to return stubs for known specs
+  Module._load = function(request, parent, isMain) {
+    if (stubs.hasOwnProperty(request)) return stubs[request];
+    return origLoad.apply(this, arguments);
+  };
+
+  // Clear require cache for server.js so we get a fresh load
+  const serverPath = require.resolve(path.join(__dirname, '../server.js'));
+  const atsPath    = require.resolve(path.join(__dirname, '../ats-helpers.js'));
+  delete require.cache[serverPath];
+  delete require.cache[atsPath];
+
+  // Capture console output (server's boot logs) to keep the test output clean
+  const origLog = console.log;
+  const origWarn = console.warn;
+  console.log = () => {};
+  console.warn = () => {};
+
+  // Use a tmp DATA_DIR so we don't touch real data
+  const os = require('os');
+  const origDataDir = process.env.DATA_DIR;
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'summit-load-test-'));
+  process.env.DATA_DIR = tmp;
+
+  let err = null;
+  try {
+    require(serverPath);
+  } catch (e) {
+    err = e;
+  } finally {
+    Module._load = origLoad;
+    Module._resolveFilename = origResolve;
+    console.log = origLog;
+    console.warn = origWarn;
+    if (origDataDir === undefined) delete process.env.DATA_DIR; else process.env.DATA_DIR = origDataDir;
+    try { fs.rmSync(tmp, { recursive: true, force: true }); } catch {}
+    // Evict the test-loaded server from cache so subsequent tests aren't affected
+    delete require.cache[serverPath];
+    delete require.cache[atsPath];
+  }
+
+  if (err) {
+    throw new Error(`server.js failed to load: ${err.message}`);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// B. Route contract tests — client/server field compatibility
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── Route contract (client/server field alignment)');
+
+t('Server destructures every field the client sends (no silent-drop regression)', () => {
+  // BACKGROUND: We hit this class of bug twice in one session —
+  //   1. POST /api/register: client sent {encryptedDataKey, recoveryKeySlots},
+  //      backend destructured only {username, password}, silently dropped the rest.
+  //      Result: encryption was NEVER persisted for any user until we fixed it.
+  //   2. POST /api/change-password: client sent {newEncryptedDataKey}, backend
+  //      ignored it. Encrypted accounts lost access to their data after password change.
+  //
+  // This test enumerates known client→server contracts and asserts the backend
+  // at least MENTIONS each field in its handler. It can't catch the subtle case
+  // where the server reads the field but never acts on it — but it reliably
+  // catches the "destructuring ignores this" regression we've already hit twice.
+
+  // Contracts: path → list of field names the client sends that must appear in
+  // the handler. Kept as data here rather than re-scraped from the frontend
+  // to avoid fragile cross-file regex; update as we add/remove fields.
+  const CONTRACTS = {
+    '/api/register': [
+      'username', 'password',
+      // Added for zero-knowledge encryption (earlier bug: these were dropped)
+      'email', 'encryptedDataKey', 'recoveryKeySlots',
+    ],
+    '/api/login': ['username', 'password'],
+    '/api/change-password': [
+      'currentPassword', 'newPassword',
+      // For encrypted accounts — dropping this orphans the wrapped key
+      'newEncryptedDataKey',
+    ],
+    '/api/enable-encryption': [
+      'password',
+      'encryptedDataKey', 'recoveryKeySlots', 'encryptedJobs',
+    ],
+    '/api/recovery-codes/generate': [
+      'password',
+      'encryptedDataKey', 'recoveryKeySlots',
+    ],
+    '/api/recover': [
+      'username', 'recoveryCode',
+      // Phase 2 additions
+      'newPassword', 'newEncryptedDataKey', 'slotIndex',
+    ],
+    // Notes autosave — blob is the whole ciphertext payload
+    '/api/notes/:jobId': ['blob', 'createSnapshot'],
+    '/api/notes/:jobId/restore': ['version'],
+  };
+
+  const offenders = [];
+  for (const [route, fields] of Object.entries(CONTRACTS)) {
+    // Locate ALL handlers for this route (a single route can have multiple
+    // HTTP methods — GET and PUT on /api/notes/:jobId for example). We check
+    // the union of all their bodies: a field is considered "referenced" if
+    // ANY handler for that path references it. This matches the real-world
+    // client-server contract: the route is a pair (method, path), but for
+    // our purposes what matters is that the SOMETHING at that URL handles it.
+    const escaped = route.replace(/\//g, '\\/').replace(/:[a-zA-Z]+/g, '[^\'"/]+');
+    const handlerRe = new RegExp(`app\\.(?:post|put|get|delete)\\(['"]${escaped}['"][\\s\\S]*?^\\}\\);`, 'gm');
+    const handlers = [...serverSrc.matchAll(handlerRe)].map(m => m[0]);
+    if (!handlers.length) {
+      offenders.push(`${route}: handler not found`);
+      continue;
+    }
+    const unionBody = handlers.join('\n');
+    for (const field of fields) {
+      const pattern = new RegExp(`(?:[{,]\\s*${field}\\s*[,}=]|req\\.body\\.${field}\\b|body\\.${field}\\b)`);
+      if (!pattern.test(unionBody)) {
+        offenders.push(`${route}: field \`${field}\` not referenced in any handler`);
+      }
+    }
+  }
+  if (offenders.length) {
+    throw new Error(`client/server contract violations:\n  ${offenders.join('\n  ')}`);
+  }
 });
 
 // ════════════════════════════════════════════════════════════════════════════

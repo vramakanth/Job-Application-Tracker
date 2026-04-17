@@ -585,6 +585,64 @@ function parseJson(raw) {
 // AUTH ROUTES
 // ════════════════════════════════════════════════════════════════════════════════
 
+// ── Simple rate limiter for sensitive endpoints ─────────────────────────────
+// In-memory sliding window keyed by username OR remote IP. Zero external
+// dependencies (no redis) — fine for a single-instance Render deploy.
+// For multi-instance or production-scale, swap for a real distributed store.
+//
+// ⚠️ Must be declared BEFORE any app.post/get that references the limiters
+// below (login, recover). Moving these further down triggers a temporal
+// dead zone ReferenceError at module load — const bindings can't be
+// referenced before their init line even though the VM hoists the name.
+const _rateBuckets = new Map();
+function rateLimit({ windowMs, max, keyFn, label }) {
+  return (req, res, next) => {
+    const key = keyFn(req);
+    if (!key) return next();
+    const now = Date.now();
+    let bucket = _rateBuckets.get(key);
+    if (!bucket) { bucket = []; _rateBuckets.set(key, bucket); }
+    // Drop entries older than the window
+    while (bucket.length && bucket[0] < now - windowMs) bucket.shift();
+    if (bucket.length >= max) {
+      const retryAfter = Math.ceil((bucket[0] + windowMs - now) / 1000);
+      console.warn(`rate-limit hit on ${label}: key=${key} count=${bucket.length}`);
+      res.setHeader('Retry-After', retryAfter);
+      return res.status(429).json({
+        error: 'rate_limited',
+        detail: `Too many ${label} attempts. Try again in ${retryAfter} seconds.`,
+      });
+    }
+    bucket.push(now);
+    next();
+  };
+}
+// Periodic cleanup — prevent unbounded growth of the bucket map
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of _rateBuckets) {
+    while (bucket.length && bucket[0] < now - 3600 * 1000) bucket.shift();
+    if (bucket.length === 0) _rateBuckets.delete(key);
+  }
+}, 15 * 60 * 1000).unref();
+
+// Rate limiters for auth-sensitive endpoints. Key by username where we have it,
+// fall back to IP. Limits chosen to be tight enough to block brute-force but
+// loose enough that a legitimate user hitting "forgot password" a few times
+// in a row won't get locked out.
+const _recoverLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,  // 1 hour sliding window
+  max:      10,               // 10 recovery attempts per hour per username
+  keyFn:    req => `recover:${(req.body?.username || '').toLowerCase() || req.ip}`,
+  label:    'recovery',
+});
+const _loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max:      20,               // generous — legit users sometimes fat-finger passwords
+  keyFn:    req => `login:${(req.body?.username || '').toLowerCase() || req.ip}`,
+  label:    'login',
+});
+
 app.post('/api/register', async (req, res) => {
   const { username, password, email, encryptedDataKey, recoveryKeySlots } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
@@ -634,7 +692,9 @@ app.post('/api/login', _loginLimiter, async (req, res) => {
     user = Object.values(users).find(u => (u.username||'').toLowerCase() === uid || (u.id||'').toLowerCase() === uid);
   }
   if (!user) {
-    console.log(`Login failed: user '${uid}' not found. Known users: ${Object.keys(users).join(', ')}`);
+    // Log only that the attempt failed, never the attempted or existing
+    // usernames. Anyone with log access could otherwise enumerate accounts.
+    console.log('Login failed: unknown user');
     return res.status(401).json({ error: 'Invalid username or password' });
   }
   // Old server stored hash as 'password', new as 'passwordHash'
@@ -680,59 +740,6 @@ app.post('/api/change-password', authMiddleware, async (req, res) => {
   delete user.password; // normalise field name
   saveUsers(users);
   res.json({ ok: true });
-});
-
-// ── Simple rate limiter for sensitive endpoints ─────────────────────────────
-// In-memory sliding window keyed by username OR remote IP. Zero external
-// dependencies (no redis) — fine for a single-instance Render deploy.
-// For multi-instance or production-scale, swap for a real distributed store.
-const _rateBuckets = new Map();
-function rateLimit({ windowMs, max, keyFn, label }) {
-  return (req, res, next) => {
-    const key = keyFn(req);
-    if (!key) return next();
-    const now = Date.now();
-    let bucket = _rateBuckets.get(key);
-    if (!bucket) { bucket = []; _rateBuckets.set(key, bucket); }
-    // Drop entries older than the window
-    while (bucket.length && bucket[0] < now - windowMs) bucket.shift();
-    if (bucket.length >= max) {
-      const retryAfter = Math.ceil((bucket[0] + windowMs - now) / 1000);
-      console.warn(`rate-limit hit on ${label}: key=${key} count=${bucket.length}`);
-      res.setHeader('Retry-After', retryAfter);
-      return res.status(429).json({
-        error: 'rate_limited',
-        detail: `Too many ${label} attempts. Try again in ${retryAfter} seconds.`,
-      });
-    }
-    bucket.push(now);
-    next();
-  };
-}
-// Periodic cleanup — prevent unbounded growth of the bucket map
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, bucket] of _rateBuckets) {
-    while (bucket.length && bucket[0] < now - 3600 * 1000) bucket.shift();
-    if (bucket.length === 0) _rateBuckets.delete(key);
-  }
-}, 15 * 60 * 1000).unref();
-
-// Rate limiters for auth-sensitive endpoints. Key by username where we have it,
-// fall back to IP. Limits chosen to be tight enough to block brute-force but
-// loose enough that a legitimate user hitting "forgot password" a few times
-// in a row won't get locked out.
-const _recoverLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,  // 1 hour sliding window
-  max:      10,               // 10 recovery attempts per hour per username
-  keyFn:    req => `recover:${(req.body?.username || '').toLowerCase() || req.ip}`,
-  label:    'recovery',
-});
-const _loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,  // 15 minutes
-  max:      20,               // generous — legit users sometimes fat-finger passwords
-  keyFn:    req => `login:${(req.body?.username || '').toLowerCase() || req.ip}`,
-  label:    'login',
 });
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -812,48 +819,13 @@ app.post('/api/enable-encryption', authMiddleware, async (req, res) => {
   res.json({ ok: true });
 });
 
-// ── Rate limiter for sensitive auth endpoints ────────────────────────────────
-// In-memory sliding window. Keyed by IP + username where applicable.
-// For /api/recover specifically: 5 attempts per 10 minutes per (IP, username).
-// Anything more is a clear enumeration or guessing attempt.
-const _rateWindows = new Map();  // key → [timestamp, timestamp, ...]
-function rateLimit(key, max = 5, windowMs = 10 * 60 * 1000) {
-  const now = Date.now();
-  const cutoff = now - windowMs;
-  let hits = _rateWindows.get(key) || [];
-  hits = hits.filter(t => t > cutoff);
-  if (hits.length >= max) {
-    // Compute retry-after based on oldest remaining hit
-    const retryAfterSec = Math.ceil((hits[0] + windowMs - now) / 1000);
-    return { allowed: false, retryAfterSec };
-  }
-  hits.push(now);
-  _rateWindows.set(key, hits);
-  // Occasional cleanup: drop empty buckets so the map doesn't grow unbounded
-  if (_rateWindows.size > 10000) {
-    for (const [k, v] of _rateWindows) {
-      if (v.every(t => t <= cutoff)) _rateWindows.delete(k);
-    }
-  }
-  return { allowed: true };
-}
-
 app.post('/api/recover', _recoverLimiter, async (req, res) => {
   const { username, recoveryCode, newPassword, newEncryptedDataKey, slotIndex } = req.body;
   if (!username || !recoveryCode) return res.status(400).json({ error: 'username and recoveryCode required' });
-  // Rate limit: 5 attempts per 10-minute window per (IP, username). Applies to
-  // BOTH phase 1 and phase 2. A phase-1 hit that leads to a successful phase-2
-  // counts as two attempts — acceptable, the user rarely needs recovery twice.
-  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
-  const rateKey = `recover:${ip}:${username.toLowerCase()}`;
-  const gate = rateLimit(rateKey, 5, 10 * 60 * 1000);
-  if (!gate.allowed) {
-    return res.status(429).json({
-      error: 'too_many_attempts',
-      detail: `Too many recovery attempts. Try again in ${gate.retryAfterSec} seconds.`,
-      retryAfterSec: gate.retryAfterSec,
-    });
-  }
+  // Rate limiting is handled by the _recoverLimiter middleware: 10 attempts
+  // per hour per username. Tight enough to block brute-force/enumeration,
+  // loose enough that a user who genuinely needs recovery a couple of times
+  // in a day isn't locked out.
   const uid = username.toLowerCase();
   const users = loadUsers();
   const user  = users[uid] || Object.values(users).find(u => (u.username||'').toLowerCase() === uid);
@@ -936,7 +908,9 @@ app.post('/api/forgot', async (req, res) => {
   tokens[token] = { username: username.toLowerCase(), expiresAt: Date.now() + 3600000 };
   saveTokens(tokens);
   const resetUrl = `${APP_URL}/reset-password?token=${token}`;
-  console.log(`Reset URL for ${username}: ${resetUrl}`);
+  // Do not log the reset URL — Render captures server logs and anyone with
+  // log access could use the URL to reset any account. The URL is returned
+  // in the response (for the admin flow) and also emailed via /api/admin/send-reset-link.
   res.json({ ok: true, resetUrl });
 });
 
