@@ -88,25 +88,46 @@ t('Features ordered I → II → III → IV → V → VI', () => {
     if (idxs[i] <= idxs[i-1]) throw new Error('order wrong at ' + order[i]);
   }
 });
-t('Roman numerals present as section markers (I, II, III, IV, V, VI)', () => {
-  for (const n of ['>I<','>II<','>III<','>IV<','>V<','>VI<']) {
-    if (!src.includes(n)) throw new Error('missing roman numeral: ' + n);
+t('No Roman numeral markers in features (removed)', () => {
+  // Roman numerals used to live as standalone <div> markers with amber 0.25em letter-spacing.
+  // Feature titles must not carry per-section roman numerals anymore.
+  if (/letter-spacing:0\.25em">(?:I|II|III|IV|V|VI)</.test(src)) {
+    throw new Error('roman numeral marker still present');
+  }
+});
+t('No per-column top rules above features', () => {
+  // The per-column amber hairline was: border-top:1px solid rgba(232,168,56,0.3)
+  if (src.includes('border-top:1px solid rgba(232,168,56,0.3)')) {
+    throw new Error('per-column amber top rule still present');
   }
 });
 t('No feature cards (glass/backdrop-filter tile pattern removed)', () => {
-  // The old cards all had this signature backdrop-filter:blur(14px) combo
   if (src.includes('backdrop-filter:blur(14px)')) throw new Error('old card pattern still present');
 });
 t('No legacy tile SVG icons in landing features', () => {
-  // Old tiles had M3 9l9-7 (house icon) — no longer present in landing
   if (src.includes('M3 9l9-7 9 7v11')) throw new Error('old house icon still in source');
 });
-t('Section-opening hairline rule above features', () => {
-  // The rule that opens the whole section
+t('Section-opening hairline rule above features (still present)', () => {
   if (!src.includes('border-top:1px solid rgba(242,234,216,0.12)')) throw new Error('section hairline missing');
 });
 t('No "Formatting preserved"',    () => not('Formatting preserved'));
 t('No "Salary intelligence"',     () => not('Salary intelligence'));
+
+// ── Hero: eyebrow + wordmark + tagline ──────────────────────────────────────
+console.log('\n── Hero');
+t('Eyebrow: "A JOB SEARCH WORKSPACE" above wordmark', () => {
+  if (!src.includes('A JOB SEARCH WORKSPACE')) throw new Error('eyebrow missing');
+  // Must come before the Summit wordmark in source order
+  const eb = src.indexOf('A JOB SEARCH WORKSPACE');
+  const wm = src.indexOf('>Summit</h1>');
+  if (eb < 0 || wm < 0 || eb > wm) throw new Error('eyebrow not above wordmark');
+});
+t('Eyebrow uses mono + amber', () => {
+  const idx = src.indexOf('A JOB SEARCH WORKSPACE');
+  const tag = src.slice(Math.max(0, idx - 300), idx);
+  if (!tag.includes('var(--mono)')) throw new Error('eyebrow not in mono');
+  if (!tag.includes('#e8a838'))     throw new Error('eyebrow not amber');
+});
 
 // ── Landing hero tagline (mountaineering, not SaaS product-bullets) ─────────
 console.log('\n── Hero tagline');
@@ -117,10 +138,18 @@ t('Old SaaS tagline removed: "Track every application"', () => not('Track every 
 t('Old SaaS tagline removed: "Tailor every resume"',     () => not('Tailor every resume'));
 t('Old SaaS tagline removed: "Land the role"',           () => not('Land the role'));
 
-// ── Footer CTA ──────────────────────────────────────────────────────────────
-console.log('\n── Footer CTA');
-t('CTA reads "Begin the climb"',       () => has('Begin the climb'));
-t('Old CTA removed: "Get started for free"', () => not('Get started for free'));
+// ── Footer colophon (no CTA — sticky nav handles conversion) ───────────────
+console.log('\n── Footer colophon');
+t('No "Begin the climb" CTA button',   () => not('Begin the climb'));
+t('No "Get started for free" CTA',     () => not('Get started for free'));
+t('No "No credit card" pitch text',    () => not('NO CREDIT CARD'));
+t('JOBSUMMIT.APP colophon present',    () => has('JOBSUMMIT.APP'));
+t('No section rule framing the old CTA', () => {
+  // That framing rule was the only 0.08-opacity border on the page
+  if (src.includes('border-top:1px solid rgba(242,234,216,0.08)')) {
+    throw new Error('old CTA-framing rule still present');
+  }
+});
 
 // ── People & Diversity section ──────────────────────────────────────────────
 console.log('\n── People & Diversity section');
