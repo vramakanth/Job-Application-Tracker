@@ -252,9 +252,14 @@ t('hasFinnhub reads from localStorage in renderInsightsTab', () => {
 console.log('\n── Browser fetch fallback (job posting)');
 t('refetchPosting tries server first then browser', () => {
   const idx = src.indexOf('async function refetchPosting');
-  const body = src.slice(idx, idx + 4000);
-  if (!body.includes('/api/parse-job')) throw new Error('missing server-side parse-job call');
+  const body = src.slice(idx, idx + 6000);
+  // Server path is _serverFetch (which posts to /api/parse-job) — check for the helper
+  if (!body.includes('_serverFetch')) throw new Error('missing server-fetch helper call');
   if (!body.includes('_browserFetchPosting')) throw new Error('missing browser fetch fallback');
+  // And confirm _serverFetch itself hits parse-job
+  const sfIdx = src.indexOf('async function _serverFetch');
+  const sfBody = src.slice(sfIdx, sfIdx + 500);
+  if (!sfBody.includes('/api/parse-job')) throw new Error('_serverFetch does not call /api/parse-job');
 });
 t('_browserFetchPosting goes through postMessage bridge (NOT chrome.tabs.create)', () => {
   has('async function _browserFetchPosting');
@@ -534,6 +539,42 @@ t('Settings colophon shows version + brand (replaces mobile-invisible version la
     throw new Error('settings-version-label not populated on openSettings');
   }
 });
+t('Stale filter pill matches the tile chip: red-orange, 3px square radius', () => {
+  // CSS rule must exist and use the same red-orange palette + 3px radius
+  const m = src.match(/\.filter-tab\[data-filter="stale"\]\s*\{[^}]*\}/);
+  if (!m) throw new Error('no dedicated CSS rule for the stale filter pill');
+  if (!/border-radius:\s*3px/.test(m[0]))                 throw new Error('stale pill not 3px square');
+  if (!/color:\s*#ea580c/.test(m[0]))                     throw new Error('stale pill not red-orange text');
+  if (!/rgba\(234,\s*88,\s*12,/.test(m[0]))               throw new Error('stale pill not using red-orange bg');
+});
+t('Stale filter pill does NOT fall back to amber accent when active', () => {
+  // The .filter-tab.active rule would apply amber to every pill including stale.
+  // A scoped active rule for [data-filter="stale"].active overrides it.
+  if (!/\.filter-tab\[data-filter="stale"\]\.active\s*\{/.test(src)) {
+    throw new Error('no scoped active rule — stale pill would go amber when selected');
+  }
+});
+t('Stale toggle button on job detail is square (3px), matches tile chip', () => {
+  // Regression target: old button used border-radius:100px pill shape
+  const idx = src.indexOf("onclick=\"toggleStale('${j.id}')\"");
+  if (idx < 0) throw new Error('stale toggle button not found');
+  const tag = src.slice(idx, idx + 800);
+  if (/border-radius:100px/.test(tag)) throw new Error('stale toggle still using 100px pill radius');
+  if (!/border-radius:3px/.test(tag))  throw new Error('stale toggle not 3px square');
+});
+t('Filter pill label renamed: "★ watchlist" → "★ starred" (data-filter value preserved)', () => {
+  // The display text changed, the filter key stayed
+  if (!/data-filter="watchlist">★ starred</.test(src)) {
+    throw new Error('filter pill text not updated to "★ starred"');
+  }
+  if (/data-filter="watchlist">★ watchlist</.test(src)) {
+    throw new Error('old "★ watchlist" label still present');
+  }
+  // Internal data-filter="watchlist" MUST stay — filter logic and job.watchlist field depend on it
+  if (!/data-filter="watchlist"/.test(src)) {
+    throw new Error('data-filter="watchlist" attribute lost — filter logic will break');
+  }
+});
 t('Sticky settings header with "Settings" title', () => {
   if (!/class="settings-header"/.test(src))       throw new Error('no .settings-header element');
   if (!/class="settings-header-title"[^>]*>Settings</.test(src)) throw new Error('no "Settings" title in header');
@@ -772,9 +813,15 @@ t('refetchPosting only shows "browser fetch" step if extension installed', () =>
 
 // ── App-wide typography consistency with insights pass ──────────────────────
 console.log('\n── App-wide body text scale');
-t('.notes-textarea bumped to 15px', () => {
-  const m = src.match(/\.notes-textarea\s*\{[^}]*\}/);
-  if (!m || !/font-size:\s*15px/.test(m[0])) throw new Error('notes textarea not 15px');
+t('.notes-editor body text size appropriate (14-15px for reading long-form notes)', () => {
+  // Old .notes-textarea was replaced by TipTap rich editor. The equivalent
+  // constraint now is on the editor itself — needs to be readable.
+  const m = src.match(/\.notes-editor\s*\{[^}]*\}/);
+  if (!m)                                       throw new Error('.notes-editor rule missing');
+  const sizeMatch = m[0].match(/font-size:\s*(\d+)px/);
+  if (!sizeMatch)                               throw new Error('.notes-editor has no font-size');
+  const size = parseInt(sizeMatch[1], 10);
+  if (size < 14 || size > 16)                   throw new Error(`.notes-editor font-size ${size}px out of range 14-16px`);
 });
 t('.posting-body bumped to 15px + text color (was 13px/text2)', () => {
   const m = src.match(/\.posting-body\s*\{[^}]*\}/);

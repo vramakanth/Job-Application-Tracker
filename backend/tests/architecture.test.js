@@ -167,13 +167,14 @@ t('GET /api/user-settings returns 404 for missing file', () => {
 
 // ── Insights: truncation detection and larger output budget ─────────────────
 console.log('\n── Insights data integrity');
-t('/api/insights max tokens bumped to 8000', () => {
+t('/api/insights max tokens fits Groq 12K TPM free-tier budget (≤ 4000)', () => {
   const idx = serverSrc.indexOf("app.post('/api/insights'");
-  const body = serverSrc.slice(idx, idx + 4500);
-  // Match "callAI(... , 8000)" anywhere inside the insights endpoint body
-  if (!/callAI\([\s\S]*?,\s*8000\s*\)/.test(body)) {
-    throw new Error('insights callAI not using 8000 token budget');
-  }
+  const body = serverSrc.slice(idx, idx + 5500);
+  // Accept either old-style (just maxTok) or new-style (maxTok, req, 'endpoint')
+  const m = body.match(/callAI\([\s\S]*?,\s*(\d+)\s*(?:,|\))/);
+  if (!m) throw new Error('insights callAI invocation not found');
+  const tok = parseInt(m[1], 10);
+  if (tok > 4000) throw new Error(`insights callAI using ${tok} tokens — should be ≤ 4000 for free-tier TPM`);
 });
 t('parseJson flags lossy strategy-3 recovery with _partial', () => {
   const idx = serverSrc.indexOf('function parseJson(raw)');

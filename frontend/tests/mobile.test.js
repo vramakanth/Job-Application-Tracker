@@ -28,8 +28,8 @@ t('mobile-avatar-btn has exactly one id attribute', () => {
 t('user-avatar hidden on mobile (prevents duplicate circles)', () => {
   // On mobile, #user-avatar must be hidden so only mobile-avatar-btn shows
   const mobileSection = src.slice(
-    src.indexOf('@media (max-width'),
-    src.indexOf('@media (max-width') + 4000
+    src.indexOf('@media (max-width: 680px)'),
+    src.indexOf('@media (max-width: 680px)') + 4000
   );
   if (!mobileSection.includes('#user-avatar') || !mobileSection.includes('display: none')) {
     throw new Error('#user-avatar not hidden in mobile CSS');
@@ -38,8 +38,8 @@ t('user-avatar hidden on mobile (prevents duplicate circles)', () => {
 
 t('mobile-avatar-btn shown on mobile', () => {
   const mobileSection = src.slice(
-    src.indexOf('@media (max-width'),
-    src.indexOf('@media (max-width') + 4000
+    src.indexOf('@media (max-width: 680px)'),
+    src.indexOf('@media (max-width: 680px)') + 4000
   );
   if (!mobileSection.includes('#mobile-avatar-btn') || !mobileSection.includes('display: flex')) {
     throw new Error('mobile-avatar-btn not shown in mobile CSS');
@@ -194,8 +194,8 @@ t('bottom bar hidden on desktop (display:none)', () => {
 
 t('bottom bar shown only in mobile media query', () => {
   const mobileSection = src.slice(
-    src.indexOf('@media (max-width'),
-    src.indexOf('@media (max-width') + 4000
+    src.indexOf('@media (max-width: 680px)'),
+    src.indexOf('@media (max-width: 680px)') + 4000
   );
   if (!mobileSection.includes('mobile-bottom-bar')) {
     throw new Error('mobile-bottom-bar not enabled in media query');

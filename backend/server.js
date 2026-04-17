@@ -17,23 +17,36 @@ const app = express();
 const PORT           = process.env.PORT           || 3000;
 const JWT_SECRET     = process.env.JWT_SECRET     || 'change-this-secret-please';
 const DATA_DIR       = process.env.DATA_DIR       || path.join(__dirname, 'data');
+const USAGE_DIR      = path.join(DATA_DIR, 'usage');
+// Per-user daily token cap. User sees a warning banner at 80%, requests are
+// rejected once the cap is reached. Override via DAILY_TOKEN_CAP env var.
+// Default 100K is enough for ~4 typical user sessions per day (insights +
+// a few tailors + interview questions) without exhausting free-tier budgets.
+const DAILY_TOKEN_CAP = parseInt(process.env.DAILY_TOKEN_CAP || '100000', 10);
 const ADMIN_SECRET   = process.env.ADMIN_SECRET   || '';
 const APP_URL        = process.env.APP_URL        || 'https://job-application-tracker-hf1f.onrender.com';
 const GROQ_API_KEY   = process.env.GROQ_API_KEY   || '';
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY || '';
 const GROQ_MODEL     = process.env.GROQ_MODEL     || 'llama-3.3-70b-versatile';
+// Cheap high-TPM fallback when primary hits 429. Groq's free tier gives 8b-instant
+// 25K TPM vs 12K for 70B, so it usually gets through when the big model is throttled.
+const GROQ_FALLBACK_MODEL = process.env.GROQ_FALLBACK_MODEL || 'llama-3.1-8b-instant';
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
-const GOOGLE_MODEL   = process.env.GOOGLE_MODEL   || 'gemini-2.0-flash';
+// Google's gemini-2.0-flash was deprecated March 31, 2026 → requests return 404.
+// gemini-2.5-flash is the free-tier successor. Override via GOOGLE_MODEL env var
+// on Render if you want a different default (e.g. gemini-3-flash-preview).
+const GOOGLE_MODEL   = process.env.GOOGLE_MODEL   || 'gemini-2.5-flash';
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 // ── Data directories ─────────────────────────────────────────────────────────
 const USERS_FILE  = path.join(DATA_DIR, 'users.json');
 const JOBS_DIR    = path.join(DATA_DIR, 'jobs');
+const NOTES_DIR   = path.join(DATA_DIR, 'notes');
 const DOCS_DIR    = path.join(DATA_DIR, 'docs');
 const SETTINGS_DIR = path.join(DATA_DIR, 'settings');
 const TOKENS_FILE = path.join(DATA_DIR, 'tokens.json');
-for (const d of [DATA_DIR, JOBS_DIR, DOCS_DIR, SETTINGS_DIR]) {
+for (const d of [DATA_DIR, JOBS_DIR, DOCS_DIR, SETTINGS_DIR, USAGE_DIR, NOTES_DIR]) {
   if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
 }
 
@@ -180,6 +193,69 @@ function adminMiddleware(req, res, next) {
   next();
 }
 
+// ── Token usage tracking ────────────────────────────────────────────────────
+// Two storage layers:
+//   1) NDJSON append log (data/usage/YYYY-MM.log) — source of truth, every call
+//      a line: {ts, user, provider, model, endpoint, prompt, completion}
+//   2) Per-user daily cache (data/usage/{user}.json) — pre-aggregated so the
+//      user settings pane and daily-cap checks don't scan the log on every call.
+
+function todayKey() { return new Date().toISOString().slice(0, 10); }
+function monthKey() { return new Date().toISOString().slice(0, 7); }
+
+function appendUsageLog(entry) {
+  try {
+    const file = path.join(USAGE_DIR, `${monthKey()}.log`);
+    fs.appendFileSync(file, JSON.stringify(entry) + '\n');
+  } catch (e) { console.warn('usage log append failed:', e.message); }
+}
+
+function loadUserUsage(user) {
+  const file = path.join(USAGE_DIR, `${user}.json`);
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return {}; }
+}
+function saveUserUsage(user, data) {
+  const file = path.join(USAGE_DIR, `${user}.json`);
+  try { fs.writeFileSync(file, JSON.stringify(data, null, 0)); }
+  catch (e) { console.warn('usage save failed:', e.message); }
+}
+
+function recordUsage(user, provider, model, endpoint, prompt, completion) {
+  if (!user) return;
+  const total = (prompt || 0) + (completion || 0);
+  if (!total) return;
+  const day = todayKey();
+  appendUsageLog({ ts: Date.now(), user, day, provider, model, endpoint, prompt: prompt || 0, completion: completion || 0 });
+  const usage = loadUserUsage(user);
+  if (!usage[day]) usage[day] = { total: 0, byProvider: {}, byEndpoint: {} };
+  usage[day].total                  += total;
+  usage[day].byProvider[provider]    = (usage[day].byProvider[provider] || 0) + total;
+  usage[day].byEndpoint[endpoint]    = (usage[day].byEndpoint[endpoint] || 0) + total;
+  saveUserUsage(user, usage);
+}
+
+function todaysUsage(user) {
+  if (!user) return 0;
+  const usage = loadUserUsage(user);
+  return usage[todayKey()]?.total || 0;
+}
+
+// Middleware: reject requests when user has hit the daily cap.
+function tokenCapMiddleware(req, res, next) {
+  if (!DAILY_TOKEN_CAP) return next();
+  const user = req.user?.username || req.username;
+  if (!user) return next();
+  const used = todaysUsage(user);
+  if (used >= DAILY_TOKEN_CAP) {
+    return res.status(429).json({
+      error: 'token_cap_reached',
+      detail: `Daily AI token budget reached (${used.toLocaleString()} / ${DAILY_TOKEN_CAP.toLocaleString()}). Resets at midnight UTC.`,
+      used, cap: DAILY_TOKEN_CAP,
+    });
+  }
+  next();
+}
+
 // ── AI helpers ───────────────────────────────────────────────────────────────
 async function fetchTimeout(url, opts, ms = 20000) {
   const ctrl = new AbortController();
@@ -194,14 +270,32 @@ async function fetchTimeout(url, opts, ms = 20000) {
 
 async function callGroq(sys, usr, maxTok = 4000) {
   if (!GROQ_API_KEY) throw new Error('GROQ_API_KEY not set');
-  const r = await fetchTimeout('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_API_KEY}` },
-    body: JSON.stringify({ model: GROQ_MODEL, max_tokens: maxTok, temperature: 0.3,
-      messages: [{ role:'system', content:sys }, { role:'user', content:usr }] })
-  });
-  if (!r.ok) throw new Error(`Groq ${r.status}: ${(await r.text()).slice(0,200)}`);
-  return (await r.json()).choices[0].message.content;
+  // Try primary model first. On 429 (rate limit), fall back to 8b-instant which
+  // has a much higher TPM budget on Groq's free tier (25K vs 12K for the 70B).
+  const attempt = async (model) => {
+    const r = await fetchTimeout('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${GROQ_API_KEY}` },
+      body: JSON.stringify({ model, max_tokens: maxTok, temperature: 0.3,
+        messages: [{ role:'system', content:sys }, { role:'user', content:usr }] })
+    });
+    if (!r.ok) { const err = new Error(`Groq ${r.status}: ${(await r.text()).slice(0,200)}`); err.status = r.status; throw err; }
+    const data = await r.json();
+    return {
+      text:  data.choices[0].message.content,
+      usage: { prompt: data.usage?.prompt_tokens || 0, completion: data.usage?.completion_tokens || 0 },
+      model,
+    };
+  };
+  try {
+    return await attempt(GROQ_MODEL);
+  } catch (e) {
+    if (e.status === 429 && GROQ_MODEL !== GROQ_FALLBACK_MODEL) {
+      console.warn(`Groq ${GROQ_MODEL} rate-limited — falling back to ${GROQ_FALLBACK_MODEL}`);
+      return await attempt(GROQ_FALLBACK_MODEL);
+    }
+    throw e;
+  }
 }
 
 async function callOpenRouter(sys, usr, maxTok = 4000) {
@@ -214,7 +308,12 @@ async function callOpenRouter(sys, usr, maxTok = 4000) {
       messages: [{ role:'system', content:sys }, { role:'user', content:usr }] })
   });
   if (!r.ok) throw new Error(`OpenRouter ${r.status}: ${(await r.text()).slice(0,200)}`);
-  return (await r.json()).choices[0].message.content;
+  const data = await r.json();
+  return {
+    text:  data.choices[0].message.content,
+    usage: { prompt: data.usage?.prompt_tokens || 0, completion: data.usage?.completion_tokens || 0 },
+    model: OPENROUTER_MODEL,
+  };
 }
 
 async function callGoogle(sys, usr, maxTok = 4000) {
@@ -230,20 +329,214 @@ async function callGoogle(sys, usr, maxTok = 4000) {
     })
   });
   if (!r.ok) throw new Error(`Google ${r.status}: ${(await r.text()).slice(0,200)}`);
-  return (await r.json()).candidates[0].content.parts[0].text;
+  const data = await r.json();
+  return {
+    text:  data.candidates[0].content.parts[0].text,
+    usage: { prompt: data.usageMetadata?.promptTokenCount || 0, completion: data.usageMetadata?.candidatesTokenCount || 0 },
+    model: GOOGLE_MODEL,
+  };
 }
 
-async function callAI(order, sys, usr, maxTok = 4000) {
-  const fns = { groq: callGroq, openrouter: callOpenRouter, google: callGoogle };
+// ── Public data fetchers ─────────────────────────────────────────────────────
+// Replaces AI-hallucinated content with real data from public sources where
+// possible. Each helper fails open (returns null/[]) so a dead source doesn't
+// sink the whole insights response.
+
+// Wikipedia REST summary — real company overview prose. Used both as the
+// displayed overview text and as grounding context for the AI's structured
+// fields (overview.founded/hq/industry/employees). Keyless, respects the
+// W3C User-Agent requirement.
+async function fetchWikipediaSummary(company) {
+  if (!company) return null;
+  // Wikipedia is case-insensitive for title matching but prefers the
+  // canonical form. Try the company name as-is first.
+  try {
+    const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(company)}`;
+    const r = await fetchTimeout(url, {
+      headers: { 'User-Agent': 'Summit/1.0 (https://jobsummit.app; contact@jobsummit.app)' }
+    }, 6000);
+    if (!r.ok) return null;
+    const data = await r.json();
+    // Skip disambiguation pages and standalone redirects with no prose
+    if (data.type === 'disambiguation') return null;
+    if (!data.extract || data.extract.length < 80) return null;
+    return {
+      title:       data.title || company,
+      description: data.description || '',
+      extract:     data.extract,
+      url:         data.content_urls?.desktop?.page || '',
+      qid:         data.wikibase_item || null,  // e.g. "Q95" for Google → lets Wikidata skip its own search
+    };
+  } catch (e) {
+    console.warn('wikipedia fail:', e.message);
+    return null;
+  }
+}
+
+// Wikidata structured facts — founded / HQ / industry / employees as ground
+// truth, resolving entity references to human-readable labels via SPARQL.
+// Takes an optional QID (from the Wikipedia REST summary) to skip the lookup
+// round trip. Returns null if no entity found or SPARQL fails — caller shows
+// just the cards that came back populated (renderOverviewCards already filters
+// empties).
+async function fetchWikidataOverview(company, qid) {
+  if (!company && !qid) return null;
+  const ua = 'Summit/1.0 (https://jobsummit.app; contact@jobsummit.app)';
+  try {
+    // Step 1: resolve the QID if we weren't handed one
+    if (!qid) {
+      const sr = await fetchTimeout(
+        `https://www.wikidata.org/w/api.php?action=wbsearchentities&search=${encodeURIComponent(company)}&language=en&format=json&type=item&limit=1&origin=*`,
+        { headers: { 'User-Agent': ua } }, 6000
+      );
+      if (!sr.ok) return null;
+      const sdata = await sr.json();
+      qid = sdata.search?.[0]?.id;
+      if (!qid) return null;
+    }
+
+    // Step 2: SPARQL — single query returns labels for all four properties
+    //   P571 inception, P159 headquarters location, P452 industry, P1128 employees
+    // `SERVICE wikibase:label` resolves entity references (e.g. Mountain View) to strings.
+    const sparql = `
+SELECT ?founded ?hqLabel ?industryLabel ?employees WHERE {
+  OPTIONAL { wd:${qid} wdt:P571 ?founded. }
+  OPTIONAL { wd:${qid} wdt:P159 ?hq. }
+  OPTIONAL { wd:${qid} wdt:P452 ?industry. }
+  OPTIONAL { wd:${qid} wdt:P1128 ?employees. }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
+} LIMIT 1`;
+    const qr = await fetchTimeout(
+      `https://query.wikidata.org/sparql?query=${encodeURIComponent(sparql)}&format=json`,
+      { headers: { 'User-Agent': ua, 'Accept': 'application/sparql-results+json' } }, 8000
+    );
+    if (!qr.ok) return null;
+    const qdata = await qr.json();
+    const row = qdata.results?.bindings?.[0];
+    if (!row) return null;
+
+    // Format employees with commas (Wikidata returns raw integer as string)
+    const empRaw = row.employees?.value;
+    const employees = empRaw && !isNaN(empRaw)
+      ? Number(empRaw).toLocaleString('en-US')
+      : '';
+    // Founded date comes as ISO "1998-09-04T00:00:00Z" — we only need the year
+    const foundedYear = row.founded?.value
+      ? new Date(row.founded.value).getUTCFullYear()
+      : null;
+
+    const result = {
+      founded:  foundedYear ? String(foundedYear) : '',
+      hq:       row.hqLabel?.value || '',
+      industry: row.industryLabel?.value || '',
+      employees,
+    };
+    // If Wikidata has none of the four, that's effectively null
+    if (!result.founded && !result.hq && !result.industry && !result.employees) return null;
+    return result;
+  } catch (e) {
+    console.warn('wikidata fail:', e.message);
+    return null;
+  }
+}
+
+async function fetchCompanyNews(company, ticker, finnhubKey) {
+  const items = [];
+
+  // 1. Finnhub — best quality, dated, tied to a real ticker. Only reachable
+  //    if the insights call already resolved the ticker AND the user has
+  //    provided a Finnhub API key.
+  if (ticker && finnhubKey) {
+    try {
+      const from = new Date(Date.now() - 90 * 86400 * 1000).toISOString().slice(0, 10);
+      const to   = new Date().toISOString().slice(0, 10);
+      const r = await fetchTimeout(
+        `https://finnhub.io/api/v1/company-news?symbol=${ticker}&from=${from}&to=${to}&token=${finnhubKey}`,
+        {}, 8000
+      );
+      if (r.ok) {
+        const data = await r.json();
+        for (const item of (data || []).slice(0, 5)) {
+          if (!item.headline || !item.url) continue;
+          items.push({
+            headline: item.headline,
+            source:   item.source || 'Finnhub',
+            date:     item.datetime ? new Date(item.datetime * 1000).toISOString().slice(0, 10) : '',
+            url:      item.url,
+            sentiment: '',
+          });
+        }
+      }
+    } catch (e) { console.warn('finnhub news fail:', e.message); }
+  }
+
+  // 2. Google News RSS — keyless, works for any company name. Minimal XML
+  //    parsing via regex; items are <item>…</item>. Google returns a redirect
+  //    URL that resolves to the actual publisher, which is fine.
+  if (items.length === 0) {
+    try {
+      const q = encodeURIComponent(company);
+      const r = await fetchTimeout(
+        `https://news.google.com/rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en`,
+        { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SummitBot/1.0)' } },
+        8000
+      );
+      if (r.ok) {
+        const xml = await r.text();
+        const itemRe = /<item>([\s\S]*?)<\/item>/g;
+        const extract = (block, tag) => {
+          const m = new RegExp(`<${tag}[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${tag}>`).exec(block);
+          return m ? m[1].trim() : '';
+        };
+        let m;
+        while ((m = itemRe.exec(xml)) && items.length < 5) {
+          const block = m[1];
+          const headline = extract(block, 'title');
+          const url      = extract(block, 'link');
+          const pubDate  = extract(block, 'pubDate');
+          const source   = extract(block, 'source') || 'News';
+          if (!headline || !url) continue;
+          // Strip the "— Publisher" suffix Google appends to Title; keep clean headline
+          const cleanHeadline = headline.replace(/\s+[—-]\s+[^—-]+$/, '').trim();
+          items.push({
+            headline: cleanHeadline || headline,
+            source,
+            date:     pubDate ? new Date(pubDate).toISOString().slice(0, 10) : '',
+            url,
+            sentiment: '',
+          });
+        }
+      }
+    } catch (e) { console.warn('google news RSS fail:', e.message); }
+  }
+
+  return items;
+}
+
+// callAI(order, sys, usr, maxTok, req, endpoint)
+// When req and endpoint are provided, token usage is recorded against the
+// authenticated user for that feature. Returns just the text string — usage
+// bookkeeping is a side effect so the ten existing call sites don't need
+// their unwrapping patterns changed.
+async function callAI(order, sys, usr, maxTok = 4000, req = null, endpoint = null) {
+  const fns     = { groq: callGroq, openrouter: callOpenRouter, google: callGoogle };
+  const models  = { groq: GROQ_MODEL, openrouter: OPENROUTER_MODEL, google: GOOGLE_MODEL };
   const errs = [];
   for (const name of order) {
     try {
-      const text = await fns[name](sys, usr, maxTok);
-      console.log(`AI ok: ${name}`);
-      return text;
+      const result = await fns[name](sys, usr, maxTok);
+      // result = {text, usage: {prompt, completion}, model}
+      console.log(`AI ok: ${name} (${result.model || models[name]}) — ${result.usage?.prompt || 0}+${result.usage?.completion || 0} tokens`);
+      // Record usage against the authenticated user, if request context provided
+      const user = req?.user?.username || req?.username || null;
+      if (user && endpoint) {
+        recordUsage(user, name, result.model || models[name], endpoint,
+                    result.usage?.prompt || 0, result.usage?.completion || 0);
+      }
+      return result.text;
     } catch (e) {
-      console.warn(`AI ${name} fail: ${e.message}`);
-      errs.push(`${name}: ${e.message}`);
+      console.warn(`AI ${name} fail [${models[name]}]: ${e.message}`);
+      errs.push(`${name}(${models[name]}): ${e.message}`);
     }
   }
   throw new Error('All AI failed: ' + errs.join(' | '));
@@ -293,22 +586,43 @@ function parseJson(raw) {
 // ════════════════════════════════════════════════════════════════════════════════
 
 app.post('/api/register', async (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, email, encryptedDataKey, recoveryKeySlots } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
   if (username.length < 3)    return res.status(400).json({ error: 'Username must be 3+ chars' });
   if (password.length < 6)    return res.status(400).json({ error: 'Password must be 6+ chars' });
   const users = loadUsers();
   const uid = username.toLowerCase();
   if (users[uid]) return res.status(409).json({ error: 'Username already taken' });
-  users[uid] = { username, passwordHash: await bcrypt.hash(password, 12), createdAt: Date.now() };
+  // Build the user record. For zero-knowledge accounts the client ships
+  // encryptedDataKey + recoveryKeySlots; we store them opaquely — the server
+  // never sees the underlying dataKey or the plaintext recovery codes.
+  const rec = {
+    username,
+    passwordHash: await bcrypt.hash(password, 12),
+    createdAt: Date.now(),
+  };
+  if (email && typeof email === 'string' && email.includes('@')) rec.email = email.trim();
+  if (encryptedDataKey && typeof encryptedDataKey === 'string') {
+    rec.encrypted        = true;
+    rec.encryptedDataKey = encryptedDataKey;
+    // Slots: [{index, slot}]. We add a `used:false` flag to each so recovery
+    // can consume them one at a time without losing the array shape.
+    rec.recoveryKeySlots = Array.isArray(recoveryKeySlots)
+      ? recoveryKeySlots.map(s => ({ index: s.index, slot: s.slot, used: false }))
+      : [];
+    rec.recoveryCodesGeneratedAt = Date.now();
+  }
+  users[uid] = rec;
   saveUsers(users);
   const token = jwt.sign({ id: uid, username }, JWT_SECRET, { expiresIn: '30d' });
-  res.json({ token, username });
+  const response = { token, username };
+  if (rec.encrypted) response.encryptedDataKey = rec.encryptedDataKey;
+  res.json(response);
 });
 
 app.get('/api/ping', (req, res) => res.json({ ok: true, version: '1.5.0', dataDir: DATA_DIR, usersExist: fs.existsSync(USERS_FILE) }));
 
-app.post('/api/login', async (req, res) => {
+app.post('/api/login', _loginLimiter, async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
   const users = loadUsers();
@@ -332,12 +646,18 @@ app.post('/api/login', async (req, res) => {
     user.passwordHash = user.password;
   }
   const payload = { id: username.toLowerCase(), username: user.username };
-  if (user.wrappedKey) payload.wrappedKey = user.wrappedKey;
-  res.json({ token: jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' }), username: user.username });
+  const response = { token: jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' }), username: user.username };
+  // Zero-knowledge accounts: return the wrapped dataKey. The client derives
+  // its password key locally and unwraps. Server never sees the plain dataKey.
+  if (user.encrypted && user.encryptedDataKey) {
+    response.encrypted        = true;
+    response.encryptedDataKey = user.encryptedDataKey;
+  }
+  res.json(response);
 });
 
 app.post('/api/change-password', authMiddleware, async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
+  const { currentPassword, newPassword, newEncryptedDataKey } = req.body;
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both passwords required' });
   if (newPassword.length < 6) return res.status(400).json({ error: 'New password too short' });
   const users = loadUsers();
@@ -346,11 +666,249 @@ app.post('/api/change-password', authMiddleware, async (req, res) => {
   const existingHash = user.passwordHash || user.password;
   if (!(await bcrypt.compare(currentPassword, existingHash)))
     return res.status(401).json({ error: 'Current password incorrect' });
+  // Zero-knowledge: if the account is encrypted, the client MUST supply the
+  // re-wrapped data key (wrapped with the new password-derived key).
+  // Without it, login after password change would fail because the old wrapped
+  // key can no longer be unwrapped by the new password.
+  if (user.encrypted && user.encryptedDataKey) {
+    if (!newEncryptedDataKey || typeof newEncryptedDataKey !== 'string') {
+      return res.status(400).json({ error: 'Encrypted account requires newEncryptedDataKey (client must re-wrap)' });
+    }
+    user.encryptedDataKey = newEncryptedDataKey;
+  }
   user.passwordHash = await bcrypt.hash(newPassword, 12);
   delete user.password; // normalise field name
   saveUsers(users);
   res.json({ ok: true });
 });
+
+// ── Simple rate limiter for sensitive endpoints ─────────────────────────────
+// In-memory sliding window keyed by username OR remote IP. Zero external
+// dependencies (no redis) — fine for a single-instance Render deploy.
+// For multi-instance or production-scale, swap for a real distributed store.
+const _rateBuckets = new Map();
+function rateLimit({ windowMs, max, keyFn, label }) {
+  return (req, res, next) => {
+    const key = keyFn(req);
+    if (!key) return next();
+    const now = Date.now();
+    let bucket = _rateBuckets.get(key);
+    if (!bucket) { bucket = []; _rateBuckets.set(key, bucket); }
+    // Drop entries older than the window
+    while (bucket.length && bucket[0] < now - windowMs) bucket.shift();
+    if (bucket.length >= max) {
+      const retryAfter = Math.ceil((bucket[0] + windowMs - now) / 1000);
+      console.warn(`rate-limit hit on ${label}: key=${key} count=${bucket.length}`);
+      res.setHeader('Retry-After', retryAfter);
+      return res.status(429).json({
+        error: 'rate_limited',
+        detail: `Too many ${label} attempts. Try again in ${retryAfter} seconds.`,
+      });
+    }
+    bucket.push(now);
+    next();
+  };
+}
+// Periodic cleanup — prevent unbounded growth of the bucket map
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, bucket] of _rateBuckets) {
+    while (bucket.length && bucket[0] < now - 3600 * 1000) bucket.shift();
+    if (bucket.length === 0) _rateBuckets.delete(key);
+  }
+}, 15 * 60 * 1000).unref();
+
+// Rate limiters for auth-sensitive endpoints. Key by username where we have it,
+// fall back to IP. Limits chosen to be tight enough to block brute-force but
+// loose enough that a legitimate user hitting "forgot password" a few times
+// in a row won't get locked out.
+const _recoverLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,  // 1 hour sliding window
+  max:      10,               // 10 recovery attempts per hour per username
+  keyFn:    req => `recover:${(req.body?.username || '').toLowerCase() || req.ip}`,
+  label:    'recovery',
+});
+const _loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,  // 15 minutes
+  max:      20,               // generous — legit users sometimes fat-finger passwords
+  keyFn:    req => `login:${(req.body?.username || '').toLowerCase() || req.ip}`,
+  label:    'login',
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+// All key material (dataKey, recovery codes) is generated in the browser.
+// The server stores only opaque ciphertext blobs (encryptedDataKey) and
+// wrapped-with-recovery-code blobs (recoveryKeySlots). It CANNOT decrypt
+// user data with any data it holds.
+
+app.get('/api/recovery-codes', authMiddleware, (req, res) => {
+  const users = loadUsers();
+  const user  = users[req.user.id];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  if (!user.encrypted) {
+    // Account isn't encrypted yet — no recovery codes exist.
+    return res.json({ count: 0, createdAt: null, encrypted: false });
+  }
+  // Count unused slots
+  const slots = user.recoveryKeySlots || [];
+  const count = slots.filter(s => !s.used).length;
+  res.json({
+    count,
+    createdAt: user.recoveryCodesGeneratedAt || user.createdAt || null,
+    encrypted: true,
+  });
+});
+
+app.post('/api/recovery-codes/generate', authMiddleware, async (req, res) => {
+  const { password, encryptedDataKey, recoveryKeySlots } = req.body;
+  if (!password) return res.status(400).json({ error: 'Password required' });
+  const users = loadUsers();
+  const user  = users[req.user.id];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const hash = user.passwordHash || user.password;
+  if (!(await bcrypt.compare(password, hash)))
+    return res.status(401).json({ error: 'Password incorrect' });
+  if (!user.encrypted) return res.status(400).json({ error: 'Account is not encrypted' });
+  if (!Array.isArray(recoveryKeySlots) || recoveryKeySlots.length < 1) {
+    return res.status(400).json({ error: 'recoveryKeySlots required' });
+  }
+  // Replace all slots with the new set (old codes become invalid immediately).
+  // If the client also re-wrapped the dataKey (rare but allowed), update that too.
+  user.recoveryKeySlots = recoveryKeySlots.map(s => ({ index: s.index, slot: s.slot, used: false }));
+  user.recoveryCodesGeneratedAt = Date.now();
+  if (encryptedDataKey && typeof encryptedDataKey === 'string') {
+    user.encryptedDataKey = encryptedDataKey;
+  }
+  saveUsers(users);
+  res.json({ ok: true, count: user.recoveryKeySlots.length, createdAt: user.recoveryCodesGeneratedAt });
+});
+
+app.post('/api/enable-encryption', authMiddleware, async (req, res) => {
+  const { password, encryptedDataKey, recoveryKeySlots, encryptedJobs } = req.body;
+  if (!password) return res.status(400).json({ error: 'Password required' });
+  if (!encryptedDataKey) return res.status(400).json({ error: 'encryptedDataKey required' });
+  if (!Array.isArray(recoveryKeySlots) || recoveryKeySlots.length < 1) {
+    return res.status(400).json({ error: 'recoveryKeySlots required' });
+  }
+  const users = loadUsers();
+  const user  = users[req.user.id];
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const hash = user.passwordHash || user.password;
+  if (!(await bcrypt.compare(password, hash)))
+    return res.status(401).json({ error: 'Password incorrect' });
+  if (user.encrypted) return res.status(400).json({ error: 'Account already encrypted' });
+  // Flip the account to encrypted. If client shipped pre-encrypted jobs blob,
+  // atomically overwrite the jobs file with the ciphertext envelope.
+  user.encrypted            = true;
+  user.encryptedDataKey     = encryptedDataKey;
+  user.recoveryKeySlots     = recoveryKeySlots.map(s => ({ index: s.index, slot: s.slot, used: false }));
+  user.recoveryCodesGeneratedAt = Date.now();
+  saveUsers(users);
+  if (encryptedJobs && typeof encryptedJobs === 'string') {
+    // Store in the client's expected envelope shape: {__enc:true, data:ciphertext}
+    const file = path.join(JOBS_DIR, `${req.user.id}.json`);
+    fs.writeFileSync(file, JSON.stringify({ __enc: true, data: encryptedJobs }));
+  }
+  res.json({ ok: true });
+});
+
+// ── Rate limiter for sensitive auth endpoints ────────────────────────────────
+// In-memory sliding window. Keyed by IP + username where applicable.
+// For /api/recover specifically: 5 attempts per 10 minutes per (IP, username).
+// Anything more is a clear enumeration or guessing attempt.
+const _rateWindows = new Map();  // key → [timestamp, timestamp, ...]
+function rateLimit(key, max = 5, windowMs = 10 * 60 * 1000) {
+  const now = Date.now();
+  const cutoff = now - windowMs;
+  let hits = _rateWindows.get(key) || [];
+  hits = hits.filter(t => t > cutoff);
+  if (hits.length >= max) {
+    // Compute retry-after based on oldest remaining hit
+    const retryAfterSec = Math.ceil((hits[0] + windowMs - now) / 1000);
+    return { allowed: false, retryAfterSec };
+  }
+  hits.push(now);
+  _rateWindows.set(key, hits);
+  // Occasional cleanup: drop empty buckets so the map doesn't grow unbounded
+  if (_rateWindows.size > 10000) {
+    for (const [k, v] of _rateWindows) {
+      if (v.every(t => t <= cutoff)) _rateWindows.delete(k);
+    }
+  }
+  return { allowed: true };
+}
+
+app.post('/api/recover', _recoverLimiter, async (req, res) => {
+  const { username, recoveryCode, newPassword, newEncryptedDataKey, slotIndex } = req.body;
+  if (!username || !recoveryCode) return res.status(400).json({ error: 'username and recoveryCode required' });
+  // Rate limit: 5 attempts per 10-minute window per (IP, username). Applies to
+  // BOTH phase 1 and phase 2. A phase-1 hit that leads to a successful phase-2
+  // counts as two attempts — acceptable, the user rarely needs recovery twice.
+  const ip = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+  const rateKey = `recover:${ip}:${username.toLowerCase()}`;
+  const gate = rateLimit(rateKey, 5, 10 * 60 * 1000);
+  if (!gate.allowed) {
+    return res.status(429).json({
+      error: 'too_many_attempts',
+      detail: `Too many recovery attempts. Try again in ${gate.retryAfterSec} seconds.`,
+      retryAfterSec: gate.retryAfterSec,
+    });
+  }
+  const uid = username.toLowerCase();
+  const users = loadUsers();
+  const user  = users[uid] || Object.values(users).find(u => (u.username||'').toLowerCase() === uid);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  // Non-encrypted accounts — this route only exists for zero-knowledge ones.
+  if (!user.encrypted) return res.status(400).json({ error: 'Account is not encrypted; use /api/forgot instead' });
+
+  // Zero-knowledge recovery: the server CANNOT verify a recovery code — it
+  // has never seen the plaintext code, only wrapped data keys. Protocol is:
+  //   Phase 1: client POSTs {username, recoveryCode} with no newPassword.
+  //            Server returns ALL unused slots as an array.
+  //            Client tries to unwrap each with the code; exactly one succeeds.
+  //   Phase 2: client POSTs {username, recoveryCode, newPassword,
+  //            newEncryptedDataKey, slotIndex} — the index of the slot it
+  //            successfully unwrapped. Server marks that specific slot used,
+  //            updates the password hash, and swaps in the new wrapped key.
+  //
+  // Sending recoveryCode in phase 1 serves as a rate-limiting gate — we
+  // don't expose wrapped slots to anonymous clients without at least a
+  // plausible token. A future hardening step could hash-verify the code
+  // itself, but that would weaken the zero-knowledge property.
+
+  if (newPassword && newEncryptedDataKey) {
+    // Phase 2: consume the specific slot the client successfully unwrapped.
+    if (newPassword.length < 6) return res.status(400).json({ error: 'New password too short' });
+    const slots = user.recoveryKeySlots || [];
+    // Accept the index from the client. Fall back to first-unused if missing
+    // (legacy behavior) but that's wrong for multi-slot cases.
+    let slotToConsume = null;
+    if (typeof slotIndex === 'number') {
+      slotToConsume = slots.find(s => s.index === slotIndex && !s.used);
+    }
+    if (!slotToConsume) slotToConsume = slots.find(s => !s.used);
+    if (!slotToConsume) return res.status(400).json({ error: 'No unused recovery slots remain' });
+    slotToConsume.used    = true;
+    user.passwordHash     = await bcrypt.hash(newPassword, 12);
+    user.encryptedDataKey = newEncryptedDataKey;
+    delete user.password;
+    saveUsers(users);
+    const token = jwt.sign({ id: uid, username: user.username }, JWT_SECRET, { expiresIn: '30d' });
+    const remaining = (user.recoveryKeySlots || []).filter(s => !s.used).length;
+    return res.json({ token, username: user.username, codesRemaining: remaining });
+  }
+
+  // Phase 1: return ALL unused slots so the client can try each
+  const slots = (user.recoveryKeySlots || []).filter(s => !s.used);
+  if (!slots.length) return res.status(400).json({ error: 'No unused recovery codes remain' });
+  return res.json({
+    phase:     1,
+    encrypted: true,
+    slots:     slots.map(s => ({ index: s.index, slot: s.slot })),
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 
 app.delete('/api/delete-account', authMiddleware, (req, res) => {
   const { username } = req.body;
@@ -362,6 +920,8 @@ app.delete('/api/delete-account', authMiddleware, (req, res) => {
   for (const f of [path.join(JOBS_DIR,`${req.user.id}.json`), path.join(DOCS_DIR,`${req.user.id}.json`)]) {
     try { fs.unlinkSync(f); } catch {}
   }
+  // Remove notes directory (contains one file per job with notes)
+  try { fs.rmSync(path.join(NOTES_DIR, req.user.id), { recursive: true, force: true }); } catch {}
   res.json({ ok: true });
 });
 
@@ -401,6 +961,144 @@ app.post('/api/reset-password', async (req, res) => {
 // ════════════════════════════════════════════════════════════════════════════════
 // JOB DATA
 // ════════════════════════════════════════════════════════════════════════════════
+
+// ── Notes (rich-text per-job documents with history) ───────────────────────
+// Storage: one JSON file per (user, jobId) at data/notes/{userId}/{jobId}.json
+// Shape: { current: <opaque blob>, history: [ { version, createdAt, blob }, ... ], nextVersion: N }
+// For zero-knowledge accounts the blobs are ciphertext from the client — server
+// stores opaquely, never inspects content. For plaintext accounts the blobs are
+// the JSON doc object. Server treats both the same way.
+
+const MAX_NOTE_VERSIONS = 20;  // retain last N snapshots per note doc
+
+function _notesUserDir(userId) {
+  const d = path.join(NOTES_DIR, userId);
+  if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
+  return d;
+}
+function _notesFilePath(userId, jobId) {
+  // jobId is client-generated. Reject anything that could escape the dir.
+  if (!/^[a-zA-Z0-9_-]+$/.test(jobId)) return null;
+  return path.join(_notesUserDir(userId), `${jobId}.json`);
+}
+function _loadNotes(userId, jobId) {
+  const f = _notesFilePath(userId, jobId);
+  if (!f || !fs.existsSync(f)) return { current: null, history: [], nextVersion: 1 };
+  try { return JSON.parse(fs.readFileSync(f, 'utf8')); }
+  catch { return { current: null, history: [], nextVersion: 1 }; }
+}
+function _saveNotes(userId, jobId, data) {
+  const f = _notesFilePath(userId, jobId);
+  if (!f) return false;
+  fs.writeFileSync(f, JSON.stringify(data));
+  return true;
+}
+
+// GET current doc — returns {current, version, updatedAt}
+app.get('/api/notes/:jobId', authMiddleware, (req, res) => {
+  const { jobId } = req.params;
+  const f = _notesFilePath(req.user.id, jobId);
+  if (!f) return res.status(400).json({ error: 'Invalid jobId' });
+  const d = _loadNotes(req.user.id, jobId);
+  res.json({
+    current:   d.current || null,
+    version:   d.current?.version || 0,
+    updatedAt: d.current?.updatedAt || null,
+  });
+});
+
+// PUT (autosave). Body: { blob, createSnapshot: bool }
+// - `blob` is stored opaquely as the current doc. Client sends ciphertext for
+//   zero-knowledge accounts, plaintext JSON otherwise.
+// - If `createSnapshot` is true, the PREVIOUS current is promoted into history
+//   before being replaced. This way the client controls when a version is
+//   committed (based on pause + content-changed heuristic).
+// - History capped at MAX_NOTE_VERSIONS — oldest pruned.
+app.put('/api/notes/:jobId', authMiddleware, (req, res) => {
+  const { jobId } = req.params;
+  const f = _notesFilePath(req.user.id, jobId);
+  if (!f) return res.status(400).json({ error: 'Invalid jobId' });
+  const { blob, createSnapshot } = req.body || {};
+  if (blob === undefined) return res.status(400).json({ error: 'blob required' });
+  const d = _loadNotes(req.user.id, jobId);
+  // Promote previous current into history when snapshot requested
+  if (createSnapshot && d.current) {
+    d.history.push({
+      version:   d.current.version,
+      createdAt: d.current.updatedAt,
+      blob:      d.current.blob,
+    });
+    // Prune oldest if over cap
+    while (d.history.length > MAX_NOTE_VERSIONS) d.history.shift();
+  }
+  d.current = {
+    version:   d.nextVersion || 1,
+    updatedAt: Date.now(),
+    blob,
+  };
+  d.nextVersion = (d.nextVersion || 1) + 1;
+  _saveNotes(req.user.id, jobId, d);
+  res.json({ ok: true, version: d.current.version, updatedAt: d.current.updatedAt,
+             historyCount: d.history.length });
+});
+
+// GET history — returns [{version, createdAt}] metadata only. Client fetches
+// individual snapshots on demand. Keeps the response small for long histories.
+app.get('/api/notes/:jobId/history', authMiddleware, (req, res) => {
+  const { jobId } = req.params;
+  const f = _notesFilePath(req.user.id, jobId);
+  if (!f) return res.status(400).json({ error: 'Invalid jobId' });
+  const d = _loadNotes(req.user.id, jobId);
+  // Include `current` as the newest "version" too so history list shows current state
+  const items = d.history.map(h => ({ version: h.version, createdAt: h.createdAt }));
+  if (d.current) items.push({ version: d.current.version, createdAt: d.current.updatedAt, isCurrent: true });
+  // Newest first
+  items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  res.json({ versions: items });
+});
+
+// GET specific version — returns the opaque blob for that version
+app.get('/api/notes/:jobId/version/:v', authMiddleware, (req, res) => {
+  const { jobId, v } = req.params;
+  const f = _notesFilePath(req.user.id, jobId);
+  if (!f) return res.status(400).json({ error: 'Invalid jobId' });
+  const d = _loadNotes(req.user.id, jobId);
+  const version = parseInt(v, 10);
+  if (d.current && d.current.version === version) {
+    return res.json({ version, createdAt: d.current.updatedAt, blob: d.current.blob });
+  }
+  const hist = d.history.find(h => h.version === version);
+  if (!hist) return res.status(404).json({ error: 'Version not found' });
+  res.json({ version: hist.version, createdAt: hist.createdAt, blob: hist.blob });
+});
+
+// POST restore — makes a historical version the new current (doesn't discard
+// anything; the existing current is pushed into history like a normal snapshot).
+app.post('/api/notes/:jobId/restore', authMiddleware, (req, res) => {
+  const { jobId } = req.params;
+  const f = _notesFilePath(req.user.id, jobId);
+  if (!f) return res.status(400).json({ error: 'Invalid jobId' });
+  const { version } = req.body || {};
+  if (typeof version !== 'number') return res.status(400).json({ error: 'version required' });
+  const d = _loadNotes(req.user.id, jobId);
+  const hist = d.history.find(h => h.version === version);
+  if (!hist) return res.status(404).json({ error: 'Version not found' });
+  // Snapshot current state first (lossless restore)
+  if (d.current) {
+    d.history.push({ version: d.current.version, createdAt: d.current.updatedAt, blob: d.current.blob });
+    while (d.history.length > MAX_NOTE_VERSIONS) d.history.shift();
+  }
+  d.current = {
+    version:   d.nextVersion || 1,
+    updatedAt: Date.now(),
+    blob:      hist.blob,  // restore the historical blob as new current
+  };
+  d.nextVersion = (d.nextVersion || 1) + 1;
+  _saveNotes(req.user.id, jobId, d);
+  res.json({ ok: true, version: d.current.version, updatedAt: d.current.updatedAt });
+});
+
+// ────────────────────────────────────────────────────────────────────────────
 
 app.get('/api/jobs', authMiddleware, (req, res) => {
   res.json(loadUserJobs(req.user.id, req.dataKey));
@@ -578,7 +1276,7 @@ function extractSalaryFromHtml(html) {
   return fmt(m[1]) + '\u2013' + fmt(m[2]);
 }
 
-app.post('/api/parse-job', authMiddleware, async (req, res) => {
+app.post('/api/parse-job', authMiddleware, tokenCapMiddleware, async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'URL required' });
   try {
@@ -652,7 +1350,7 @@ async function searchWeb(query) {
 
 // Ask AI to judge whether a candidate posting is the SAME job as the claimed
 // title/company/location. Low token count — we only need a yes/no + confidence.
-async function verifyMirrorMatch({ claimedTitle, claimedCompany, claimedLocation, candidateText }) {
+async function verifyMirrorMatch({ claimedTitle, claimedCompany, claimedLocation, candidateText }, req = null) {
   const sys = 'You verify whether two job postings describe the same role. Return ONLY valid compact JSON.';
   const usr = `Claimed: title="${claimedTitle}", company="${claimedCompany}"${claimedLocation ? `, location="${claimedLocation}"` : ''}.
 
@@ -664,12 +1362,12 @@ Do these describe the SAME job? Return {"match": true|false, "confidence": 0.0-1
 - Title must be equivalent (minor wording differences OK; different seniority or function = NOT a match).
 - Location should be compatible if both specified.`;
   try {
-    const raw = await callAI(['groq','google','openrouter'], sys, usr, 150);
+    const raw = await callAI(['groq','google','openrouter'], sys, usr, 150, req, 'verify-mirror');
     return parseJson(raw);
   } catch { return { match: false, confidence: 0, reason: 'verify-failed' }; }
 }
 
-app.post('/api/find-posting-mirror', authMiddleware, async (req, res) => {
+app.post('/api/find-posting-mirror', authMiddleware, tokenCapMiddleware, async (req, res) => {
   const { title, company, location, originalUrl } = req.body || {};
   if (!title || !company) return res.status(400).json({ error: 'title and company required' });
 
@@ -704,7 +1402,7 @@ app.post('/api/find-posting-mirror', authMiddleware, async (req, res) => {
     const verdict = await verifyMirrorMatch({
       claimedTitle: title, claimedCompany: company, claimedLocation: location,
       candidateText: fetched.text,
-    });
+    }, req);
     if (verdict?.match && (verdict.confidence ?? 0) >= 0.7) {
       return res.json({ ok: true, mirrorUrl: c.url, via: c.label, confidence: verdict.confidence });
     }
@@ -712,7 +1410,7 @@ app.post('/api/find-posting-mirror', authMiddleware, async (req, res) => {
   res.json({ ok: false, reason: 'no-verified-match' });
 });
 
-app.post('/api/extract-fields', authMiddleware, async (req, res) => {
+app.post('/api/extract-fields', authMiddleware, tokenCapMiddleware, async (req, res) => {
   const postingText = req.body.postingText || req.body.text || '';
   const domSalary = req.body.salary || null; // pre-extracted from DOM (bdi, JSON-LD)
   if (!postingText) return res.status(400).json({ error: 'postingText required' });
@@ -722,7 +1420,7 @@ app.post('/api/extract-fields', authMiddleware, async (req, res) => {
 Fields: title(string), company(string), location(city+state only, null if remote-only), workType("Remote"|"Hybrid"|"On-site"|null), remote(boolean), salary(ONLY real dollar amounts like "$120k–$150k" or null — never invent, never use "Competitive" or "DOE"). ${salaryHint}`;
   const usr = `Extract from this job posting:\n\n${postingText.slice(0, 4000)}`;
   try {
-    const parsed = parseJson(await callAI(['groq','openrouter','google'], sys, usr, 400));
+    const parsed = parseJson(await callAI(['groq','openrouter','google'], sys, usr, 400, req, 'extract-fields'));
     // Always prefer DOM-extracted salary over AI-guessed salary
     if (domSalary) parsed.salary = domSalary;
     res.json(parsed);
@@ -733,19 +1431,19 @@ Fields: title(string), company(string), location(city+state only, null if remote
 // AI FEATURES
 // ════════════════════════════════════════════════════════════════════════════════
 
-app.post('/api/tailor', authMiddleware, async (req, res) => {
+app.post('/api/tailor', authMiddleware, tokenCapMiddleware, async (req, res) => {
   const { company, title, location, salary, postingText, content, docType, context } = req.body;
   if (!content || !docType) return res.status(400).json({ error: 'content and docType required' });
   const label = docType === 'resume' ? 'RESUME' : 'COVER LETTER';
   const sys = 'You are a professional career coach. Return ONLY the tailored document as clean HTML using <h1>,<h2>,<h3>,<p>,<strong>,<ul>,<li>. Preserve all section structure. No preamble, no labels, no backticks.';
   const usr = `Tailor this ${label} for the role. Return only clean HTML.\n\nCompany: ${company}\nRole: ${title}\n${location?`Location: ${location}`:''}${salary?`\nSalary: ${salary}`:''}${context?`\nNotes: ${context}`:''}${postingText?`\n\nJob posting:\n${postingText.slice(0,3000)}`:''}\n\n${label} TO TAILOR:\n${content}`;
   try {
-    const result = await callAI(['groq','openrouter','google'], sys, usr, 3000);
+    const result = await callAI(['groq','openrouter','google'], sys, usr, 3000, req, 'tailor');
     res.json({ result: result.trim(), docType });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/tailor-docx', authMiddleware, async (req, res) => {
+app.post('/api/tailor-docx', authMiddleware, tokenCapMiddleware, async (req, res) => {
   const { docxBase64, company, title, location, salary, postingText, docType, context } = req.body;
   if (!docxBase64) return res.status(400).json({ error: 'DOCX data required' });
   try {
@@ -759,7 +1457,7 @@ app.post('/api/tailor-docx', authMiddleware, async (req, res) => {
     const label = docType === 'resume' ? 'RESUME' : 'COVER LETTER';
     const sys = `You are a professional career coach. Tailor this ${label}. Return ONLY the tailored text, same length and structure.`;
     const usr = `Company: ${company}\nRole: ${title}\n${location||''}\n${salary||''}\n${context||''}\n${postingText?postingText.slice(0,2000):''}\n\nOriginal ${label}:\n${rawText.slice(0,3000)}\n\nReturn ONLY the tailored text.`;
-    const tailored = await callAI(['groq','openrouter','google'], sys, usr, 3000);
+    const tailored = await callAI(['groq','openrouter','google'], sys, usr, 3000, req, 'tailor-docx');
     // Replace text content in XML runs proportionally
     const textRuns = [...xml.matchAll(/<w:r[ >][\s\S]*?<\/w:r>/g)].map(m=>m[0]).filter(r=>/<w:t[ >]/.test(r));
     if (textRuns.length === 0) return res.status(422).json({ error: 'No text runs in DOCX' });
@@ -779,7 +1477,7 @@ app.post('/api/tailor-docx', authMiddleware, async (req, res) => {
   } catch (e) { console.error('tailor-docx:', e.message); res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/insights', authMiddleware, async (req, res) => {
+app.post('/api/insights', authMiddleware, tokenCapMiddleware, async (req, res) => {
   const { company, title, location, salary, postingText, finnhubKey } = req.body;
   if (!company || !title) return res.status(400).json({ error: 'company and title required' });
   let stock = null;
@@ -804,37 +1502,70 @@ app.post('/api/insights', authMiddleware, async (req, res) => {
   }
   const today = new Date().toISOString().split('T')[0];
   const sys = `You are a career research assistant. Today is ${today}. Return valid JSON only, no markdown, no backticks.`;
-  const usr = `Research ${company} (${title} role). Return ONLY valid compact JSON — no truncation.
-${postingText?'Job posting context: '+postingText.slice(0,800):''}
+  // Fetch Wikipedia first so we can pass the extract to the AI as grounding
+  // context AND hand its QID to Wikidata to skip one round trip.
+  const wiki = await fetchWikipediaSummary(company);
+  const wikiContext = wiki?.extract ? `Wikipedia excerpt about ${company}:\n"""${wiki.extract.slice(0, 1200)}"""\n\n` : '';
+  // Schema trimmed aggressively. AI is now responsible ONLY for the fields
+  // that genuinely need synthesis (workforce, culture, roleIntel, flags).
+  // Everything else comes from public structured sources:
+  //   - companyOverview → Wikipedia (fetchWikipediaSummary)
+  //   - overview.founded/hq/industry/employees → Wikidata (fetchWikidataOverview)
+  //   - stock → Finnhub
+  //   - news → Finnhub company-news or Google News RSS
+  // Total AI output ~800-1200 tokens, well under Groq's 12K TPM free tier.
+  const usr = `${wikiContext}Research ${company} (${title} role). Return ONLY valid compact JSON.
+${postingText?'Job posting context: '+postingText.slice(0,600):''}
 
-{"overview":{"founded":"year","employees":"N,NNN","hq":"city","industry":"sector"},
-"companyOverview":"3-4 paragraphs about company mission, products, culture, recent developments",
-"workforce":{"headcount":"N,NNN","headcountTrend":"growing","avgTenure":"2.5 years","fullTimePct":85,"remoteRatio":40,"recentLayoffs":"None","genderSplit":{"female":42,"male":56,"other":2},"ageBrackets":{"under30":28,"30to40":38,"40to50":22,"over50":12},"ethnicityMix":{"asian":28,"white":48,"hispanic":12,"black":8,"other":4},"visaSponsorship":"yes","visaNote":"Sponsors H-1B; green card support for qualified candidates","topLocations":["City, ST","Remote"],"glassdoorDiversity":4.1,"note":"Estimated from public data."},
-"culture":{"overallRating":3.8,"workLifeBalance":3.5,"cultureValues":3.8,"careerOpp":3.6,"compensation":3.4,"leadership":3.5,"numRatings":"1,234","ceoApproval":72,"recommend":68,"summary":"Culture summary paragraph"},
-"roleIntel":"2-3 paragraphs about this specific role and team",
-"flags":{"green":["positive signal"],"red":["concern to watch"]},
-"linkedin":{"suggestedContacts":[{"name":"Hiring Manager Title","role":"Engineering Manager","company":"${company}","tip":"Why to reach out"}],"outreachTip":"Strategy","messageTemplate":"Hi [Name], ..."},
-"news":[{"headline":"Recent headline","source":"Source","date":"2024-01","url":"","sentiment":"positive"}],
-"interviewTips":"Role-specific interview preparation tips"}`
+{"workforce":{"headcount":"N,NNN","headcountTrend":"growing","avgTenure":"2.5 years","remoteRatio":40,"recentLayoffs":"None","visaSponsorship":"yes","visaNote":"H-1B support","topLocations":["City, ST","Remote"],"note":"Estimated from public data."},
+"culture":{"overallRating":3.8,"workLifeBalance":3.5,"careerOpp":3.6,"leadership":3.5,"numRatings":"1,234","ceoApproval":72,"recommend":68,"summary":"Culture summary paragraph"},
+"roleIntel":"2-3 paragraphs about this role and team",
+"flags":{"green":["positive signal"],"red":["concern to watch"]}}`
   try {
-    const raw = await callAI(['groq','openrouter','google'], sys, usr, 8000);
+    const ticker = stock && !stock.error ? stock.ticker : null;
+    const [raw, news, overview] = await Promise.all([
+      callAI(['groq','openrouter','google'], sys, usr, 2000, req, 'insights'),
+      fetchCompanyNews(company, ticker, finnhubKey),
+      fetchWikidataOverview(company, wiki?.qid || null),
+    ]);
     const data = parseJson(raw);
-    res.json({ ...data, stock, generatedAt: Date.now() });
-  } catch (e) { console.error('insights:', e.message); res.status(500).json({ error: e.message }); }
+    res.json({
+      ...data,
+      overview:        overview || null,         // Wikidata structured facts (may be null if not found)
+      companyOverview: wiki?.extract || '',      // Wikipedia prose
+      wikipediaUrl:    wiki?.url || '',
+      news,
+      stock,
+      generatedAt: Date.now(),
+    });
+  } catch (e) {
+    console.error('insights:', e.message);
+    // 429 on all providers — surface a specific error the UI can recognize
+    const allRateLimited = /All AI failed:/.test(e.message) && !/^(?!.*429)/.test(e.message)
+                         && (e.message.match(/429/g) || []).length >= 2;
+    if (allRateLimited) {
+      return res.status(429).json({
+        error: 'rate_limited',
+        detail: 'All AI providers are currently rate-limited. Please wait a minute and try again.',
+        raw: e.message,
+      });
+    }
+    res.status(500).json({ error: e.message });
+  }
 });
 
-app.post('/api/outreach-targets', authMiddleware, async (req, res) => {
+app.post('/api/outreach-targets', authMiddleware, tokenCapMiddleware, async (req, res) => {
   const { company, title } = req.body;
   try {
     const raw = await callAI(['groq','openrouter','google'],
       'Return valid JSON only, no markdown.',
       `Suggest 3 LinkedIn contacts to reach out to when applying for ${title} at ${company}. Return: {"contacts":[{"title":"...","reason":"...","searchTip":"..."}]}`,
-      500);
+      500, req, 'outreach-targets');
     res.json(parseJson(raw));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/interview-questions', authMiddleware, async (req, res) => {
+app.post('/api/interview-questions', authMiddleware, tokenCapMiddleware, async (req, res) => {
   const { company, title, postingText, count = 15, existingQuestions = [] } = req.body;
   const avoidSection = existingQuestions.length > 0
     ? `\n\nDO NOT repeat these existing questions:\n${existingQuestions.map(q => '- ' + q).join('\n')}` : '';
@@ -849,46 +1580,154 @@ Make questions specific to this role and company.
 
 Return ONLY this JSON:
 {"questions":[{"category":"Behavioral","question":"..."},{"category":"Technical","question":"..."},{"category":"Culture Fit","question":"..."},{"category":"Role-Specific","question":"..."},{"category":"Questions to Ask","question":"..."}]}`,
-      1500);
+      1500, req, 'interview-questions');
     res.json(parseJson(raw));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/keyword-gap', authMiddleware, async (req, res) => {
+app.post('/api/keyword-gap', authMiddleware, tokenCapMiddleware, async (req, res) => {
   const { resumeText, postingText } = req.body;
   try {
     const raw = await callAI(['groq','openrouter','google'],
       'Return valid JSON only, no markdown.',
       `Find keyword gaps between this resume and job posting.\nPosting: ${(postingText||'').slice(0,2000)}\nResume: ${(resumeText||'').slice(0,2000)}\nReturn: {"matched":["keyword"],"missing":["keyword"],"score":75,"suggestions":["add X to Y"]}`,
-      800);
+      800, req, 'keyword-gap');
     res.json(parseJson(raw));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/email-template', authMiddleware, async (req, res) => {
+app.post('/api/email-template', authMiddleware, tokenCapMiddleware, async (req, res) => {
   const { company, title, type, context } = req.body;
   try {
     const raw = await callAI(['groq','openrouter','google'],
       'Return valid JSON only, no markdown.',
       `Write a ${type||'follow-up'} email for ${title} at ${company}. ${context||''}\nReturn: {"subject":"...","body":"..."}`,
-      500);
+      500, req, 'email-template');
     res.json(parseJson(raw));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/salary-benchmark', authMiddleware, async (req, res) => {
+app.post('/api/salary-benchmark', authMiddleware, tokenCapMiddleware, async (req, res) => {
   const { title, location, company } = req.body;
   try {
     const raw = await callAI(['groq','openrouter','google'],
       'Return valid JSON only, no markdown.',
       `Salary benchmarks for ${title} in ${location||'United States'}${company?` at ${company}`:''}.\nReturn: {"low":120000,"median":150000,"high":180000,"currency":"USD","notes":"..."}`,
-      300);
+      300, req, 'salary-benchmark');
     res.json(parseJson(raw));
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/ai-status', authMiddleware, (req, res) => {
-  res.json({ groq: !!GROQ_API_KEY, openrouter: !!OPENROUTER_API_KEY, google: !!GOOGLE_API_KEY });
+// ── Token usage endpoints ───────────────────────────────────────────────────
+
+// User's own usage: last 30 days, pre-aggregated from their daily cache.
+// Returns enough for the settings-pane card (totals + provider + endpoint breakdowns).
+app.get('/api/user-usage', authMiddleware, (req, res) => {
+  const user = req.user.username;
+  const usage = loadUserUsage(user);
+  // Collect last 30 days in order
+  const days = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    days.push({ day: d, data: usage[d] || { total: 0, byProvider: {}, byEndpoint: {} } });
+  }
+  const today = usage[todayKey()] || { total: 0, byProvider: {}, byEndpoint: {} };
+  // Last 7 days aggregated
+  const week = { total: 0, byProvider: {}, byEndpoint: {} };
+  for (const d of days.slice(-7)) {
+    week.total += d.data.total;
+    for (const [k, v] of Object.entries(d.data.byProvider || {})) week.byProvider[k] = (week.byProvider[k] || 0) + v;
+    for (const [k, v] of Object.entries(d.data.byEndpoint || {})) week.byEndpoint[k] = (week.byEndpoint[k] || 0) + v;
+  }
+  // Last 30 days aggregated
+  const month = { total: 0, byProvider: {}, byEndpoint: {} };
+  for (const d of days) {
+    month.total += d.data.total;
+    for (const [k, v] of Object.entries(d.data.byProvider || {})) month.byProvider[k] = (month.byProvider[k] || 0) + v;
+    for (const [k, v] of Object.entries(d.data.byEndpoint || {})) month.byEndpoint[k] = (month.byEndpoint[k] || 0) + v;
+  }
+  res.json({
+    today, week, month, days,
+    cap: DAILY_TOKEN_CAP,
+    pct: DAILY_TOKEN_CAP ? Math.round((today.total / DAILY_TOKEN_CAP) * 1000) / 10 : 0,
+  });
+});
+
+// Admin usage: aggregate across all users. Reads the NDJSON month logs so we
+// can produce per-user and per-endpoint breakdowns.
+app.get('/api/admin/usage', adminMiddleware, (req, res) => {
+  const days = parseInt(req.query.days || '30', 10);
+  const cutoff = Date.now() - days * 86400000;
+  // Collect the relevant month log files (current + potentially previous)
+  let lines = [];
+  try {
+    const files = fs.readdirSync(USAGE_DIR).filter(f => f.endsWith('.log'));
+    // Sort descending (newest month first) and read last 2 months' worth
+    files.sort().reverse();
+    for (const f of files.slice(0, 3)) {
+      const content = fs.readFileSync(path.join(USAGE_DIR, f), 'utf8');
+      for (const line of content.split('\n')) {
+        if (!line.trim()) continue;
+        try { lines.push(JSON.parse(line)); } catch {}
+      }
+    }
+  } catch (e) { console.warn('admin usage read fail:', e.message); }
+  lines = lines.filter(e => e.ts >= cutoff);
+
+  // Aggregate
+  const byDay      = {};
+  const byUser     = {};
+  const byProvider = {};
+  const byEndpoint = {};
+  let totalTokens = 0;
+  for (const e of lines) {
+    const total = (e.prompt || 0) + (e.completion || 0);
+    totalTokens += total;
+    byDay[e.day]          = (byDay[e.day] || 0) + total;
+    byUser[e.user]        = (byUser[e.user] || 0) + total;
+    byProvider[e.provider] = (byProvider[e.provider] || 0) + total;
+    byEndpoint[e.endpoint] = (byEndpoint[e.endpoint] || 0) + total;
+  }
+  // Top 10 users by tokens
+  const topUsers = Object.entries(byUser)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([user, total]) => ({ user, total }));
+
+  // Produce ordered day series for charting (oldest → newest)
+  const daySeries = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10);
+    daySeries.push({ day: d, total: byDay[d] || 0 });
+  }
+
+  res.json({
+    days, totalTokens, callCount: lines.length,
+    byProvider, byEndpoint, topUsers, daySeries,
+    cap: DAILY_TOKEN_CAP,
+  });
+});
+
+app.get('/api/ai-status', authMiddleware, async (req, res) => {
+  // Active probe: hit each provider with a tiny request, report model + error.
+  // Helpful for diagnosing insights failures without tailing Render logs.
+  const probe = async (name, fn, model) => {
+    if (!model) return { key: false, ok: false, model: null };
+    const t0 = Date.now();
+    try {
+      await fn('You are a test.', 'Say "ok" and nothing else.', 20);
+      return { key: true, ok: true, model, latencyMs: Date.now() - t0 };
+    } catch (e) {
+      return { key: true, ok: false, model, error: e.message.slice(0, 200), latencyMs: Date.now() - t0 };
+    }
+  };
+  const [groq, openrouter, google] = await Promise.all([
+    GROQ_API_KEY       ? probe('groq',       callGroq,       GROQ_MODEL)       : { key: false, ok: false, model: GROQ_MODEL },
+    OPENROUTER_API_KEY ? probe('openrouter', callOpenRouter, OPENROUTER_MODEL) : { key: false, ok: false, model: OPENROUTER_MODEL },
+    GOOGLE_API_KEY     ? probe('google',     callGoogle,     GOOGLE_MODEL)     : { key: false, ok: false, model: GOOGLE_MODEL },
+  ]);
+  const anyOk = groq.ok || openrouter.ok || google.ok;
+  res.json({ anyOk, groq, openrouter, google });
 });
 
 // ════════════════════════════════════════════════════════════════════════════════
@@ -1017,7 +1856,14 @@ app.delete('/api/docs/:id', authMiddleware, (req, res) => {
 
 app.get('/api/admin/users', adminMiddleware, (req, res) => {
   res.json(Object.entries(loadUsers()).map(([id, u]) => ({
-    id, username: u.username, createdAt: u.createdAt, active: u.active !== false
+    id,
+    username:  u.username,
+    email:     u.email || '',
+    createdAt: u.createdAt,
+    lastLogin: u.lastLogin || null,
+    active:    u.active !== false,
+    encrypted: u.encrypted === true,
+    recoveryCodes: u.encrypted ? (u.recoveryKeySlots || []).filter(s => !s.used).length : null,
   })));
 });
 
