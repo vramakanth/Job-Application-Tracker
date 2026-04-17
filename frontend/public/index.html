@@ -219,9 +219,22 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .notes-toolbar-status.saving { color: var(--amber); }
 .notes-toolbar-status.saved { color: var(--green); }
 .notes-toolbar-status.error { color: var(--red); }
-.notes-editor-wrap { flex: 1; border: 0.5px solid var(--border); border-radius: 0 0 var(--radius) var(--radius); background: var(--bg); overflow: auto; min-height: 300px; }
-.notes-editor { padding: 18px 24px; outline: none; min-height: 100%; font-size: 14px; line-height: 1.65; color: var(--text); }
-.notes-editor:focus { outline: none; }
+.notes-editor-wrap { flex: 1; display: flex; min-height: 300px; overflow: auto; }
+/* The editor is the layer the user actually interacts with — it needs the
+   visible border + a subtle bg so clicks on the visible box land on the
+   editable area. min-height makes the empty-doc state feel like a real canvas
+   instead of collapsing to one line. */
+.notes-editor { flex: 1; display: flex; flex-direction: column; padding: 18px 24px; outline: none; min-height: 280px; font-size: 14px; line-height: 1.65; color: var(--text);
+  border: 0.5px solid var(--border); border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--bg2); cursor: text; }
+.notes-editor:focus-within { border-color: var(--border2); }
+/* TipTap injects .ProseMirror as a direct child of .notes-editor — fill the space */
+.notes-editor .ProseMirror { flex: 1; outline: none; min-height: 100%; }
+.notes-editor .ProseMirror:focus { outline: none; }
+/* Centered cold-load state — only visible until TipTap initializes */
+.notes-editor-loading { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 260px; padding: 24px 16px; gap: 10px; text-align: center; }
+.notes-editor-loading-text { font-size: 13px; color: var(--text2); font-weight: 500; }
+.notes-editor-loading-hint { font-size: 11px; color: var(--text3); font-family: var(--mono); max-width: 360px; line-height: 1.5; }
 .notes-editor p { margin: 0 0 10px; }
 .notes-editor p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; color: var(--text3); pointer-events: none; height: 0; }
 .notes-editor h1 { font-size: 22px; font-weight: 600; margin: 18px 0 8px; font-family: var(--font-display); letter-spacing: -0.01em; }
@@ -1384,6 +1397,17 @@ function showApp() {
   if (mav) mav.textContent = (currentUser||'?').slice(0,2).toUpperCase();
   if (mun) mun.textContent = currentUser || '';
   if (mabtn) mabtn.style.display = window.innerWidth <= 680 ? 'flex' : 'none';
+
+  // Prefetch TipTap modules ~1s after login so the Notes tab opens instantly
+  // for most users. The import is fire-and-forget — if the user never opens
+  // Notes this session, the bandwidth was wasted, but the modules are small
+  // (~200KB gz total) and esm.sh caches aggressively so repeat visits are free.
+  // We defer past showApp to avoid competing with the initial jobs fetch.
+  setTimeout(() => {
+    // loadTipTap is idempotent (caches via _tiptap global), so it's safe to
+    // call again when the user actually opens Notes — this just warms the cache.
+    try { loadTipTap(); } catch {}
+  }, 1000);
 }
 
 // ── AUTH ──
@@ -1882,6 +1906,9 @@ async function doLogout() {
   // is gone, the PUT would 401 and the user's last typing would be lost.
   // We await so state is deterministic before we clear everything.
   try { await tearDownNotesEditor(); } catch {}
+  // Purge the notes doc cache — it holds decrypted per-user content and must
+  // not leak across accounts if a different user logs in next.
+  for (const k of Object.keys(_notesDocCache)) delete _notesDocCache[k];
   const bg = document.getElementById('mountain-bg'); if(bg) bg.style.display='';
   token=null; currentUser=null; jobs={}; currentJobId=null;
   dataKey=null; isEncrypted=false; // Zero-knowledge: clear key from memory
@@ -1939,6 +1966,21 @@ async function loadJobs() {
         j.location = j.location.replace(new RegExp('^' + wt + '\\s*[-\u2013]?\\s*', 'i'), '').trim();
       }
     });
+
+    // Sweep deprecated `notes` field from all contacts. We removed the Notes
+    // textarea from the contact modal + list display — the Journal (rich Notes)
+    // is the one place for freeform contact context now. Any data sitting in
+    // contact.notes is unreachable from the UI, so strip it and save once to
+    // keep the model consistent. Safe because the field has been invisible
+    // for at least one deploy cycle before this sweep.
+    let strippedAnyNotes = false;
+    Object.values(jobs).forEach(j => {
+      if (!Array.isArray(j.contacts)) return;
+      j.contacts.forEach(c => {
+        if (c && 'notes' in c) { delete c.notes; strippedAnyNotes = true; }
+      });
+    });
+    if (strippedAnyNotes) scheduleSave();
   } catch(e) { console.error('loadJobs error:', e); jobs={}; }
   renderJobList();
   renderStaleNudge();
@@ -3454,6 +3496,11 @@ let _notesSnapshotTimer = null;
 let _notesLastSnapshotAt = 0;
 let _notesLastSavedContent = '';   // JSON-string of last synced doc — dedupe identical saves
 let _notesRemoteVersion = 0;       // server-assigned version of last confirmed save
+// Per-jobId doc cache for return visits. Key: jobId → { doc: <prose-mirror-json>, version: n }.
+// When the user navigates Notes → away → back, we mount TipTap with the cached
+// doc immediately (no loading placeholder) and refetch in the background to
+// catch multi-device updates. Populated after every fetch AND on every save.
+const _notesDocCache = Object.create(null);
 
 const NOTES_DEBOUNCE_MS        = 10 * 1000;      // idle-debounce for autosave
 const NOTES_MAX_SAVE_INTERVAL  = 2 * 60 * 1000;  // force save at least every 2 min of continuous typing
@@ -3497,10 +3544,18 @@ function renderNotesTab(j) {
     <div class="notes-layout">
       <div class="notes-shell">
         <div class="notes-toolbar" id="notes-toolbar-${j.id}">
-          <div style="font-size:11px;color:var(--text3);padding:6px 10px">Loading editor…</div>
+          <div style="font-size:11px;color:var(--text3);padding:6px 10px;display:flex;align-items:center;gap:6px">
+            ${spinner()}<span>Loading editor…</span>
+          </div>
         </div>
         <div class="notes-editor-wrap">
-          <div id="notes-editor-${j.id}" class="notes-editor"></div>
+          <div id="notes-editor-${j.id}" class="notes-editor">
+            <div class="notes-editor-loading">
+              ${spinner()}
+              <div class="notes-editor-loading-text">Preparing editor…</div>
+              <div class="notes-editor-loading-hint">First load fetches ~200KB of rich-text libraries (cached thereafter).</div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="notes-history">
@@ -3547,78 +3602,118 @@ async function mountNotesEditor(jobId) {
 
   _notesCurrentJobId = jobId;
 
-  let T;
-  try { T = await loadTipTap(); }
-  catch (e) {
-    toolbar.innerHTML = `<div style="font-size:11px;color:var(--red);padding:6px 10px">Editor failed to load (${esc(e.message)}). Check your connection.</div>`;
-    return;
+  // Helper: build the TipTap editor with a given doc. Called once immediately
+  // if we have cached state, then again with fresh content if the background
+  // fetch returned something newer. Encapsulated so the caller doesn't have
+  // to know about the cache path.
+  const buildEditor = (T, doc) => {
+    // Clear the container (removes the loading placeholder if still there)
+    container.innerHTML = '';
+    _notesEditor = new T.Editor({
+      element: container,
+      extensions: [
+        T.StarterKit.configure({ codeBlock: { HTMLAttributes: { class: 'notes-code-block' } } }),
+        T.Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' } }),
+        T.Table.configure({ resizable: false, HTMLAttributes: { class: 'notes-table' } }),
+        T.TableRow, T.TableHeader, T.TableCell,
+        T.TaskList, T.TaskItem.configure({ nested: true }),
+      ],
+      content: doc || '',
+      editorProps: {
+        attributes: { 'data-placeholder': 'Start writing notes for this job…' },
+        handlePaste(view, event) {
+          const items = event.clipboardData?.items;
+          if (items) {
+            for (const it of items) {
+              if (it.type && it.type.startsWith('image/')) { event.preventDefault(); return true; }
+            }
+          }
+          return false;
+        },
+        handleDrop(view, event) {
+          if (event.dataTransfer?.files?.length) {
+            for (const f of event.dataTransfer.files) {
+              if (f.type.startsWith('image/')) { event.preventDefault(); return true; }
+            }
+          }
+          return false;
+        },
+      },
+      onUpdate: () => {
+        scheduleNotesSave(jobId);
+        renderNotesToolbar(jobId);
+      },
+      onSelectionUpdate: () => renderNotesToolbar(jobId),
+      onCreate: () => {
+        _notesLastSavedContent = JSON.stringify(_notesEditor.getJSON());
+        renderNotesToolbar(jobId);
+      },
+    });
+    renderNotesToolbar(jobId);
+    setNotesStatus('saved');
+  };
+
+  // ── Fast path: if TipTap is cached AND we have a cached doc for this job,
+  //    mount the editor immediately with the cached content. No loading flash.
+  const cached = _notesDocCache[jobId];
+  if (_tiptap && cached !== undefined) {
+    buildEditor(_tiptap, cached.doc);
+    _notesRemoteVersion = cached.version || 0;
   }
 
-  // Fetch current doc from server (ciphertext for encrypted accounts, JSON otherwise)
+  // ── Slow path (first visit OR TipTap not cached yet):
+  //    If we haven't mounted yet, keep the placeholder until TipTap loads.
+  let T = _tiptap;
+  if (!T) {
+    try { T = await loadTipTap(); }
+    catch (e) {
+      toolbar.innerHTML = `<div style="font-size:11px;color:var(--red);padding:6px 10px">Editor failed to load (${esc(e.message)}). Check your connection.</div>`;
+      return;
+    }
+  }
+
+  // Always refetch in background to catch any multi-device updates — but don't
+  // block the editor from being visible. If we already built the editor from
+  // cache, we only swap content if the server returns a newer version.
   let remoteDoc = null;
+  let remoteVersion = 0;
   try {
     const res = await fetch(API + '/api/notes/' + encodeURIComponent(jobId), {
       headers: { Authorization: 'Bearer ' + token },
     });
     if (res.ok) {
       const d = await res.json();
-      _notesRemoteVersion = d.version || 0;
-      if (d.current?.blob) {
-        remoteDoc = await decodeNoteBlob(d.current.blob);
-      }
+      remoteVersion = d.version || 0;
+      if (d.current?.blob) remoteDoc = await decodeNoteBlob(d.current.blob);
     }
   } catch {}
 
-  _notesEditor = new T.Editor({
-    element: container,
-    extensions: [
-      T.StarterKit.configure({ codeBlock: { HTMLAttributes: { class: 'notes-code-block' } } }),
-      T.Link.configure({ openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' } }),
-      T.Table.configure({ resizable: false, HTMLAttributes: { class: 'notes-table' } }),
-      T.TableRow, T.TableHeader, T.TableCell,
-      T.TaskList, T.TaskItem.configure({ nested: true }),
-    ],
-    content: remoteDoc || '',
-    editorProps: {
-      attributes: { 'data-placeholder': 'Start writing notes for this job…' },
-      // Strip pasted images (we disallow images at this phase)
-      handlePaste(view, event) {
-        const items = event.clipboardData?.items;
-        if (items) {
-          for (const it of items) {
-            if (it.type && it.type.startsWith('image/')) {
-              event.preventDefault();
-              return true;
-            }
-          }
-        }
-        return false;
-      },
-      // Also guard against drag-drop images
-      handleDrop(view, event) {
-        if (event.dataTransfer?.files?.length) {
-          for (const f of event.dataTransfer.files) {
-            if (f.type.startsWith('image/')) { event.preventDefault(); return true; }
-          }
-        }
-        return false;
-      },
-    },
-    onUpdate: () => {
-      scheduleNotesSave(jobId);
-      renderNotesToolbar(jobId);
-    },
-    onSelectionUpdate: () => renderNotesToolbar(jobId),
-    onCreate: () => {
-      _notesLastSavedContent = JSON.stringify(_notesEditor.getJSON());
-      renderNotesToolbar(jobId);
-    },
-  });
+  // If we haven't mounted yet (first visit), mount now with the fetched doc.
+  if (!_notesEditor) {
+    buildEditor(T, remoteDoc);
+    _notesRemoteVersion = remoteVersion;
+  } else if (cached && remoteVersion > (cached.version || 0) && remoteDoc) {
+    // Cache was stale — rebuild editor with fresh content. This is rare
+    // (requires multi-device or cross-session editing) and worth the jank.
+    _notesEditor.destroy();
+    _notesEditor = null;
+    buildEditor(T, remoteDoc);
+    _notesRemoteVersion = remoteVersion;
+  }
 
-  renderNotesToolbar(jobId);
+  // Update the cache with whatever we most recently loaded
+  if (remoteDoc !== null) {
+    _notesDocCache[jobId] = { doc: remoteDoc, version: remoteVersion };
+  } else if (!cached) {
+    // No content on server and no cache — seed an empty-doc cache entry so
+    // the NEXT return visit also goes down the fast path.
+    _notesDocCache[jobId] = { doc: null, version: 0 };
+  }
+
   loadNotesHistory(jobId);
-  setNotesStatus('saved');
 }
+
+
 
 function renderNotesToolbar(jobId) {
   const bar = document.getElementById(`notes-toolbar-${jobId}`);
@@ -3719,6 +3814,11 @@ async function flushNotesSave(final) {
     const d = await res.json();
     _notesRemoteVersion = d.version || _notesRemoteVersion + 1;
     _notesLastSavedContent = docJson;
+    // Keep the doc cache in sync so if the user navigates away and comes
+    // back, the fast path shows the just-saved content (not stale state).
+    try {
+      _notesDocCache[jobId] = { doc: JSON.parse(docJson), version: _notesRemoteVersion };
+    } catch {}
     if (createSnapshot) {
       _notesLastSnapshotAt = Date.now();
       // Refresh history sidebar to show the new snapshot
@@ -3798,6 +3898,9 @@ async function restoreNotesVersion(jobId, version) {
       body: JSON.stringify({ version }),
     });
     if (!res.ok) { alert('Restore failed: ' + (await res.text())); return; }
+    // Invalidate the in-memory cache so mountNotesEditor refetches the
+    // newly-swapped content instead of showing pre-restore state.
+    delete _notesDocCache[jobId];
     // Remount the editor with the restored content
     mountNotesEditor(jobId);
   } catch (e) {
@@ -5757,9 +5860,9 @@ function renderContactsTab(j) {
               <div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">
                 ${c.linkedin ? `<a href="${esc(c.linkedin)}" target="_blank" style="font-size:11px;color:var(--blue);text-decoration:none">LinkedIn ↗</a>` : ''}
                 ${c.email ? `<a href="mailto:${esc(c.email)}" style="font-size:11px;color:var(--blue);text-decoration:none">${esc(c.email)}</a>` : ''}
+                ${c.phone ? `<a href="tel:${esc(c.phone)}" style="font-size:11px;color:var(--text2);text-decoration:none;font-family:var(--mono)">${esc(c.phone)}</a>` : ''}
                 ${c.lastContact ? `<span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Last contact: ${fmtDate(c.lastContact)}</span>` : ''}
               </div>
-              ${c.notes ? `<div style="font-size:12px;color:var(--text2);margin-top:6px;line-height:1.5">${esc(c.notes)}</div>` : ''}
             </div>
             <div style="display:flex;gap:6px;flex-shrink:0">
               <button onclick="openContactModal('${j.id}','${c.id}')" style="padding:4px 10px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-size:11px;font-family:var(--font);color:var(--text2);cursor:pointer">Edit</button>
@@ -5776,40 +5879,144 @@ function renderContactsTab(j) {
 
 // ── Contact modal ──
 let _editContactId = null;
+let _contactModalMode = 'paste';  // 'paste' | 'form'
+
 function openContactModal(jobId, contactId) {
   _editContactId = contactId || null;
   const j = jobs[jobId];
   const c = contactId ? (j.contacts||[]).find(x=>x.id===contactId) : null;
+  // Editing existing contact → skip paste zone and go straight to form.
+  // New contact → start with paste zone, let the user paste a signature or
+  // choose manual entry.
+  _contactModalMode = c ? 'form' : 'paste';
+
   const overlay = document.createElement('div');
   overlay.id = 'contact-modal-overlay';
-  overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center';
+  overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.5);z-index:700;display:flex;align-items:center;justify-content:center;padding:16px';
   overlay.innerHTML = `
-    <div style="background:var(--bg2);border-radius:var(--radius);width:min(480px,92vw);padding:24px;box-shadow:0 16px 64px rgba(0,0,0,0.2)">
-      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:16px">${c ? 'Edit contact' : 'Add contact'}</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">
-        <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">NAME</label>
-          <input id="cm-name" value="${esc(c?.name||'')}" placeholder="Full name" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none"></div>
-        <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">ROLE</label>
-          <input id="cm-role" value="${esc(c?.role||'')}" placeholder="e.g. Hiring Manager" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:10px">
-        <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">EMAIL</label>
-          <input id="cm-email" value="${esc(c?.email||'')}" placeholder="email@company.com" type="email" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none"></div>
-        <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">LAST CONTACT</label>
-          <input id="cm-date" value="${c?.lastContact||''}" type="date" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none"></div>
-      </div>
-      <div style="margin-bottom:10px"><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">LINKEDIN URL</label>
-        <input id="cm-linkedin" value="${esc(c?.linkedin||'')}" placeholder="https://linkedin.com/in/..." style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none"></div>
-      <div style="margin-bottom:16px"><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">NOTES</label>
-        <textarea id="cm-notes" rows="2" placeholder="Context, what you discussed, follow-up needed..." style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;resize:none;line-height:1.5">${esc(c?.notes||'')}</textarea></div>
-      <div style="display:flex;gap:8px">
-        <button onclick="document.getElementById('contact-modal-overlay').remove()" style="flex:1;padding:9px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer">Cancel</button>
-        <button onclick="saveContact('${jobId}')" style="flex:1;padding:9px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Save</button>
-      </div>
+    <div style="background:var(--bg2);border-radius:var(--radius);width:min(520px,96vw);max-height:92vh;overflow-y:auto;padding:24px;box-shadow:0 16px 64px rgba(0,0,0,0.2)">
+      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:14px">${c ? 'Edit contact' : 'Add contact'}</div>
+      <div id="contact-modal-body"></div>
     </div>`;
   overlay.addEventListener('click', e => { if(e.target===overlay) overlay.remove(); });
   document.body.appendChild(overlay);
+  _renderContactModalBody(jobId, c);
+}
+
+function _renderContactModalBody(jobId, c, prefill) {
+  const body = document.getElementById('contact-modal-body');
+  if (!body) return;
+
+  if (_contactModalMode === 'paste') {
+    body.innerHTML = `
+      <div style="font-size:12px;color:var(--text2);line-height:1.55;margin-bottom:10px">
+        Paste an email signature, LinkedIn bio, or any block of contact info. The app will extract name, role, email, and more — you'll review before saving.
+      </div>
+      <textarea id="cm-paste" rows="7" placeholder="Paste signature here…
+e.g.
+Sarah Chen
+Senior Recruiter | Anthropic
+sarah.chen@anthropic.com
+linkedin.com/in/sarahchen" style="width:100%;padding:10px;background:var(--bg3);border:0.5px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;resize:vertical;line-height:1.55;box-sizing:border-box"></textarea>
+      <div id="cm-paste-err" style="display:none;font-size:11px;color:var(--red);margin-top:6px"></div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button onclick="document.getElementById('contact-modal-overlay').remove()" style="flex:1;padding:10px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer">Cancel</button>
+        <button id="cm-parse-btn" onclick="_parseSignature('${jobId}')" style="flex:2;padding:10px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Parse signature</button>
+      </div>
+      <div style="text-align:center;margin-top:12px">
+        <button onclick="_contactModalMode='form';_renderContactModalBody('${jobId}',null)" style="background:none;border:none;font-size:12px;color:var(--text3);font-family:var(--font);cursor:pointer;text-decoration:underline">Skip — enter manually</button>
+      </div>`;
+    setTimeout(() => document.getElementById('cm-paste')?.focus(), 50);
+    // Cmd/Ctrl+Enter submits the parse
+    const ta = document.getElementById('cm-paste');
+    if (ta) ta.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') _parseSignature(jobId);
+    });
+    return;
+  }
+
+  // Form mode — either editing existing, or after parse
+  const data = prefill || c || {};
+  const parsedBanner = prefill ? `
+    <div style="padding:9px 12px;margin-bottom:14px;background:rgba(96,200,136,0.10);border:0.5px solid rgba(96,200,136,0.4);border-radius:var(--radius-sm);font-size:12px;color:var(--text2);display:flex;align-items:center;gap:8px">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--green)" stroke-width="1.5"><path d="M3 8l3 3 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Auto-filled from your paste. Review and edit before saving.</span>
+    </div>` : '';
+
+  body.innerHTML = `
+    ${parsedBanner}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px">
+      <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">NAME</label>
+        <input id="cm-name" value="${esc(data.name||'')}" placeholder="Full name" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;box-sizing:border-box"></div>
+      <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">ROLE</label>
+        <input id="cm-role" value="${esc(data.role||'')}" placeholder="e.g. Hiring Manager" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;box-sizing:border-box"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px">
+      <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">COMPANY</label>
+        <input id="cm-company" value="${esc(data.company||'')}" placeholder="Company name" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;box-sizing:border-box"></div>
+      <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">EMAIL</label>
+        <input id="cm-email" value="${esc(data.email||'')}" placeholder="email@company.com" type="email" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;box-sizing:border-box"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:10px">
+      <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">PHONE</label>
+        <input id="cm-phone" value="${esc(data.phone||'')}" placeholder="+1 555-0123" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;box-sizing:border-box"></div>
+      <div><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">LAST CONTACT</label>
+        <input id="cm-date" value="${data.lastContact||''}" type="date" style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;box-sizing:border-box"></div>
+    </div>
+    <div style="margin-bottom:16px"><label style="display:block;font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;font-family:var(--mono)">LINKEDIN URL</label>
+      <input id="cm-linkedin" value="${esc(data.linkedin||'')}" placeholder="https://linkedin.com/in/..." style="width:100%;padding:8px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text);outline:none;box-sizing:border-box"></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="document.getElementById('contact-modal-overlay').remove()" style="flex:1;padding:10px;background:var(--bg3);border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer">Cancel</button>
+      <button onclick="saveContact('${jobId}')" style="flex:2;padding:10px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Save contact</button>
+    </div>`;
   setTimeout(() => document.getElementById('cm-name')?.focus(), 50);
+}
+
+// Send paste to AI for extraction, then swap to form view with prefilled fields.
+async function _parseSignature(jobId) {
+  const ta = document.getElementById('cm-paste');
+  const btn = document.getElementById('cm-parse-btn');
+  const errEl = document.getElementById('cm-paste-err');
+  const text = (ta?.value || '').trim();
+  if (!text) {
+    if (errEl) { errEl.textContent = 'Paste something first, or use "Skip — enter manually".'; errEl.style.display = 'block'; }
+    return;
+  }
+  if (errEl) errEl.style.display = 'none';
+  if (btn) { btn.disabled = true; btn.textContent = 'Parsing…'; btn.style.opacity = '0.7'; }
+  try {
+    const res = await fetch(API + '/api/parse-contact-signature', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ text }),
+    });
+    if (!res.ok) {
+      // Token cap exceeded or similar — gracefully fall back to manual form
+      // with nothing prefilled rather than blocking the user.
+      const body = await res.text();
+      if (res.status === 429) {
+        if (errEl) { errEl.textContent = 'AI parse limit reached — switching to manual entry.'; errEl.style.display = 'block'; }
+        setTimeout(() => { _contactModalMode='form'; _renderContactModalBody(jobId, null); }, 1500);
+      } else {
+        if (errEl) { errEl.textContent = 'Parse failed: ' + body.slice(0, 140); errEl.style.display = 'block'; }
+        if (btn) { btn.disabled = false; btn.textContent = 'Parse signature'; btn.style.opacity = '1'; }
+      }
+      return;
+    }
+    const parsed = await res.json();
+    // Empty result? Tell the user rather than silently switching.
+    const filled = Object.values(parsed).filter(v => v && v !== 'null').length;
+    if (filled === 0) {
+      if (errEl) { errEl.textContent = 'Couldn\'t extract anything from that text. Try "Skip — enter manually".'; errEl.style.display = 'block'; }
+      if (btn) { btn.disabled = false; btn.textContent = 'Parse signature'; btn.style.opacity = '1'; }
+      return;
+    }
+    _contactModalMode = 'form';
+    _renderContactModalBody(jobId, null, parsed);
+  } catch (e) {
+    if (errEl) { errEl.textContent = 'Parse failed: ' + e.message; errEl.style.display = 'block'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Parse signature'; btn.style.opacity = '1'; }
+  }
 }
 
 function saveContact(jobId) {
@@ -5821,11 +6028,14 @@ function saveContact(jobId) {
     id: _editContactId || genId(),
     name,
     role:        document.getElementById('cm-role').value.trim(),
+    company:     document.getElementById('cm-company')?.value.trim() || '',
     email:       document.getElementById('cm-email').value.trim(),
+    phone:       document.getElementById('cm-phone')?.value.trim() || '',
     linkedin:    document.getElementById('cm-linkedin').value.trim(),
     lastContact: document.getElementById('cm-date').value || null,
-    notes:       document.getElementById('cm-notes').value.trim(),
   };
+  // Preserve legacy id only — the deprecated `notes` field is now swept at
+  // login time (see migrateData), so we don't need to carry it through here.
   if (_editContactId) {
     const idx = j.contacts.findIndex(c=>c.id===_editContactId);
     if (idx >= 0) j.contacts[idx] = contact;
@@ -6528,7 +6738,10 @@ function bulkDelete() {
   if (bulkSelected.has(currentJobId)) {
     tearDownNotesEditor();
   }
-  bulkSelected.forEach(id => { delete jobs[id]; });
+  // Evict doc cache entries for deleted jobs — prevents stale content from
+  // resurfacing if an id is ever reused, and keeps the cache from growing
+  // unboundedly over a long session of bulk deletes.
+  bulkSelected.forEach(id => { delete jobs[id]; delete _notesDocCache[id]; });
   if (bulkSelected.has(currentJobId)) { currentJobId = null; renderDetail(); }
   scheduleSave(); bulkSelected.clear(); renderJobList(); updateBulkBar(); renderStaleNudge();
 }

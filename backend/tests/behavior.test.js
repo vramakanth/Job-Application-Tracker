@@ -1063,6 +1063,27 @@ t('renderDetail triggers mountNotesEditor when notes tab is active', () => {
   }
 });
 
+t('showApp prefetches TipTap modules (warms cache for Notes tab)', () => {
+  // Performance: first Notes open previously required a ~9-module ESM
+  // download (~200KB gz). Prefetching during showApp's idle window makes
+  // subsequent Notes opens feel instant for the user.
+  const idx = feSrc.indexOf('function showApp');
+  if (idx < 0) throw new Error('showApp not found');
+  const body = feSrc.slice(idx, idx + 2000);
+  // Must call loadTipTap (fire-and-forget OK) inside a setTimeout — not at
+  // the synchronous top of showApp, because that would compete with the
+  // initial jobs/settings fetches for network bandwidth.
+  if (!/setTimeout\([\s\S]{0,300}loadTipTap/.test(body)) {
+    throw new Error('showApp does not defer-prefetch loadTipTap');
+  }
+  // Delay must be ≥ 500ms so it sits past the critical-path fetches
+  const timerMatch = body.match(/setTimeout\(\(\)\s*=>\s*\{[\s\S]{0,300}?loadTipTap[\s\S]{0,200}?\},\s*(\d+)\s*\)/);
+  if (!timerMatch)    throw new Error('prefetch setTimeout not in expected shape');
+  const delay = parseInt(timerMatch[1], 10);
+  if (delay < 500)    throw new Error(`prefetch delay ${delay}ms too eager — should be ≥ 500ms`);
+  if (delay > 5000)   throw new Error(`prefetch delay ${delay}ms too long — user may click Notes first`);
+});
+
 // ════════════════════════════════════════════════════════════════════════════
 // Posting quote-to-notes + transient highlights
 // ════════════════════════════════════════════════════════════════════════════
@@ -1652,6 +1673,7 @@ t('Every AI-consuming route has tokenCapMiddleware (covers the daily cap)', () =
     '/api/salary-benchmark',
     '/api/find-posting-mirror',
     '/api/parse-job',
+    '/api/parse-contact-signature',
   ];
   const offenders = [];
   for (const r of AI_ROUTES) {
@@ -1836,6 +1858,246 @@ t('Server destructures every field the client sends (no silent-drop regression)'
   }
   if (offenders.length) {
     throw new Error(`client/server contract violations:\n  ${offenders.join('\n  ')}`);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// Notes editor UX fixes — collapsed-empty-state + reload-on-return regressions
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── Notes editor mount UX');
+
+t('Notes editor has its border + background on the interactive layer (not the outer wrap)', () => {
+  // Bug 1: users were clicking the visible border (on .notes-editor-wrap) and
+  // nothing happened because the interactive area (.notes-editor inside the
+  // wrap) was invisibly shorter and offset. Fix: the border lives on
+  // .notes-editor so the visible frame IS the click target.
+  const wrapRule = feSrc.match(/\.notes-editor-wrap\s*\{[^}]*\}/);
+  const editorRule = feSrc.match(/\.notes-editor\s*\{[^}]*\}/);
+  if (!wrapRule || !editorRule) throw new Error('notes-editor CSS rules not found');
+  // The wrap should NOT carry the visible border anymore — if it does, we're
+  // back in the bug state with a mismatched click target.
+  if (/border:\s*\d/.test(wrapRule[0])) {
+    throw new Error('.notes-editor-wrap still has a visible border (click target mismatch)');
+  }
+  // The editor itself must have the border + a background different from page bg
+  if (!/border:\s*0?\.?5?px\s+solid/.test(editorRule[0])) {
+    throw new Error('.notes-editor missing visible border');
+  }
+  if (!/background:\s*var\(--bg2\)/.test(editorRule[0])) {
+    throw new Error('.notes-editor needs a distinct background (otherwise empty state is invisible)');
+  }
+  // Minimum height so the empty doc doesn't collapse to one line
+  const mhMatch = editorRule[0].match(/min-height:\s*(\d+)px/);
+  if (!mhMatch)           throw new Error('.notes-editor has no min-height — empty doc will collapse');
+  if (parseInt(mhMatch[1], 10) < 200) throw new Error(`.notes-editor min-height too small (${mhMatch[1]}px)`);
+  // cursor: text so hovering the padding reads as editable
+  if (!/cursor:\s*text/.test(editorRule[0])) {
+    throw new Error('.notes-editor lacks cursor:text — padding area feels non-interactive');
+  }
+});
+
+t('TipTap ProseMirror element fills the notes editor (no sub-line collapse)', () => {
+  // When TipTap mounts, it injects <div class="ProseMirror"> as a child of
+  // .notes-editor. For an empty doc it would collapse to one line unless we
+  // force it to fill the available height.
+  const pmRule = feSrc.match(/\.notes-editor\s+\.ProseMirror\s*\{[^}]*\}/);
+  if (!pmRule) throw new Error('.notes-editor .ProseMirror rule missing');
+  if (!/flex:\s*1/.test(pmRule[0]))              throw new Error('.ProseMirror must flex:1 inside the editor');
+  if (!/min-height:\s*100%/.test(pmRule[0]))     throw new Error('.ProseMirror needs min-height:100% to fill editor');
+});
+
+t('Notes doc cache exists + populated on fetch so return visits skip the loading flash', () => {
+  // Bug 2: every time the user navigates Notes → away → back, the "Preparing
+  // editor…" placeholder showed again even though TipTap is cached. Root
+  // cause: mountNotesEditor awaited a fresh GET /api/notes/:jobId every time.
+  // Fix: per-jobId in-memory doc cache + synchronous fast-path mount.
+  if (!/_notesDocCache\s*=\s*Object\.create\(null\)/.test(feSrc) &&
+      !/_notesDocCache\s*=\s*\{\}/.test(feSrc)) {
+    throw new Error('_notesDocCache not declared');
+  }
+  // Fast path: if TipTap is cached AND we have cached doc → build editor sync,
+  // no await before the container is populated.
+  const mountIdx = feSrc.indexOf('async function mountNotesEditor');
+  const mountBody = feSrc.slice(mountIdx, mountIdx + 5000);
+  if (!/_notesDocCache\[jobId\]/.test(mountBody))       throw new Error('mount does not consult doc cache');
+  if (!/if\s*\(\s*_tiptap\s*&&\s*cached[^)]*\)/.test(mountBody)) {
+    throw new Error('mount missing synchronous fast-path when both TipTap and cached doc are present');
+  }
+  // Cache must be populated after every successful fetch so the NEXT mount
+  // can take the fast path. Look for assignment after the fetch block.
+  if (!/_notesDocCache\[jobId\]\s*=\s*\{/.test(mountBody)) {
+    throw new Error('mount does not populate cache after fetching remote doc');
+  }
+});
+
+t('Notes doc cache is kept in sync after every save (no stale return visits)', () => {
+  // If we only populate the cache on fetch, typing something and navigating
+  // away + back would show pre-typed content until the fetch returns. Not a
+  // data-loss bug but a jarring UX. Cache must be written on every successful
+  // save too.
+  const flushIdx = feSrc.indexOf('async function flushNotesSave');
+  const body = feSrc.slice(flushIdx, flushIdx + 2500);
+  if (!/_notesDocCache\[jobId\]\s*=\s*\{[\s\S]{0,200}_notesRemoteVersion/.test(body)) {
+    throw new Error('flushNotesSave does not write through to _notesDocCache');
+  }
+});
+
+t('Notes doc cache is invalidated on version restore', () => {
+  // After a user restores a historical version, the server has swapped
+  // current. The cached doc is now wrong. Without invalidation, return visits
+  // would show pre-restore content for one load cycle.
+  const idx = feSrc.indexOf('async function restoreNotesVersion');
+  const body = feSrc.slice(idx, idx + 1200);
+  if (!/delete\s+_notesDocCache\[jobId\]/.test(body)) {
+    throw new Error('restoreNotesVersion does not invalidate cached doc');
+  }
+});
+
+t('Notes doc cache is purged on logout (per-user data safety)', () => {
+  // Cache holds decrypted note content. Must be cleared before a different
+  // user logs in on the same browser session.
+  const idx = feSrc.indexOf('async function doLogout');
+  const body = feSrc.slice(idx, idx + 1000);
+  if (!/_notesDocCache/.test(body)) {
+    throw new Error('doLogout does not clear _notesDocCache — cross-account leak risk');
+  }
+});
+
+t('bulkDelete evicts notes cache entries for deleted jobs', () => {
+  const idx = feSrc.indexOf('function bulkDelete');
+  const body = feSrc.slice(idx, idx + 800);
+  if (!/delete\s+_notesDocCache\[id\]/.test(body)) {
+    throw new Error('bulkDelete does not evict _notesDocCache entries');
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// Signature paste → AI-parsed contact form
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── Contact signature paste');
+
+t('parse-contact-signature route exists, behind auth + token cap', () => {
+  if (!/app\.post\('\/api\/parse-contact-signature',\s*authMiddleware,\s*tokenCapMiddleware/.test(serverSrc)) {
+    throw new Error('parse-contact-signature missing or not properly protected');
+  }
+});
+
+t('Backend rejects empty text and over-long text (DoS protection)', () => {
+  const idx = serverSrc.indexOf("app.post('/api/parse-contact-signature'");
+  const body = serverSrc.slice(idx, idx + 2500);
+  if (!/if \(!text\)/.test(body))     throw new Error('does not reject empty text');
+  if (!/text\.length\s*>\s*\d{3,}/.test(body)) throw new Error('does not cap input length');
+});
+
+t('Backend normalizes empty/null-string AI output to real null', () => {
+  // The AI sometimes returns "" or "null" or "N/A" instead of a JSON null.
+  // The handler must normalize so the frontend can use plain `if (v)` checks.
+  const idx = serverSrc.indexOf("app.post('/api/parse-contact-signature'");
+  const body = serverSrc.slice(idx, idx + 2500);
+  if (!/parsed\[k\]\s*===\s*''|parsed\[k\]\s*===\s*"null"|parsed\[k\]\s*===\s*'N\/A'/.test(body)) {
+    throw new Error('does not normalize stringy-null AI responses to null');
+  }
+});
+
+t('AI prompt instructs model to never fabricate missing fields', () => {
+  // Important: a "guess" at email/phone could send the user to a stranger.
+  // Prompt must explicitly tell the model to return null for unknown fields.
+  const idx = serverSrc.indexOf("app.post('/api/parse-contact-signature'");
+  const body = serverSrc.slice(idx, idx + 2500);
+  if (!/NEVER guess|do not fabricate|never invent/i.test(body)) {
+    throw new Error('system prompt does not forbid fabrication — risk of fake emails/phones');
+  }
+});
+
+t('Frontend contact modal opens in paste-first mode for new contacts', () => {
+  if (!/_contactModalMode\s*=\s*['"]paste['"]/.test(feSrc)) {
+    throw new Error('_contactModalMode not initialized to paste for new contacts');
+  }
+  // Edit mode should skip paste — existing contact already has fields
+  if (!/contactId\s*\?\s*\(j\.contacts[^:]+\s*:\s*null/.test(feSrc) && !/contactId\s*\?\s*\(j\.contacts/.test(feSrc)) {
+    throw new Error('edit path does not look up existing contact');
+  }
+  // Must have a branch that sets mode to 'form' when editing
+  if (!/_contactModalMode\s*=\s*(?:c\s*\?\s*)?['"]form['"]/.test(feSrc)) {
+    throw new Error('edit contact does not skip paste zone');
+  }
+});
+
+t('Paste zone has both "Parse" button and "Skip — enter manually" fallback', () => {
+  // Users who want to type manually shouldn't feel forced into pasting.
+  if (!/Parse signature/.test(feSrc))          throw new Error('Parse button label missing');
+  if (!/Skip.*enter manually/i.test(feSrc))    throw new Error('Skip/manual entry option missing');
+});
+
+t('_parseSignature sends paste to backend and swaps to form on success', () => {
+  if (!/async function _parseSignature/.test(feSrc)) throw new Error('_parseSignature function missing');
+  const idx = feSrc.indexOf('async function _parseSignature');
+  const body = feSrc.slice(idx, idx + 3000);
+  if (!/\/api\/parse-contact-signature/.test(body))         throw new Error('does not call parse endpoint');
+  if (!/Authorization.*Bearer.*token/.test(body))           throw new Error('missing auth header');
+  // Must disable button during parse (prevents double-submit)
+  if (!/btn\.disabled\s*=\s*true/.test(body))               throw new Error('does not disable button during parse');
+  // Must swap to form mode on success
+  if (!/_contactModalMode\s*=\s*['"]form['"]/.test(body))   throw new Error('does not switch to form on success');
+});
+
+t('Graceful fallback when AI parse fails or returns nothing', () => {
+  const idx = feSrc.indexOf('async function _parseSignature');
+  const body = feSrc.slice(idx, idx + 3000);
+  // 429 (token cap) → switch to manual with explanation
+  if (!/res\.status\s*===\s*429/.test(body) && !/429/.test(body)) {
+    throw new Error('no specific handling for token cap 429 response');
+  }
+  // Zero-fields extraction → don't silently accept, tell user
+  if (!/filled\s*===\s*0|filled\.length\s*===\s*0/.test(body) &&
+      !/Object\.values\(parsed\)[\s\S]{0,200}filter/.test(body)) {
+    throw new Error('does not detect empty AI response');
+  }
+});
+
+t('saveContact includes phone + company fields (new schema)', () => {
+  const idx = feSrc.indexOf('function saveContact');
+  const body = feSrc.slice(idx, idx + 1500);
+  if (!/cm-phone/.test(body))   throw new Error('saveContact does not read phone field');
+  if (!/cm-company/.test(body)) throw new Error('saveContact does not read company field');
+});
+
+t('saveContact does NOT handle a notes field (removed in favor of Journal)', () => {
+  // Previous turn preserved legacy notes on edit; this turn removes the
+  // field entirely and uses a one-shot sweep in loadJobs to strip leftover
+  // data. saveContact should no longer reference `notes` at all.
+  const idx = feSrc.indexOf('function saveContact');
+  const body = feSrc.slice(idx, idx + 1500);
+  if (/cm-notes|contact\.notes\b|existing\.notes/.test(body)) {
+    throw new Error('saveContact still references removed notes field');
+  }
+});
+
+t('loadJobs sweeps legacy contact.notes field (one-shot migration)', () => {
+  const idx = feSrc.indexOf('async function loadJobs');
+  const body = feSrc.slice(idx, idx + 4000);
+  // Must delete `notes` from any contact objects that have one
+  if (!/delete\s+c\.notes/.test(body)) {
+    throw new Error('loadJobs does not delete deprecated contact.notes');
+  }
+  // Must trigger a save so the cleanup persists (otherwise it runs every login)
+  if (!/scheduleSave\(\)/.test(body.slice(body.indexOf('c.notes')))) {
+    throw new Error('contact notes sweep does not trigger a save');
+  }
+  // Must be guarded — don't save if nothing was stripped
+  if (!/strippedAnyNotes/.test(body) && !/let\s+\w+\s*=\s*false/.test(body)) {
+    throw new Error('sweep unconditionally saves even when no changes — wasteful');
+  }
+});
+
+t('Contact list rendering does NOT display a notes line', () => {
+  // The individual contact row used to include `${c.notes ? ... : ''}` — if
+  // that survives, users who still have notes in their data would see them
+  // briefly before the sweep runs. Remove the rendering entirely.
+  const idx = feSrc.indexOf('function renderContactsTab');
+  const body = feSrc.slice(idx, idx + 4000);
+  if (/c\.notes\s*\?/.test(body)) {
+    throw new Error('contact list still conditionally renders c.notes');
   }
 });
 

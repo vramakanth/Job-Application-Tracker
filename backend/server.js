@@ -1401,6 +1401,45 @@ Fields: title(string), company(string), location(city+state only, null if remote
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// Parse a pasted email signature / contact block into structured fields.
+// Handles formats ranging from traditional "name / title / company / email /
+// phone" signatures to informal LinkedIn bios and intro-email openers.
+// Returns null values for anything the text doesn't contain — we never
+// fabricate. The frontend presents results in an editable form for the user
+// to correct before saving.
+app.post('/api/parse-contact-signature', authMiddleware, tokenCapMiddleware, async (req, res) => {
+  const text = (req.body.text || '').trim();
+  if (!text) return res.status(400).json({ error: 'text required' });
+  if (text.length > 4000) return res.status(400).json({ error: 'text too long (max 4000 chars)' });
+
+  const sys = `You extract contact information from email signatures, LinkedIn bios, or similar text blocks.
+Return ONLY valid JSON (no markdown fences, no commentary).
+Fields (use null for anything not present — NEVER guess or infer):
+- name (string): person's full name
+- role (string): job title like "Senior Recruiter" or "Head of Engineering"
+- company (string): employer name
+- email (string): email address — exactly as written, no cleanup
+- phone (string): phone number — exactly as written, no formatting changes
+- linkedin (string): full LinkedIn profile URL. If you see only "linkedin.com/in/xxx" without https://, prepend "https://"
+- location (string): city or city+state like "San Francisco, CA" — null for country-only or generic
+
+Hard rules: do not fabricate. If a field isn't clearly in the text, return null for it. Don't combine unrelated text into a field.`;
+
+  const usr = `Parse this signature:\n\n${text}`;
+
+  try {
+    const raw = await callAI(['groq','openrouter','google'], sys, usr, 300, req, 'parse-contact-signature');
+    const parsed = parseJson(raw);
+    // Sanity-filter: the AI sometimes emits empty strings instead of nulls
+    for (const k of Object.keys(parsed)) {
+      if (parsed[k] === '' || parsed[k] === 'null' || parsed[k] === 'N/A') parsed[k] = null;
+    }
+    res.json(parsed);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ════════════════════════════════════════════════════════════════════════════════
 // AI FEATURES
 // ════════════════════════════════════════════════════════════════════════════════
