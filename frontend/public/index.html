@@ -485,7 +485,7 @@ input[type=\"file\"] { display: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes blink { 0%,100%{opacity:1}50%{opacity:0} }
 @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
-.tab-pane { animation: fadeIn .15s ease; }
+.tab-pane { animation: fadeIn .15s ease; min-height: 0; }
 .typing-cursor { display: inline-block; width: 2px; height: 14px; background: var(--accent-bg); animation: blink 1s infinite; vertical-align: middle; }
 ::selection { background: rgba(232,168,56,0.25); color: var(--text); }
 .modal-overlay { -webkit-backdrop-filter: blur(2px);backdrop-filter: blur(2px); }
@@ -517,7 +517,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 /* ── MOBILE @media ── */
 
 /* ── KEY IDs ── */
-#detail-view { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+#detail-view { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
 #job-list { flex: 1; overflow-y: auto; }
 #analytics-overlay { position: fixed; top:0;right:0;bottom:0;left:0; background: var(--bg); z-index: 500; display: flex; flex-direction: column; overflow: hidden; }
 #settings-overlay { position: fixed; top:0;right:0;bottom:0;left:0; z-index: 600; }
@@ -660,7 +660,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
         <!-- Documents -->
         <div style="background:rgba(18,8,2,0.72);border:1px solid rgba(232,168,56,0.14);border-radius:14px;padding:24px;backdrop-filter:blur(14px);color:rgba(232,168,56,0.9)">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" style="margin-bottom:14px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Document library</div>
+          <div style="font-size:13px;font-weight:600;color:#f2ead8;margin-bottom:6px">Library</div>
           <div style="font-size:12px;color:rgba(242,234,216,0.48);line-height:1.6">Store resumes and cover letters. Pick and tailor per application.</div>
         </div>
 
@@ -808,7 +808,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 20V14M8 20V10M12 20V4M16 20V10M20 20V14"/></svg>
         Analytics
       </button>
-      <button class="sidebar-action-btn" onclick="showDocumentsPage()" data-section="library" title="Document library">
+      <button class="sidebar-action-btn" onclick="showDocumentsPage()" data-section="library" title="Library">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Library
       </button>
@@ -849,7 +849,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <div id="empty-state" class="empty-state">
       <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" style="opacity:0.15"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h7M7 16h4"/></svg>
       <h2>No application selected</h2>
-      <p>Add a job application or select one from the list to view details.</p>
+      <p>Click <strong>Add job</strong> to start tracking your applications, or select one from the list.</p>
     </div>
     <!-- Detail view (populated by JS) -->
     <div id="detail-view" style="display:none;flex:1;overflow:hidden;flex-direction:column"></div>
@@ -1745,6 +1745,7 @@ function showErr(el, msg) { el.textContent=msg; el.classList.add('show'); }
 
 // ── DATA ──
 async function loadJobs() {
+  currentFilter = 'all'; // reset stale filter on every load
   try {
     const res = await fetch(API+'/api/jobs', {headers:{Authorization:'Bearer '+token}});
     if (res.status===401) { doLogout(); return; }
@@ -2095,7 +2096,20 @@ function renderJobList() {
   const list = document.getElementById('job-list');
   const filtered = getFilteredJobs();
   if (!filtered.length) {
-    list.innerHTML = '<div class="empty-list">No applications yet</div>';
+    const total = Object.keys(jobs).length;
+    if (total === 0) {
+      list.innerHTML = `<div class="empty-list" style="padding:32px 16px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" style="width:36px;height:36px;opacity:0.2;margin:0 auto 12px;display:block"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7 8h10M7 12h7M7 16h4"/></svg>
+        <div style="font-weight:500;color:var(--text2);margin-bottom:6px">No applications yet</div>
+        <div style="color:var(--text3);font-size:12px;line-height:1.6">Click <strong style="color:var(--text2)">Add job</strong> to track your first application.</div>
+      </div>`;
+    } else {
+      // Jobs exist but filter has no matches — offer to clear the filter
+      list.innerHTML = `<div class="empty-list" style="padding:24px 16px">
+        <div style="color:var(--text2);margin-bottom:10px">No <strong>${currentFilter}</strong> applications.</div>
+        <button onclick="setFilter('all')" style="padding:5px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;color:var(--text2);cursor:pointer">Show all</button>
+      </div>`;
+    }
     return;
   }
   list.innerHTML = filtered.map((j, i) => `
@@ -2144,7 +2158,8 @@ function selectJob(id) {
   dv.style.display = 'flex';
   dv.style.flexDirection = 'column';
   dv.style.flex = '1';
-  dv.style.overflow = 'hidden';
+  dv.style.overflowY = 'auto';
+  dv.style.overflowX = 'hidden';
   // Mobile: slide detail into view, hide sidebar
   if (window.innerWidth <= 680) {
     document.querySelector('.sidebar')?.classList.add('hidden-mobile');
@@ -2742,7 +2757,7 @@ function renderFilesTab(j) {
 }
 
 
-// ── DOCUMENT LIBRARY PICKER ──
+// ── LIBRARY PICKER ──
 let libraryDocs = [];
 let libraryPickTarget = null;
 
@@ -3533,7 +3548,7 @@ function renderDocsPage() {
   overlay.innerHTML = `
     <div class="docs-header" style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--bg2);flex-shrink:0">
       <svg width="16" height="16" viewBox="0 0 14 14" fill="none" style="flex-shrink:0;color:var(--text3)"><path d="M2 2h6l3 3v7a1 1 0 01-1 1H2a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" stroke-width="1.3"/><path d="M8 2v4h4" stroke="currentColor" stroke-width="1.3"/></svg>
-      <div class="docs-title" style="flex:1;min-width:0;font-size:15px;font-weight:600;color:var(--text)">Document Library</div>
+      <div class="docs-title" style="flex:1;min-width:0;font-size:15px;font-weight:600;color:var(--text)">Library</div>
       <label style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:var(--accent-bg);color:#1a1917;border-radius:var(--radius-sm);font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0">
         <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1v8M3 6l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M1 10h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
         Upload
@@ -4013,7 +4028,7 @@ function renderDocumentsTab(j) {
       <div style="text-align:center;padding:48px 20px;color:var(--text3)">
         <div style="margin-bottom:14px;color:var(--text3)"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
         <div style="font-size:14px;font-weight:500;color:var(--text2);margin-bottom:6px">No documents yet</div>
-        <div style="font-size:13px;line-height:1.6">Upload a resume or cover letter to tailor it for this role, or pick one from your Document Library.</div>
+        <div style="font-size:13px;line-height:1.6">Upload a resume or cover letter to tailor it for this role, or pick one from your Library.</div>
       </div>` : `
       <div style="display:flex;flex-direction:column;gap:0">
         ${docs.map(d => `
@@ -5356,70 +5371,63 @@ function bulkExport() {
 function showHelp() {
   openSection('help');
   const sv = document.getElementById('section-view');
-
   sv.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0;flex-shrink:0">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:24px 28px 0;flex-shrink:0">
       <div style="font-size:16px;font-weight:600;color:var(--text)">Help</div>
       <button onclick="closeSection()" style="width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--text2);font-size:16px;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">×</button>
     </div>
-    <div style="flex:1;overflow-y:auto;padding:20px 24px 32px">
-      <div style="font-size:13px;color:var(--text3);margin-bottom:24px">How to get the most out of Summit.</div>
-      <div style="display:flex;flex-direction:column;gap:12px;max-width:680px">
+    <div style="flex:1;overflow-y:auto;padding:20px 28px 40px;max-width:680px">
 
-        <div class="settings-section">
-          <div class="settings-section-title" style="display:flex;align-items:center;gap:8px"><span>🔍</span> FINDING &amp; ADDING JOBS</div>
-          <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
-            Hit <strong style="color:var(--text)">+ Add</strong> and paste any job URL — Summit will try to pull the title, company, and salary automatically. You can edit anything it gets wrong.<br><br>
-            Even better: install the <strong style="color:var(--text)">browser extension</strong> (Settings → Browser Extensions) and you'll get a one-click button on every job page. It grabs the full posting text, which makes AI tailoring a lot more accurate.
-          </div>
+      <!-- TOC -->
+      <div style="margin-bottom:28px;padding:16px 18px;background:var(--bg3);border-radius:var(--radius-sm);border:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:600;font-family:var(--mono);color:var(--text3);letter-spacing:.5px;margin-bottom:10px">CONTENTS</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <a href="#h-adding" style="font-size:13px;color:var(--blue);text-decoration:none">Adding a job</a>
+          <a href="#h-pipeline" style="font-size:13px;color:var(--blue);text-decoration:none">Tracking your pipeline</a>
+          <a href="#h-tailoring" style="font-size:13px;color:var(--blue);text-decoration:none">AI resume tailoring</a>
+          <a href="#h-research" style="font-size:13px;color:var(--blue);text-decoration:none">Company research</a>
+          <a href="#h-interview" style="font-size:13px;color:var(--blue);text-decoration:none">Interview prep</a>
+          <a href="#h-library" style="font-size:13px;color:var(--blue);text-decoration:none">Library</a>
+          <a href="#h-analytics" style="font-size:13px;color:var(--blue);text-decoration:none">Analytics &amp; stale check</a>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div style="font-size:13px;color:var(--text2);line-height:1.8;display:flex;flex-direction:column;gap:24px">
+
+        <div id="h-adding">
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px">Adding a job</div>
+          Click <strong style="color:var(--text)">Add job</strong> and paste the URL from any job board — Summit will automatically pull the title, company, location, and salary. You can edit anything it gets wrong before saving. For the best results, make sure the job posting is cached: open the <strong style="color:var(--text)">Job Posting tab</strong> on the job and click <strong style="color:var(--text)">refresh cache</strong> so Summit has the full description text to work with later. Even better, install the <strong style="color:var(--text)">browser extension</strong> (Settings → Browser Extensions) — it captures the full posting in one click while you're browsing, which makes tailoring significantly more accurate.
         </div>
 
-        <div class="settings-section">
-          <div class="settings-section-title" style="display:flex;align-items:center;gap:8px"><span>📋</span> TRACKING YOUR PIPELINE</div>
-          <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
-            Every job moves through statuses — <em>to apply → applied → interview → offer</em>. Change the status from the dropdown at the top of any job.<br><br>
-            Use the <strong style="color:var(--text)">filter bar</strong> at the top of the job list to quickly see just what you're interviewing for, or just the jobs you've starred (★ watchlist). The <strong style="color:var(--text)">stale</strong> tag appears on postings that look expired — Summit checks these automatically in the background.
-          </div>
+        <div id="h-pipeline">
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px">Tracking your pipeline</div>
+          Each job moves through statuses: <em>to apply → applied → interview → offer</em>. Change the status using the dropdown at the top of any job. Use the <strong style="color:var(--text)">filter bar</strong> above the job list to focus on a particular stage — you can also filter to just the jobs you've starred using the <strong style="color:var(--text)">★ watchlist</strong> filter. Click the star on any job row to add or remove it from your watchlist without opening the job. The <strong style="color:var(--text)">stale</strong> tag appears automatically on postings that look expired or taken down — Summit checks these in the background and you can also mark a job stale manually.
         </div>
 
-        <div class="settings-section">
-          <div class="settings-section-title" style="display:flex;align-items:center;gap:8px"><span>✦</span> AI RESUME TAILORING</div>
-          <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
-            Go to the <strong style="color:var(--text)">Documents tab</strong> on any job, then click <strong style="color:var(--text)">Tailor ✦</strong>. Summit reads the job posting and rewrites your resume or cover letter to match. It takes about 10–20 seconds.<br><br>
-            The result is fully editable before you download. If you don't love it, tweak the context field and tailor again — each version is saved separately so you never lose the original.
-          </div>
+        <div id="h-tailoring">
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px">AI resume tailoring</div>
+          Open any job and go to the <strong style="color:var(--text)">Documents tab</strong>, then click <strong style="color:var(--text)">Tailor ✦</strong>. Summit reads the job posting and rewrites your resume or cover letter to match the role — this takes about 10–20 seconds. The result opens in a full-screen editor so you can review and tweak it before downloading as a .docx. If you want to try again with different emphasis, adjust the context field and click Tailor again. Each version is saved separately under that job, so your original document in the Library is never touched.
         </div>
 
-        <div class="settings-section">
-          <div class="settings-section-title" style="display:flex;align-items:center;gap:8px"><span>🏢</span> COMPANY RESEARCH</div>
-          <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
-            Click the <strong style="color:var(--text)">Insights tab</strong> on any job and hit <strong style="color:var(--text)">Research this role</strong>. You'll get a rundown on the company culture, Glassdoor ratings, recent news, workforce data, and a breakdown of green flags vs. things to watch out for.<br><br>
-            For public companies, add a free <strong style="color:var(--text)">Finnhub API key</strong> in Settings → Financial Data to also see live stock price and market cap.
-          </div>
+        <div id="h-research">
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px">Company research</div>
+          Open the <strong style="color:var(--text)">Insights tab</strong> on any job and click <strong style="color:var(--text)">Research this role</strong>. Summit generates a company overview, Glassdoor culture and ratings data, recent news, workforce demographics, and a list of green flags and things to watch out for — all in one place. For publicly traded companies, you can add a free <strong style="color:var(--text)">Finnhub API key</strong> in Settings → Financial Data to also pull in live stock price and market cap alongside the research.
         </div>
 
-        <div class="settings-section">
-          <div class="settings-section-title" style="display:flex;align-items:center;gap:8px"><span>🎯</span> INTERVIEW PREP</div>
-          <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
-            Open the <strong style="color:var(--text)">Interview Prep tab</strong> on any job and click <strong style="color:var(--text)">Generate questions</strong>. Summit writes role-specific questions across behavioural, technical, culture fit, and "questions to ask them" categories.<br><br>
-            Check off questions as you practice them so you know exactly where you stand before the interview.
-          </div>
+        <div id="h-interview">
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px">Interview prep</div>
+          Open the <strong style="color:var(--text)">Interview Prep tab</strong> on any job and click <strong style="color:var(--text)">Generate questions</strong>. Summit writes role-specific questions organised into categories: behavioural, technical, culture fit, role-specific, and questions you should ask the interviewer. Check off questions as you practice them so you can see at a glance where you still need to prepare.
         </div>
 
-        <div class="settings-section">
-          <div class="settings-section-title" style="display:flex;align-items:center;gap:8px"><span>📁</span> DOCUMENT LIBRARY</div>
-          <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
-            Your resumes and cover letters live in the <strong style="color:var(--text)">Library</strong> (sidebar icon). Upload your master versions once, then attach them to any job with a couple of clicks.<br><br>
-            When you tailor a document for a specific job, it saves as a new version under that job — your originals stay untouched in the Library.
-          </div>
+        <div id="h-library">
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px">Library</div>
+          The <strong style="color:var(--text)">Library</strong> (sidebar) is where your master resumes and cover letters live. Upload your base versions once and they're available to attach to any job. When you tailor a document for a specific job, Summit saves the tailored version under that job — the originals in your Library are always preserved. You can also create and edit documents directly in the built-in editor.
         </div>
 
-        <div class="settings-section">
-          <div class="settings-section-title" style="display:flex;align-items:center;gap:8px"><span>📊</span> ANALYTICS &amp; STALE CHECK</div>
-          <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
-            The <strong style="color:var(--text)">Analytics</strong> view (sidebar) shows your funnel — how many applications at each stage, response rates, and timeline.<br><br>
-            Hit <strong style="color:var(--text)">Check postings</strong> to scan all your active job URLs and flag any that look taken down or expired. Saves you from chasing roles that are already filled.
-          </div>
+        <div id="h-analytics">
+          <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px">Analytics &amp; stale check</div>
+          Open <strong style="color:var(--text)">Analytics</strong> from the sidebar to see your full application funnel — how many jobs at each stage, trends over time, and response rate patterns. It's useful for noticing things like consistently stalling at the phone screen. The <strong style="color:var(--text)">Check postings</strong> button scans all your active job URLs and flags any that appear to have been taken down or filled. This saves you from following up on roles that are already closed.
         </div>
 
       </div>
@@ -5427,6 +5435,7 @@ function showHelp() {
 
   _setMobileActiveBtn('help');
 }
+
 function showWatchlist() {
   openSection('watchlist');
   const sv = document.getElementById('section-view');
@@ -6456,7 +6465,7 @@ setInterval(() => {
 
           <div class="settings-section">
             <div class="settings-section-title" style="display:flex;align-items:center;gap:8px">
-              <span>📁</span> DOCUMENT LIBRARY
+              <span>📁</span> LIBRARY
             </div>
             <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
               Your resumes and cover letters live in the <strong style="color:var(--text)">Library</strong> (sidebar icon). Upload your master versions once, then attach them to any job with a couple of clicks.<br><br>
@@ -6533,7 +6542,7 @@ setInterval(() => {
               <input type="checkbox" id="st-autosave" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent-bg)" onchange="setTailorSetting('tailor_autosave',this.checked)">
               <div>
                 <div style="font-size:13px;font-weight:600;color:var(--text)">Auto-save every tailored version to vault</div>
-                <div style="font-size:12px;color:var(--text3);margin-top:2px;line-height:1.5">Each time you tailor a document it is automatically saved to your Document Library with a version number and timestamp. Default: on.</div>
+                <div style="font-size:12px;color:var(--text3);margin-top:2px;line-height:1.5">Each time you tailor a document it is automatically saved to your Library with a version number and timestamp. Default: on.</div>
               </div>
             </label>
           </div>
@@ -6546,7 +6555,7 @@ setInterval(() => {
               <input type="checkbox" id="st-cleanup" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent-bg)" onchange="setTailorSetting('tailor_cleanup_exit',this.checked)">
               <div>
                 <div style="font-size:13px;font-weight:600;color:var(--text)">Clean up intermediate versions on exit</div>
-                <div style="font-size:12px;color:var(--text3);margin-top:2px;line-height:1.5">When you close the tailoring panel, all versions except the final one are removed from your Document Library. Keeps the vault tidy. Default: on.</div>
+                <div style="font-size:12px;color:var(--text3);margin-top:2px;line-height:1.5">When you close the tailoring panel, all versions except the final one are removed from your Library. Keeps the vault tidy. Default: on.</div>
               </div>
             </label>
           </div>

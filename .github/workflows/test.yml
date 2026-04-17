@@ -54,3 +54,7 @@ jobs:
       - name: Mobile layout tests
         working-directory: frontend
         run: node tests/mobile.test.js
+
+      - name: Job list & empty state tests
+        working-directory: frontend
+        run: node tests/joblist.test.js
