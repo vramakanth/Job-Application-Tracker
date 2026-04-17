@@ -215,3 +215,26 @@ t('refetchPosting closes background tab after extraction', () => {
   const body = src.slice(idx, idx + 800);
   if (!body.includes('chrome.tabs.remove')) throw new Error('background tab not closed');
 });
+
+// ── Help in sidebar ──────────────────────────────────────────────────────────
+console.log('\n── Help in sidebar');
+t('Help button in sidebar action buttons', () => {
+  // Must be a sidebar-action-btn with data-section="help" calling showHelp()
+  const sidebarStart = src.indexOf('class="sidebar-action-btns"');
+  const sidebarEnd   = src.indexOf('</div>', sidebarStart + 100) + 6;
+  const bar = src.slice(sidebarStart, sidebarEnd + 600); // wide enough to catch all buttons
+  if (!bar.includes("data-section=\"help\"")) throw new Error('no data-section=help in sidebar');
+  if (!bar.includes("showHelp()"))           throw new Error('no showHelp() call in sidebar');
+});
+t('showHelp() function exists', () => has('function showHelp()'));
+t('showHelp() calls openSection("help")', () => {
+  const idx  = src.indexOf('function showHelp()');
+  const body = src.slice(idx, idx + 200);
+  if (!body.includes("openSection('help')")) throw new Error('openSection not called');
+});
+t('Help removed from settings nav', () => not('snav-help'));
+t('Settings Help pane has redirect to sidebar', () => {
+  const idx  = src.indexOf('id="spane-help"');
+  const body = src.slice(idx, idx + 600);
+  if (!body.includes('showHelp()')) throw new Error('no showHelp link in settings pane');
+});

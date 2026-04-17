@@ -814,6 +814,10 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       </button>
 
 
+      <button class="sidebar-action-btn" onclick="showHelp()" data-section="help" title="Help">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Help
+      </button>
       <button class="sidebar-action-btn" onclick="openSettings()" data-section="settings" title="Settings">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="2.5"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
         Settings
@@ -2235,6 +2239,8 @@ function mobileNav(section) {
     showDocumentsPage?.();
   } else if (section === 'stats') {
     showAnalytics?.();
+  } else if (section === 'help') {
+    showHelp?.();
   } else if (section === 'settings') {
     openSettings?.();
   }
@@ -5346,6 +5352,81 @@ function bulkExport() {
 // ══════════════════════════════════════════════════════════════════
 // FEATURE 4: COMPANY WATCHLIST
 // ══════════════════════════════════════════════════════════════════
+
+function showHelp() {
+  openSection('help');
+  const sv = document.getElementById('section-view');
+
+  sv.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0;flex-shrink:0">
+      <div style="font-size:16px;font-weight:600;color:var(--text)">Help</div>
+      <button onclick="closeSection()" style="width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);cursor:pointer;color:var(--text2);font-size:16px;display:flex;align-items:center;justify-content:center" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">×</button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:20px 24px 32px">
+      <div style="font-size:13px;color:var(--text3);margin-bottom:24px">How to get the most out of Summit.</div>
+      <div style="display:flex;flex-direction:column;gap:12px;max-width:680px">
+
+        <div class="settings-section">
+          <div class="settings-section-title" style="display:flex;align-items:center;gap:8px"><span>🔍</span> FINDING &amp; ADDING JOBS</div>
+          <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
+            Hit <strong style="color:var(--text)">+ Add</strong> and paste any job URL — Summit will try to pull the title, company, and salary automatically. You can edit anything it gets wrong.<br><br>
+            Even better: install the <strong style="color:var(--text)">browser extension</strong> (Settings → Browser Extensions) and you'll get a one-click button on every job page. It grabs the full posting text, which makes AI tailoring a lot more accurate.
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title" style="display:flex;align-items:center;gap:8px"><span>📋</span> TRACKING YOUR PIPELINE</div>
+          <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
+            Every job moves through statuses — <em>to apply → applied → interview → offer</em>. Change the status from the dropdown at the top of any job.<br><br>
+            Use the <strong style="color:var(--text)">filter bar</strong> at the top of the job list to quickly see just what you're interviewing for, or just the jobs you've starred (★ watchlist). The <strong style="color:var(--text)">stale</strong> tag appears on postings that look expired — Summit checks these automatically in the background.
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title" style="display:flex;align-items:center;gap:8px"><span>✦</span> AI RESUME TAILORING</div>
+          <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
+            Go to the <strong style="color:var(--text)">Documents tab</strong> on any job, then click <strong style="color:var(--text)">Tailor ✦</strong>. Summit reads the job posting and rewrites your resume or cover letter to match. It takes about 10–20 seconds.<br><br>
+            The result is fully editable before you download. If you don't love it, tweak the context field and tailor again — each version is saved separately so you never lose the original.
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title" style="display:flex;align-items:center;gap:8px"><span>🏢</span> COMPANY RESEARCH</div>
+          <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
+            Click the <strong style="color:var(--text)">Insights tab</strong> on any job and hit <strong style="color:var(--text)">Research this role</strong>. You'll get a rundown on the company culture, Glassdoor ratings, recent news, workforce data, and a breakdown of green flags vs. things to watch out for.<br><br>
+            For public companies, add a free <strong style="color:var(--text)">Finnhub API key</strong> in Settings → Financial Data to also see live stock price and market cap.
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title" style="display:flex;align-items:center;gap:8px"><span>🎯</span> INTERVIEW PREP</div>
+          <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
+            Open the <strong style="color:var(--text)">Interview Prep tab</strong> on any job and click <strong style="color:var(--text)">Generate questions</strong>. Summit writes role-specific questions across behavioural, technical, culture fit, and "questions to ask them" categories.<br><br>
+            Check off questions as you practice them so you know exactly where you stand before the interview.
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title" style="display:flex;align-items:center;gap:8px"><span>📁</span> DOCUMENT LIBRARY</div>
+          <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
+            Your resumes and cover letters live in the <strong style="color:var(--text)">Library</strong> (sidebar icon). Upload your master versions once, then attach them to any job with a couple of clicks.<br><br>
+            When you tailor a document for a specific job, it saves as a new version under that job — your originals stay untouched in the Library.
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-section-title" style="display:flex;align-items:center;gap:8px"><span>📊</span> ANALYTICS &amp; STALE CHECK</div>
+          <div class="settings-section-body" style="font-size:13px;color:var(--text2);line-height:1.7">
+            The <strong style="color:var(--text)">Analytics</strong> view (sidebar) shows your funnel — how many applications at each stage, response rates, and timeline.<br><br>
+            Hit <strong style="color:var(--text)">Check postings</strong> to scan all your active job URLs and flag any that look taken down or expired. Saves you from chasing roles that are already filled.
+          </div>
+        </div>
+
+      </div>
+    </div>`;
+
+  _setMobileActiveBtn('help');
+}
 function showWatchlist() {
   openSection('watchlist');
   const sv = document.getElementById('section-view');
@@ -6139,7 +6220,6 @@ setInterval(() => {
         <button id="snav-tailoring" onclick="showSettingsSection('tailoring')" class="snav-btn">Tailoring</button>
         <button id="snav-financial" onclick="showSettingsSection('financial')" class="snav-btn">Financial Data</button>
         <button id="snav-data"      onclick="showSettingsSection('data')"      class="snav-btn">Data &amp; Export</button>
-        <button id="snav-help"      onclick="showSettingsSection('help')"      class="snav-btn">Help</button>
         <button id="snav-feedback"  onclick="showSettingsSection('feedback')"  class="snav-btn">Feedback</button>
         <button id="snav-recovery"  onclick="showSettingsSection('recovery')"  class="snav-btn">Recovery Codes</button>
         <!-- Mobile-only quick actions -->
@@ -6314,7 +6394,12 @@ setInterval(() => {
       <!-- HELP & SUPPORT -->
       <div class="settings-pane" id="spane-help" style="display:none">
         <div style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:6px">Help</div>
-        <div style="font-size:13px;color:var(--text3);margin-bottom:28px">How to get the most out of Summit.</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Click <strong style="color:var(--text)">Help</strong> in the sidebar for the full guide.</div>
+        <button onclick="closeSettings();showHelp()" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer;transition:all .15s" onmouseover="this.style.background='var(--bg4)'" onmouseout="this.style.background='var(--bg3)'">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          Open Help
+        </button>
+        <div style="margin-top:20px;font-size:13px;color:var(--text3);margin-bottom:28px">How to get the most out of Summit.</div>
 
         <!-- Workflow cards -->
         <div style="display:flex;flex-direction:column;gap:16px">
