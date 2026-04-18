@@ -32,7 +32,14 @@ const GROQ_MODEL     = process.env.GROQ_MODEL     || 'llama-3.3-70b-versatile';
 // Cheap high-TPM fallback when primary hits 429. Groq's free tier gives 8b-instant
 // 25K TPM vs 12K for 70B, so it usually gets through when the big model is throttled.
 const GROQ_FALLBACK_MODEL = process.env.GROQ_FALLBACK_MODEL || 'llama-3.1-8b-instant';
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free';
+// OpenRouter fallback path. Using openrouter/free (an auto-router across free
+// models — Nemotron Super/Nano, Trinity Large, etc.) instead of pinning
+// llama-3.3-70b — the Llama free tier has the same rate limits as Groq's
+// primary model, so when Groq rate-limited us the OR fallback just hit the
+// same wall. The auto-router smartly filters for models supporting our
+// required features (structured JSON output) and spreads load across
+// providers so transient rate limits on one don't break the whole request.
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'openrouter/free';
 // Google's gemini-2.0-flash was deprecated March 31, 2026 → requests return 404.
 // gemini-2.5-flash is the free-tier successor. Override via GOOGLE_MODEL env var
 // on Render if you want a different default (e.g. gemini-3-flash-preview).
