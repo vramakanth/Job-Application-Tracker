@@ -1308,29 +1308,36 @@ async function fetchATS(rawUrl) {
   // Returns null on: rendering disabled, circuit-breaker open, Chromium
   // crashed, page timeout. We fall through to step 3 in those cases.
   const rendered = await renderPage(url);
-  if (rendered && rendered.text.length > 200) {
+  if (rendered) {
     const renderedLd = parseJobPostingLD(rendered.html);
     // Prefer rendered JSON-LD (post-hydration, most complete) over direct-
     // fetch's (shell-only, may be stale or partial).
     const mergedLd = renderedLd || (direct && direct.ldFields) || null;
-    const salary = (mergedLd && mergedLd.salary)
-      || extractSalaryFromText(rendered.text)
-      || extractSalaryFromHtml(rendered.html)
-      || null;
-    const fields = mergedLd ? { ...mergedLd, salary } : null;
-    return {
-      fields,
-      text: rendered.text,
-      html: rendered.html.slice(0, 200000),
-      salary,
-      _via: fields ? 'render+ld' : 'render',
-    };
+    // Accept the result if EITHER we have JSON-LD OR we have substantial
+    // text for AI. Previously we gated on text.length > 200 even when LD
+    // was present — which discarded perfectly good structured data on
+    // SPA pages whose visible text is lazy-loaded (v1.17.2 fix).
+    if (mergedLd || rendered.text.length > 200) {
+      const salary = (mergedLd && mergedLd.salary)
+        || extractSalaryFromText(rendered.text)
+        || extractSalaryFromHtml(rendered.html)
+        || null;
+      const fields = mergedLd ? { ...mergedLd, salary } : null;
+      return {
+        fields,
+        text: rendered.text,
+        html: rendered.html.slice(0, 200000),
+        salary,
+        _via: fields ? 'render+ld' : 'render',
+      };
+    }
   }
 
   // ── Step 3: use direct-fetch result if we have one ──────────────────────
   // Happens when render failed (disabled, circuit-broken, timeout) but
-  // direct-fetch got us something. Better than slug fallback when available.
-  if (direct && direct.text.length > 200) {
+  // direct-fetch got us something. Accept JSON-LD alone OR substantial
+  // text — same rationale as step 2.
+  if (direct && (direct.ldFields || direct.text.length > 200)) {
     const salary = (direct.ldFields && direct.ldFields.salary)
       || extractSalaryFromText(direct.text)
       || extractSalaryFromHtml(direct.html)

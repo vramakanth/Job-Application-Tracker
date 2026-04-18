@@ -3067,13 +3067,53 @@ t('render failure falls through to direct-fetch and slug (graceful degradation)'
   // null. fetchATS must CONTINUE to the direct-fetch reuse step and slug
   // fallback rather than throwing — otherwise a broken browser kills parse
   // entirely.
+  //
+  // v1.17.2: the render block is now structured as `if (rendered) { ...
+  // inner check on LD-or-text ... }`. Null-guard is just `if (rendered)`.
+  // The inner gate accepts JSON-LD OR substantial text (instead of only text)
+  // so we don't throw away good structured data on short-body SPAs.
   const body = serverSrc.slice(serverSrc.indexOf('async function fetchATS'));
   const renderIdx = body.indexOf('renderPage(url)');
   const block = body.slice(renderIdx, renderIdx + 2000);
-  // The render-success block should be guarded by `if (rendered && ...)`
-  // so a null result falls through rather than short-circuiting.
-  if (!/if\s*\(\s*rendered\s*&&/.test(block)) {
+  // The render-success block must be guarded on `rendered` being truthy.
+  if (!/if\s*\(\s*rendered\s*\)/.test(block) && !/if\s*\(\s*rendered\s*&&/.test(block)) {
     throw new Error('render result not null-guarded — would break fetchATS on render failure');
+  }
+});
+
+t('render accepts JSON-LD without a text-length gate (v1.17.2 fix)', () => {
+  // v1.17.0/1 had `if (rendered && rendered.text.length > 200)` gating BOTH
+  // the JSON-LD harvest and the text-for-AI path. For SPAs whose
+  // post-hydration visible text is short (Ashby shows body text < 200 chars
+  // when content is rendered into collapsed sections), we threw away perfectly
+  // good JSON-LD fields — causing Ashby 0/14 in the v1.17.1 audit.
+  //
+  // v1.17.2 gates on `(mergedLd || rendered.text.length > 200)` so JSON-LD
+  // alone is sufficient to accept the render result.
+  const body = serverSrc.slice(serverSrc.indexOf('async function fetchATS'));
+  const renderIdx = body.indexOf('renderPage(url)');
+  const block = body.slice(renderIdx, renderIdx + 2000);
+  // The inner check must contain an OR between mergedLd and a text length
+  // check. A bare `rendered.text.length > 200` on its own is the bug.
+  if (!/\bmergedLd\s*\|\|\s*rendered\.text\.length/.test(block)) {
+    throw new Error('render result gated only on text length — JSON-LD alone should be sufficient');
+  }
+});
+
+t('direct-fetch reuse accepts JSON-LD without a text-length gate (v1.17.2 fix)', () => {
+  // Same bug as the render gate but on the step-3 direct-fetch reuse path.
+  // If direct-fetch got JSON-LD but short body text, we were falling all
+  // the way to slug and throwing away good LD fields. Fix: accept on
+  // `direct.ldFields || direct.text.length > 200`.
+  const body = serverSrc.slice(serverSrc.indexOf('async function fetchATS'));
+  // Locate the step-3 block. It comes after the render block.
+  const renderIdx = body.indexOf('renderPage(url)');
+  const afterRender = body.slice(renderIdx + 200);
+  const step3Idx = afterRender.indexOf('if (direct');
+  if (step3Idx < 0) throw new Error('direct-fetch reuse branch not found');
+  const step3 = afterRender.slice(step3Idx, step3Idx + 400);
+  if (!/\bdirect\.ldFields\s*\|\|\s*direct\.text\.length/.test(step3)) {
+    throw new Error('direct-fetch reuse still text-length-only — JSON-LD alone should be sufficient');
   }
 });
 
