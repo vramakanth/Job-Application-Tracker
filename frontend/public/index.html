@@ -935,7 +935,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       Don't have an account? <a onclick="showScreen('register')">Create one</a>
       <br><a onclick="showScreen('forgot')" style="font-size:12px;color:var(--text3)">Forgot password?</a>
     </div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.16.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.17.0 · private beta</div>
   </div>
 </div>
 
@@ -975,7 +975,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     </div>
     <button id="register-btn" class="auth-btn" onclick="doRegister()">Create account</button>
     <div class="auth-switch">Already have an account? <a onclick="showScreen('login')">Sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.16.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.17.0 · private beta</div>
   </div>
 </div>
 
@@ -991,7 +991,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <div class="auth-field"><label>CONFIRM PASSWORD</label><input id="recover-confirmpw" type="password" placeholder="Confirm new password"></div>
     <button id="recover-btn" class="auth-btn" onclick="recoverAccount()">Reset password</button>
     <div class="auth-switch"><a onclick="showScreen('login')">Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.16.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.17.0 · private beta</div>
   </div>
 </div>
 
@@ -1068,7 +1068,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       <div class="user-avatar" id="user-avatar" style="display:flex">VR</div>
       <div style="flex:1;min-width:0">
         <div class="user-name" id="user-name-display">user</div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.16.0</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.17.0</div>
       </div>
 
       <button class="user-bar-settings" onclick="doLogout()" title="Sign out" style="color:var(--text3)" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">
@@ -1127,9 +1127,6 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <div class="field"><label>STATUS</label>
       <select id="job-status"><option value="to apply">To apply</option><option value="applied">Applied</option><option value="screening">Screening</option><option value="interviewing">Interviewing</option><option value="offer">Offer</option><option value="rejected">Rejected</option></select>
     </div>
-    <div class="field"><label>SOURCE</label><input id="job-source" type="text" placeholder="LinkedIn, referral, company site…"></div>
-    <div class="field"><label>REFERRED BY</label><input id="job-referred-by" type="text" placeholder="Name of referrer (optional)" id="referral-field"></div>
-    <div class="field"><label>FOLLOW-UP DATE</label><input id="job-followup" type="date"></div>
     <div class="field"><label>APPLICATION DEADLINE</label><input id="job-deadline" type="date"></div>
     </div><!-- end manual-fields -->
     <div class="modal-actions" style="margin-top:20px">
@@ -1275,7 +1272,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
 <script>
 const API = '';
-const APP_VERSION = '1.16.0';
+const APP_VERSION = '1.17.0';
 let token = localStorage.getItem('applied_token');
 let currentUser = localStorage.getItem('applied_user');
 let jobs = {}, currentJobId = null, currentFilter = 'all', activeDetailTab = 'notes';
@@ -2356,6 +2353,26 @@ async function parseJobUrl() {
 
     if (data._linkedinBlocked) {
       statusEl.innerHTML = `<span style="color:var(--amber)">⚠</span> LinkedIn requires login to auto-fill. <strong>Use the Chrome/Safari extension</strong> while on LinkedIn, or fill in manually below.`;
+    } else if (data._via === 'slug' || (filled === 0 && !text)) {
+      // Slug fallback means neither direct-fetch nor Chromium got usable
+      // page content — we only have whatever the URL path hinted at. The
+      // extension runs in the user's own browser (which the site trusts),
+      // so it can read the page even when our server can't.
+      //
+      // Tailor the message based on whether they already have the
+      // extension installed — if they do, just remind them; if not,
+      // offer to download.
+      const mf = document.getElementById('manual-fields');
+      const mc = document.getElementById('manual-chevron');
+      if (mf) mf.style.display = 'block';
+      if (mc) mc.style.transform = 'rotate(180deg)';
+      const summary = filled > 0
+        ? `Only the company name was recoverable from the URL.`
+        : `This site blocked our server-side parser.`;
+      const extHint = _extensionAvailable
+        ? `Open the posting in your browser and press the Summit extension button — it'll capture the full page.`
+        : `For full extraction, <a href="#" onclick="downloadExtension();return false;" style="color:var(--accent-bg);text-decoration:underline">install the Summit extension</a> — it reads pages from your own browser, which sites don't block.`;
+      statusEl.innerHTML = `<span style="color:var(--amber)">⚠</span> ${summary} ${extHint}`;
     } else if (filled > 0) {
       // Auto-expand so user can review filled fields
     const mf = document.getElementById('manual-fields');
@@ -2364,7 +2381,7 @@ async function parseJobUrl() {
     if (mc) mc.style.transform = 'rotate(180deg)';
     statusEl.innerHTML = `<span style="color:var(--accent);font-weight:600">✓</span> Filled ${filled} field${filled !== 1 ? 's' : ''} — review and correct below`;
     } else {
-      statusEl.innerHTML = `<span style="color:var(--amber)">⚠</span> Could not auto-fill — this site may block scraping. Please fill in manually.`;
+      statusEl.innerHTML = `<span style="color:var(--amber)">⚠</span> Could not auto-fill — please fill in manually.`;
     }
 
   } catch(e) {
@@ -2400,14 +2417,7 @@ function openAddModal() {
     document.getElementById(id)?.classList.remove('filled');
   });
   document.getElementById('job-status').value = 'to apply';
-  const srcEl = document.getElementById('job-source');
-  if (srcEl) { srcEl.value = ''; srcEl.onchange = () => {
-    const refField = document.getElementById('referral-field');
-    if (refField) refField.style.display = srcEl.value === 'Referral' ? 'block' : 'none';
-  }; }
-  const refField = document.getElementById('referral-field');
-  if (refField) refField.style.display = 'none';
-  ['job-deadline','job-followup','job-referred-by'].forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+  const el = document.getElementById('job-deadline'); if (el) el.value = '';
   document.getElementById('parse-status').style.display = 'none';
   document.getElementById('parse-btn').textContent = 'Open';
   pendingHtml = null; pendingText = null;
@@ -2433,10 +2443,7 @@ function addJob() {
     workType,
     salary:     document.getElementById('job-salary').value.trim(),
     status:     document.getElementById('job-status').value,
-    source:     document.getElementById('job-source')?.value || null,
-    referredBy: document.getElementById('job-referred-by')?.value.trim() || null,
     deadline:   document.getElementById('job-deadline')?.value || null,
-    followUpDate: document.getElementById('job-followup')?.value || null,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     notes: [], contacts: [], interviews: [],
@@ -2527,7 +2534,6 @@ function renderJobList() {
           <div class="status-dot" style="background:${statusColor(j.status)}"></div>
           <span style="font-size:10px;font-family:var(--mono);color:${statusColor(j.status)}">${j.status}</span>
           ${j.stale ? '<span style="font-size:9px;padding:1px 6px;background:rgba(234,88,12,0.12);color:#ea580c;border-radius:3px;font-family:var(--mono);border:1px solid rgba(234,88,12,0.25)">stale</span>' : ''}
-          ${j.followUpDate && new Date(j.followUpDate) <= new Date(Date.now()+86400000*2) ? '<span style="font-size:9px;padding:1px 4px;background:rgba(251,191,36,0.15);color:var(--amber);border-radius:3px">↩</span>' : ''}
           ${j.deadline && new Date(j.deadline) <= new Date(Date.now()+86400000*3) ? '<span style="font-size:9px;padding:1px 4px;background:rgba(239,68,68,0.12);color:var(--red);border-radius:3px">⏰</span>' : ''}
           <span style="flex:1"></span>
           <button onclick="event.stopPropagation();toggleWatchlist('${j.id}')" title="${j.watchlist?'Remove from watchlist':'Add to watchlist'}" style="padding:3px 4px;background:none;border:none;cursor:pointer;font-size:13px;line-height:1;color:${j.watchlist?'var(--accent-bg)':'var(--border2)'};transition:color .15s;flex-shrink:0;border-radius:3px;min-width:20px;text-align:center">${j.watchlist?'★':'☆'}</button>
@@ -2737,9 +2743,7 @@ function renderDetail() {
             </button>
           </div>
           <span class="date-added">Added ${fmtDate(j.createdAt)}</span>
-          ${j.source ? `<span style="font-size:11px;color:var(--text3);font-family:var(--mono)">${j.source}${j.referredBy ? ` · via ${esc(j.referredBy)}` : ''}</span>` : ''}
           ${j.deadline ? `<span style="font-size:11px;color:var(--red);font-family:var(--mono)">⏰ Due ${fmtDate(j.deadline)}</span>` : ''}
-          ${j.followUpDate ? `<span style="font-size:11px;color:var(--amber);font-family:var(--mono)">↩ Follow up ${fmtDate(j.followUpDate)}</span>` : ''}
         </div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;padding-top:2px">
@@ -8447,7 +8451,7 @@ setInterval(() => {
     </div>
     <button class="auth-btn" id="forgot-btn" onclick="doForgot()">Send recovery email</button>
     <div class="auth-switch" style="margin-top:12px"><a onclick="showScreen('login')">← Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.16.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.17.0 · private beta</div>
   </div>
 </div>
 

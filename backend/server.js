@@ -1167,30 +1167,6 @@ app.post('/api/parse-file', authMiddleware, upload.single('file'), async (req, r
 const { cleanJobUrl, slugFallback, decodeEntities } = require('./ats-helpers');
 const { renderPage, shutdownBrowser } = require('./render');
 
-// Known SPA hosts where direct-fetch returns an empty shell and Jina's
-// script-tag-stripping makes JSON-LD invisible. For these we skip the
-// Jina path entirely and route through our own Chromium renderer, which
-// returns the post-hydration DOM (including JSON-LD script tags).
-//
-// Everything NOT on this list keeps the existing direct-fetch → Jina flow
-// — SSR sites like Greenhouse, iCIMS, Lever-with-content render fine in
-// Jina and don't need the memory overhead of a headless browser.
-const SPA_HOSTS = [
-  'jobs.ashbyhq.com',
-  'apply.workable.com',
-  'myworkdayjobs.com',          // all *.myworkdayjobs.com subdomains
-  'bamboohr.com',               // *.bamboohr.com/jobs
-  'jobs.apple.com',
-  'jobs.bd.com',                // Workday-based BD careers site
-];
-
-function isSpaHost(url) {
-  try {
-    const host = new URL(url).hostname.toLowerCase();
-    return SPA_HOSTS.some(spa => host.includes(spa));
-  } catch { return false; }
-}
-
 /**
  * Parse the first JobPosting JSON-LD block out of a raw HTML string.
  * Returns a normalized { title, company, location, workType, salary } object
@@ -1252,62 +1228,42 @@ function parseJobPostingLD(html) {
 }
 
 /**
- * Strip Jina's markdown output down to clean prose for downstream AI
- * extraction. Extracted into its own function so the cleanup is reusable
- * and testable.
- */
-function cleanJinaMarkdown(raw) {
-  return raw
-    .replace(/^(Title|URL Source|URL|Published Time|Markdown Content|Description):[^\n]*\n/gim, '')
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/^\s*\[[^\]]+\]:\s*\S.*$/gm, '')
-    .replace(/^\s*#{1,6}\s+/gm, '')
-    .replace(/^\s*>\s?/gm, '')
-    .replace(/^(\s*)[-*+]\s+/gm, '$1• ')
-    .replace(/^(\s*)\d+\.\s+/gm, '$1')
-    .replace(/^\s*([-*_])\s*\1\s*\1[-*_\s]*$/gm, '')
-    .replace(/(\*\*\*|___)(.+?)\1/g, '$2')
-    .replace(/(\*\*|__)(.+?)\1/g, '$2')
-    .replace(/(?<!\w)[*_]([^*_\n]+?)[*_](?!\w)/g, '$1')
-    .replace(/```[\s\S]*?```/g, '')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/~~(.+?)~~/g, '$1')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{4,}/g, '\n\n\n')
-    .trim();
-}
-
-/**
- * Fetch a job posting's content from any ATS. Tries three paths, harvesting
- * whatever each produces and merging:
+ * Fetch a job posting's content from any ATS. Four-step cascade, each step
+ * strictly more thorough than the one before:
  *
  *   1. Direct fetch (fast, ~2-3s):
- *      Grabs raw HTML. Harvests JSON-LD (JobPosting structured data) which
- *      most ATS platforms embed for SEO even on SPA pages. Also gets the
- *      stripped text — usable for SSR sites, a shell for SPAs.
+ *      Raw HTTP GET. Harvests JSON-LD (JobPosting structured data) from
+ *      the HTML. Sufficient for SSR ATS platforms (Greenhouse, iCIMS,
+ *      Lever-with-content). Early-exits if JSON-LD is complete AND text
+ *      is substantive, skipping everything below.
  *
- *   2. Jina reader (slow, ~3-18s):
- *      Server-side renders the page and returns visible text as markdown.
- *      Needed for SPAs where direct-fetch text is just a skeleton. Does
- *      NOT see JSON-LD (markdown format), so we always merge any JSON-LD
- *      we harvested from step 1.
+ *   2. Chromium render (~5-8s):
+ *      Runs the page's JavaScript and captures the post-hydration DOM.
+ *      Required for SPAs (Ashby, Workable, Workday, BambooHR, Apple)
+ *      that inject JSON-LD and content client-side. Single shared browser,
+ *      circuit-broken on repeated failures, gracefully falls through.
  *
- *   3. Slug fallback:
- *      Guesses title/company from the URL path when neither fetch produced
- *      usable content. Deliberately conservative — leaves fields null
- *      rather than inventing garbage from UUID path segments.
+ *   3. Direct-fetch result as final fallback:
+ *      If rendering failed or didn't produce enough, fall back to whatever
+ *      direct-fetch got us, even if incomplete.
  *
- * Fast path: if step 1 returns complete JSON-LD + substantive text, skip
- * Jina entirely. Saves a Jina call on SSR sites (Greenhouse, iCIMS, etc.).
+ *   4. Slug fallback:
+ *      Guess title/company from the URL path. Used when everything above
+ *      failed to produce usable content. Deliberately conservative —
+ *      leaves fields null rather than inventing garbage from UUIDs.
+ *
+ * Jina.ai was the step-2 renderer from v1.10 through v1.16 but couldn't
+ * expose JSON-LD (strips <script> tags) and had free-tier rate limits.
+ * Removed in v1.17 in favor of our own Chromium — strictly more info per
+ * request with no external quota.
  */
 async function fetchATS(rawUrl) {
   const url = cleanJobUrl(rawUrl);
 
   // ── Step 1: direct fetch ────────────────────────────────────────────────
   // Fast (~2-3s typically) and often carries JSON-LD even on SPA sites that
-  // can't be read as plain text. We always do this first so JSON-LD is
-  // available to merge with whatever Jina produces.
+  // embed it in the shell for SEO. We always do this first so JSON-LD is
+  // available to merge with whatever render produces.
   let direct = null;
   try {
     const r = await fetchTimeout(url, {
@@ -1326,7 +1282,7 @@ async function fetchATS(rawUrl) {
     }
   } catch {}
 
-  // ── Early exit: JSON-LD + substantive text means we don't need Jina ────
+  // ── Early exit: JSON-LD + substantive text means we don't need render ──
   // "Substantive" = >500 chars of text. Avoids early-exiting on SPA shells
   // that happen to embed JSON-LD but have no body content yet.
   if (direct && direct.ldFields?.title && direct.ldFields?.company && direct.text.length > 500) {
@@ -1344,83 +1300,36 @@ async function fetchATS(rawUrl) {
     };
   }
 
-  // ── Step 1.5: Chromium render for known SPA hosts ───────────────────────
-  // For Ashby, Workable, Workday, BambooHR, Apple — direct-fetch returns
-  // an empty shell and Jina strips <script> tags. Render the page in our
-  // own Chromium to get the post-hydration DOM with JSON-LD intact.
+  // ── Step 2: Chromium render ─────────────────────────────────────────────
+  // Runs JS. Needed for SPAs. Merges with any JSON-LD direct-fetch already
+  // harvested so we keep the best of both: LD fields are authoritative,
+  // render gives us richer text for AI description extraction.
   //
-  // Only runs for hosts in SPA_HOSTS to avoid the Chromium memory overhead
-  // on SSR sites that don't need it. Falls through to Jina if rendering
-  // fails (browser not launched, timeout, circuit-breaker open, etc.).
-  if (isSpaHost(url)) {
-    const rendered = await renderPage(url);
-    if (rendered && rendered.text.length > 200) {
-      const ldFields = parseJobPostingLD(rendered.html);
-      const salary = (ldFields && ldFields.salary)
-        || extractSalaryFromText(rendered.text)
-        || extractSalaryFromHtml(rendered.html)
-        || null;
-      const fields = ldFields ? { ...ldFields, salary } : null;
-      return {
-        fields,
-        text: rendered.text,
-        html: rendered.html.slice(0, 200000),
-        salary,
-        _via: fields ? 'render+ld' : 'render',
-      };
-    }
-    // If render failed or returned nothing useful, continue to Jina + slug —
-    // no regression vs pre-v1.16 behavior.
-  }
-
-  // ── Step 2: Jina ─────────────────────────────────────────────────────────
-  // Renders JS. Needed for SPAs. Asks for markdown text (not HTML) because:
-  //   1. Jina strips <script> tags from HTML responses regardless of format,
-  //      so X-Return-Format:'html' doesn't actually give us SPA JSON-LD.
-  //      (v1.15 tried this — didn't work, reverted in v1.15.1.)
-  //   2. Markdown responses are smaller and process faster.
-  //
-  // Single attempt. A retry loop sounds defensive but two 18s attempts plus
-  // a 1s pause blew past the audit script's 30s per-URL timeout in v1.15,
-  // causing 90% of URLs to fail. If Jina is rate-limited we fall through to
-  // direct-fetch (step 3) or slug fallback (step 4) instead.
-  let jina = null;
-  try {
-    const r = await fetchTimeout('https://r.jina.ai/' + url, {
-      headers: {
-        'User-Agent': UA,
-        Accept: 'text/plain,*/*',
-        'X-Return-Format': 'text',
-      }
-    }, 18000);
-    if (r.ok) {
-      const raw = await r.text();
-      const text = cleanJinaMarkdown(raw);
-      if (text.length > 200) jina = { text };
-    }
-  } catch {}
-
-  if (jina) {
-    // Merge with any JSON-LD direct-fetch harvested in step 1. Direct-fetch
-    // JSON-LD works for SSR sites (Greenhouse, iCIMS) and for SPAs that
-    // pre-render JSON-LD in their shell HTML (many do for SEO).
-    const mergedLd = (direct && direct.ldFields) || null;
+  // Returns null on: rendering disabled, circuit-breaker open, Chromium
+  // crashed, page timeout. We fall through to step 3 in those cases.
+  const rendered = await renderPage(url);
+  if (rendered && rendered.text.length > 200) {
+    const renderedLd = parseJobPostingLD(rendered.html);
+    // Prefer rendered JSON-LD (post-hydration, most complete) over direct-
+    // fetch's (shell-only, may be stale or partial).
+    const mergedLd = renderedLd || (direct && direct.ldFields) || null;
     const salary = (mergedLd && mergedLd.salary)
-      || extractSalaryFromText(jina.text)
+      || extractSalaryFromText(rendered.text)
+      || extractSalaryFromHtml(rendered.html)
       || null;
     const fields = mergedLd ? { ...mergedLd, salary } : null;
     return {
       fields,
-      text: jina.text,
-      html: '',
+      text: rendered.text,
+      html: rendered.html.slice(0, 200000),
       salary,
-      _via: fields ? 'jina+ld' : 'jina',
+      _via: fields ? 'render+ld' : 'render',
     };
   }
 
   // ── Step 3: use direct-fetch result if we have one ──────────────────────
-  // Happens on SSR sites where direct-fetch returned usable text but Jina
-  // failed. Still usable.
+  // Happens when render failed (disabled, circuit-broken, timeout) but
+  // direct-fetch got us something. Better than slug fallback when available.
   if (direct && direct.text.length > 200) {
     const salary = (direct.ldFields && direct.ldFields.salary)
       || extractSalaryFromText(direct.text)
@@ -1439,6 +1348,9 @@ async function fetchATS(rawUrl) {
   }
 
   // ── Step 4: slug fallback ────────────────────────────────────────────────
+  // Last resort. Returns company/title guessed from URL path only — no
+  // location, salary, description, or workType. The frontend surfaces a
+  // "use the extension for better extraction" nudge when it sees _via='slug'.
   return { fields: slugFallback(url), text: '', html: '', salary: null, _via: 'slug' };
 }
 

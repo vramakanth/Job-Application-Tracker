@@ -15,11 +15,14 @@
 // and fall through to its existing Jina + slug paths.
 
 const DISABLE_RENDER = process.env.DISABLE_RENDER === '1';
+const CIRCUIT_BREAKER_THRESHOLD = 3;
+const CIRCUIT_BREAKER_COOLDOWN_MS = 60_000;
 
 let _browser = null;
 let _launchPromise = null;
 let _renderMutex = Promise.resolve();
 let _consecutiveFailures = 0;
+let _circuitOpenedAt = 0;
 
 /**
  * Lazy-launch a shared browser instance. All callers await the same promise
@@ -103,12 +106,18 @@ async function renderPage(url, { timeoutMs = 8000 } = {}) {
   await prev;
 
   try {
-    // Circuit breaker: if the last 3 renders have failed, stop trying for
-    // a bit so we don't repeatedly pay the launch cost on a broken browser.
-    // The next parse request after a cool-down period will retry fresh.
-    if (_consecutiveFailures >= 3) {
-      console.warn('[render] circuit-breaker open after 3 failures — skipping');
-      return null;
+    // Circuit breaker: if the last 3 renders have failed in a row, stop
+    // trying for 60 seconds so we don't repeatedly pay the launch cost on
+    // a broken browser. After the cooldown window, the next call tries
+    // fresh — if it fails again, the circuit re-opens.
+    if (_consecutiveFailures >= CIRCUIT_BREAKER_THRESHOLD) {
+      if (Date.now() - _circuitOpenedAt < CIRCUIT_BREAKER_COOLDOWN_MS) {
+        return null;
+      }
+      // Cooldown passed — reset and give it another shot.
+      console.log('[render] circuit-breaker cooldown elapsed — retrying');
+      _consecutiveFailures = 0;
+      _circuitOpenedAt = 0;
     }
 
     const browser = await getBrowser();
@@ -167,6 +176,10 @@ async function renderPage(url, { timeoutMs = 8000 } = {}) {
     }
   } catch (e) {
     _consecutiveFailures++;
+    if (_consecutiveFailures === CIRCUIT_BREAKER_THRESHOLD) {
+      _circuitOpenedAt = Date.now();
+      console.warn(`[render] circuit-breaker opened after ${CIRCUIT_BREAKER_THRESHOLD} failures — pausing for ${CIRCUIT_BREAKER_COOLDOWN_MS/1000}s`);
+    }
     console.warn(`[render] failed (${_consecutiveFailures}): ${e.message}`);
     return null;
   } finally {

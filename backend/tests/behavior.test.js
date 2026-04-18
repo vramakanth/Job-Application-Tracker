@@ -3014,84 +3014,62 @@ t('Parse-status cycle helper exists and displays progressive hints', () => {
   if (cancels < 2) throw new Error('cycle not cancelled at phase transitions (timers leak)');
 });
 
-t('Jina timeout raised to 18s for JS-heavy SPA career portals', () => {
-  // User reported slow parses. Many SPA portals take 12+ seconds for Jina
-  // to hydrate the DOM before salary text appears. 18s gives headroom.
-  const idx = serverSrc.indexOf("fetchTimeout('https://r.jina.ai");
-  if (idx < 0) throw new Error('Jina call site not found');
-  const body = serverSrc.slice(idx, idx + 800);
-  const m = body.match(/,\s*(\d+)\s*\)/);
-  if (!m) throw new Error('Jina fetchTimeout has no explicit timeout');
-  const t = parseInt(m[1], 10);
-  if (t < 18000) throw new Error(`Jina timeout is ${t}ms — expected ≥18000 for SPA sites`);
-});
-
-t('Jina uses text format (v1.15.1: HTML format reverted)', () => {
-  // v1.15 tried X-Return-Format:'html' to parse <script> JSON-LD from
-  // Jina-rendered DOM — turned out Jina strips <script> tags regardless
-  // of format, so the gain was illusory. Reverted in v1.15.1 along with
-  // the retry loop that was blowing the audit timeout budget.
-  const idx = serverSrc.indexOf("fetchTimeout('https://r.jina.ai");
-  const body = serverSrc.slice(idx, idx + 800);
-  if (!/['"]X-Return-Format['"]\s*:\s*['"]text['"]/.test(body)) {
-    throw new Error("Jina should request 'text' format — 'html' doesn't expose script tags anyway");
+t('Chromium render is the JS-rendering step (Jina reader removed in v1.17)', () => {
+  // v1.17: r.jina.ai removed from fetchATS — our own Chromium via render.js
+  // replaces it. Any reference to r.jina.ai/ in fetchATS is a regression.
+  const fatsIdx = serverSrc.indexOf('async function fetchATS');
+  const fatsEnd = serverSrc.indexOf('return { fields: slugFallback', fatsIdx);
+  const body = serverSrc.slice(fatsIdx, fatsEnd);
+  if (/r\.jina\.ai/.test(body)) {
+    throw new Error('r.jina.ai/ still referenced in fetchATS — should be fully yanked');
+  }
+  if (!/renderPage\(url\)/.test(body)) {
+    throw new Error('renderPage not called in fetchATS');
   }
 });
 
-t('SPA_HOSTS list defined + includes known problem sites', () => {
-  // v1.16: Jina can't give us SPA JSON-LD regardless of format, so we run
-  // our own Chromium for these hosts. If an SPA ATS is added without
-  // being on this list, it'll fall through to Jina and keep producing
-  // slug-fallback garbage.
-  if (!/const SPA_HOSTS\s*=/.test(serverSrc)) throw new Error('SPA_HOSTS not defined');
-  const required = [
-    'jobs.ashbyhq.com', 'apply.workable.com', 'myworkdayjobs.com',
-    'bamboohr.com', 'jobs.apple.com'
-  ];
-  for (const host of required) {
-    if (!serverSrc.includes(`'${host}'`)) {
-      throw new Error(`SPA_HOSTS missing ${host}`);
-    }
+t('render is universal (no SPA host allowlist)', () => {
+  // v1.17: removed SPA_HOSTS/isSpaHost. Render runs for every URL that
+  // direct-fetch did not fully resolve. Direct-fetch's early-exit still
+  // handles SSR sites fast (no Chromium launched). Allowlists are a
+  // maintenance burden — as new ATS platforms ship SPAs, we'd need to
+  // remember to add them or they'd silently slug-fallback.
+  if (/const SPA_HOSTS\s*=/.test(serverSrc)) {
+    throw new Error('SPA_HOSTS reintroduced — render should run for all non-SSR URLs');
+  }
+  if (/function isSpaHost/.test(serverSrc)) {
+    throw new Error('isSpaHost reintroduced — should not exist');
   }
 });
 
-t('render branch sits BEFORE Jina in fetchATS (short-circuits for SPAs)', () => {
-  // Ordering matters: direct-fetch → (render for SPAs) → Jina → slug.
-  // If render were after Jina, we'd always pay Jina's 18s latency first
-  // even when we know it can't help.
+t('render branch ordering: after direct-fetch early-exit, before slug', () => {
+  // direct-fetch SSR early-exit → render → direct-fetch incomplete fallback
+  // → slug. If render moved before direct-fetch, every parse would launch
+  // Chromium (memory blown on Render Starter). If after slug, slug would
+  // always fire first — render would be dead code.
   const body = serverSrc.slice(
     serverSrc.indexOf('async function fetchATS'),
     serverSrc.indexOf("return { fields: slugFallback", serverSrc.indexOf('async function fetchATS'))
   );
-  const renderIdx = body.indexOf('renderPage(url)');
-  const jinaIdx   = body.indexOf('r.jina.ai');
-  if (renderIdx < 0) throw new Error('renderPage not called in fetchATS');
-  if (jinaIdx < 0)   throw new Error('Jina not called in fetchATS');
-  if (renderIdx > jinaIdx) {
-    throw new Error('renderPage runs AFTER Jina — should be BEFORE for SPA short-circuit');
+  const directIdx  = body.indexOf('fetchTimeout(url');
+  const earlyExit  = body.indexOf("_via: 'fetch-ld'");
+  const renderIdx  = body.indexOf('renderPage(url)');
+  if (directIdx < 0 || earlyExit < 0 || renderIdx < 0) {
+    throw new Error('expected direct-fetch, early-exit, and renderPage in fetchATS');
+  }
+  if (!(directIdx < earlyExit && earlyExit < renderIdx)) {
+    throw new Error('fetchATS ordering wrong: expected direct-fetch → early-exit → render');
   }
 });
 
-t('render branch is gated on isSpaHost (no Chromium for SSR sites)', () => {
-  // We do NOT want to launch Chromium for Greenhouse/iCIMS/Lever — direct-
-  // fetch handles those fine. The render branch must be inside an
-  // isSpaHost() check.
-  const body = serverSrc.slice(serverSrc.indexOf('async function fetchATS'));
-  const renderIdx = body.indexOf('renderPage(url)');
-  if (renderIdx < 0) throw new Error('renderPage not called');
-  const before = body.slice(Math.max(0, renderIdx - 200), renderIdx);
-  if (!/isSpaHost\(url\)/.test(before)) {
-    throw new Error('renderPage not gated on isSpaHost — would launch Chromium for every parse');
-  }
-});
-
-t('render failure falls through to Jina (graceful degradation)', () => {
+t('render failure falls through to direct-fetch and slug (graceful degradation)', () => {
   // If Chromium won't launch or circuit-breaker is open, renderPage returns
-  // null. fetchATS must CONTINUE to the Jina branch rather than returning
-  // an error — otherwise a broken browser kills parse entirely.
+  // null. fetchATS must CONTINUE to the direct-fetch reuse step and slug
+  // fallback rather than throwing — otherwise a broken browser kills parse
+  // entirely.
   const body = serverSrc.slice(serverSrc.indexOf('async function fetchATS'));
   const renderIdx = body.indexOf('renderPage(url)');
-  const block = body.slice(renderIdx, renderIdx + 1500);
+  const block = body.slice(renderIdx, renderIdx + 2000);
   // The render-success block should be guarded by `if (rendered && ...)`
   // so a null result falls through rather than short-circuiting.
   if (!/if\s*\(\s*rendered\s*&&/.test(block)) {
@@ -3121,17 +3099,22 @@ t('render.js: puppeteer + chromium required lazily (not at module load)', () => 
   }
 });
 
-t('Jina is single-attempt (no retry — v1.15.1 fix)', () => {
-  // v1.15 added a retry loop that pushed worst-case parse-job latency to
-  // 47s (direct 10s + Jina 18s + 1s pause + Jina 18s), exceeding the
-  // audit script's 30s per-URL timeout. 90% of URLs timed out from the
-  // client side. Reverted in v1.15.1.
-  const idx = serverSrc.indexOf('async function fetchATS');
-  const end = serverSrc.indexOf('return { fields: slugFallback', idx);
-  const body = serverSrc.slice(idx, end);
-  // Must NOT contain an attempt-counted retry loop around the Jina call
-  if (/for\s*\(\s*let\s+attempt\s*=\s*0[^}]{0,500}r\.jina\.ai/.test(body)) {
-    throw new Error('Jina retry loop reintroduced — will blow audit timeout budget');
+t('render circuit-breaker has time-based cooldown (auto-resets)', () => {
+  // v1.17 improvement: the previous circuit breaker opened permanently
+  // after 3 failures. A bad run (network flakes mid-audit) would disable
+  // rendering until manual redeploy. Now it auto-resets after 60s so
+  // transient failures self-heal.
+  const fs = require('fs');
+  const path = require('path');
+  const renderSrc = fs.readFileSync(path.join(__dirname, '../render.js'), 'utf8');
+  if (!/CIRCUIT_BREAKER_COOLDOWN_MS/.test(renderSrc)) {
+    throw new Error('no cooldown constant — circuit breaker never resets');
+  }
+  if (!/_circuitOpenedAt/.test(renderSrc)) {
+    throw new Error('circuit breaker not tracking open timestamp');
+  }
+  if (!/Date\.now\(\)\s*-\s*_circuitOpenedAt/.test(renderSrc)) {
+    throw new Error('cooldown check missing — _circuitOpenedAt never read');
   }
 });
 

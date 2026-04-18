@@ -69,21 +69,51 @@ t('returns null fields on invalid URL', () => {
 console.log('\n── Server architecture');
 t('detectATS removed',           () => not(serverSrc, 'detectATS'));
 t('UA constant defined',         () => has(serverSrc, "const UA = 'Mozilla"));
-t('UA in request headers (x2)',  () => { if ((serverSrc.match(/'User-Agent': UA/g)||[]).length < 2) throw new Error('only ' + (serverSrc.match(/'User-Agent': UA/g)||[]).length + ' refs'); });
-t('Jina reader as primary path', () => has(serverSrc, 'r.jina.ai/'));
+t('UA in request headers (direct-fetch only)', () => {
+  // v1.17: Jina reader removed, so only direct-fetch uses the UA constant
+  // directly. Chromium sets its UA via page.setUserAgent() in render.js —
+  // still a real-browser UA, just a different mechanism.
+  const refs = (serverSrc.match(/'User-Agent': UA/g) || []).length;
+  if (refs < 1) throw new Error('UA constant not used in any request header');
+});
+t('Chromium render as primary path for SPAs', () => {
+  // v1.17: Jina reader removed. Our own Chromium (via render.js) is the
+  // JS-rendering path. Lives in backend/render.js, imported into server.js.
+  if (!/require\(['"]\.\/render['"]\)/.test(serverSrc)) {
+    throw new Error('server.js does not require ./render');
+  }
+});
+t('Jina reader yanked from fetchATS',   () => {
+  // v1.17 removed r.jina.ai from fetchATS. s.jina.ai (Jina search endpoint,
+  // used by mirror-finder — a different feature) is still allowed.
+  if (/r\.jina\.ai/.test(serverSrc)) {
+    throw new Error('r.jina.ai still referenced — Jina reader should be fully removed');
+  }
+});
 t('Promise.race hard timeout',   () => has(serverSrc, 'Promise.race([fetchProm'));
 t('fetchTimeout default 20s',    () => has(serverSrc, 'ms = 20000'));
 t('all via markers present',    () => {
-  // v1.14 refactor added +ld variants for JSON-LD harvest paths. Some are
-  // inside ternary expressions so we check for the quoted literal anywhere
-  // in the source after an `_via:` occurrence.
-  const markers = ["'fetch-ld'", "'fetch+ld'", "'fetch'", "'jina+ld'", "'jina'", "'slug'"];
+  // v1.17: jina/jina+ld replaced with render/render+ld. fetch-ld (direct +
+  // JSON-LD, SSR happy path) and slug (last resort) are unchanged.
+  const markers = ["'fetch-ld'", "'fetch+ld'", "'fetch'", "'render+ld'", "'render'", "'slug'"];
   for (const m of markers) {
     if (!serverSrc.includes(m)) throw new Error(`marker ${m} not found in server.js`);
   }
 });
+t('no jina/render-obsolete via markers', () => {
+  // v1.17 regression guard: these markers must not reappear in server.js.
+  for (const m of ["'jina'", "'jina+ld'"]) {
+    if (serverSrc.includes(m)) throw new Error(`stale marker ${m} present — should be render/render+ld`);
+  }
+});
 t('parseJobPostingLD defined',   () => has(serverSrc, 'function parseJobPostingLD'));
-t('cleanJinaMarkdown defined',   () => has(serverSrc, 'function cleanJinaMarkdown'));
+t('cleanJinaMarkdown removed',   () => {
+  // v1.17: markdown cleanup only existed for Jina output. Chromium returns
+  // innerText — no markdown to clean. Helper should be dead-code-deleted.
+  if (/function cleanJinaMarkdown/.test(serverSrc)) {
+    throw new Error('cleanJinaMarkdown should be deleted, not retained');
+  }
+});
 t('htmlToText defined',          () => has(serverSrc, 'function htmlToText'));
 t('extractSalaryFromText',       () => has(serverSrc, 'function extractSalaryFromText'));
 t('extractSalaryFromHtml (bdi)', () => has(serverSrc, 'function extractSalaryFromHtml'));
@@ -250,20 +280,6 @@ t('Mirror finder excludes the original URL\'s host from results', () => {
   const idx = serverSrc.indexOf("app.post('/api/find-posting-mirror'");
   const body = serverSrc.slice(idx, idx + 3000);
   if (!/origHost/.test(body)) throw new Error('no original-host exclusion');
-});
-
-// ── fetchATS Jina branch: full markdown→plain scrub ─────────────────────────
-console.log('\n── Posting fetch markdown scrub');
-t('cleanJinaMarkdown strips bold/italic/headings/blockquotes/bullets', () => {
-  // v1.14 extracted Jina markdown cleanup from fetchATS into its own helper
-  // so it's reusable and testable. Check the helper body.
-  const idx = serverSrc.indexOf('function cleanJinaMarkdown');
-  const body = serverSrc.slice(idx, idx + 2000);
-  if (!/\\s\*#\{1,6\}\\s\+/.test(body)) throw new Error('no heading strip');
-  if (!/\\\*\\\*\|__/.test(body)) throw new Error('no bold strip');
-  if (!/\\s\*>\\s\?/.test(body)) throw new Error('no blockquote strip');
-  if (!/\[-\*\+\]\\s\+/.test(body)) throw new Error('no bullet normalize');
-  if (!/```\[\\s\\S\]\*\?```/.test(body)) throw new Error('no code-fence strip');
 });
 
 console.log(`\n${pass}/${pass+fail} passed${fail ? ' ← FAILURES' : '  ✓'}`);
