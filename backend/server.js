@@ -1538,30 +1538,62 @@ app.post('/api/insights', authMiddleware, tokenCapMiddleware, async (req, res) =
   //   - overview.founded/hq/industry/employees → Wikidata (fetchWikidataOverview)
   //   - stock → Finnhub
   //   - news → Finnhub company-news or Google News RSS
-  // Total AI output ~800-1200 tokens, well under Groq's 12K TPM free tier.
+  // If Wikipedia doesn't have an extract for the company (common for startups
+  // and small firms), we ALSO ask AI for a company overview + overview facts
+  // in a secondary field. Flagged with companyOverviewSource: 'ai' so the UI
+  // can label it.
+  const needAiCompanyFallback = !wiki?.extract || wiki.extract.length < 150;
+  const companyFallbackSchema = needAiCompanyFallback ? `
+"companyFallback":{"overview":"2-paragraph description","founded":"YYYY or null","hq":"City, Country or null","industry":"industry or null","employees":"range like '50-200' or null"},` : '';
   const usr = `${wikiContext}Research ${company} (${title} role). Return ONLY valid compact JSON.
 ${postingText?'Job posting context: '+postingText.slice(0,600):''}
+${needAiCompanyFallback ? `\nNOTE: Wikipedia has no good article for this company — use your own knowledge + the job posting to fill "companyFallback". If you don't know, use null.` : ''}
 
 {"workforce":{"headcount":"N,NNN","headcountTrend":"growing","avgTenure":"2.5 years","remoteRatio":40,"recentLayoffs":"None","visaSponsorship":"yes","visaNote":"H-1B support","topLocations":["City, ST","Remote"],"note":"Estimated from public data."},
 "culture":{"overallRating":3.8,"workLifeBalance":3.5,"careerOpp":3.6,"leadership":3.5,"numRatings":"1,234","ceoApproval":72,"recommend":68,"summary":"Culture summary paragraph"},
 "roleIntel":"2-3 paragraphs about this role and team",
-"flags":{"green":["positive signal"],"red":["concern to watch"]}}`
+${companyFallbackSchema}"flags":{"green":["positive signal"],"red":["concern to watch"]}}`
   try {
     const ticker = stock && !stock.error ? stock.ticker : null;
-    const [raw, news, overview] = await Promise.all([
+    const [raw, news, wikidataOverview] = await Promise.all([
       callAI(['groq','openrouter','google'], sys, usr, 2000, req, 'insights'),
       fetchCompanyNews(company, ticker, finnhubKey),
       fetchWikidataOverview(company, wiki?.qid || null),
     ]);
     const data = parseJson(raw);
+    // Merge Wikipedia + Wikidata + AI fallback into a single picture.
+    // Priority: Wikipedia prose > AI overview. Wikidata facts > AI facts.
+    let companyOverview = wiki?.extract || '';
+    let overview = wikidataOverview;
+    let companyOverviewSource = 'wikipedia';
+    if (!companyOverview && data.companyFallback?.overview) {
+      companyOverview = data.companyFallback.overview;
+      companyOverviewSource = 'ai';
+    }
+    if (!overview && data.companyFallback) {
+      const fb = data.companyFallback;
+      const aiFacts = {
+        founded:   fb.founded && fb.founded !== 'null' ? String(fb.founded) : '',
+        hq:        fb.hq && fb.hq !== 'null' ? fb.hq : '',
+        industry:  fb.industry && fb.industry !== 'null' ? fb.industry : '',
+        employees: fb.employees && fb.employees !== 'null' ? fb.employees : '',
+      };
+      if (aiFacts.founded || aiFacts.hq || aiFacts.industry || aiFacts.employees) {
+        overview = aiFacts;
+      }
+    }
+    // Strip the fallback from the data payload — it's merged, shouldn't leak
+    delete data.companyFallback;
     res.json({
       ...data,
-      overview:        overview || null,         // Wikidata structured facts (may be null if not found)
-      companyOverview: wiki?.extract || '',      // Wikipedia prose
-      wikipediaUrl:    wiki?.url || '',
+      overview:               overview || null,
+      companyOverview,
+      companyOverviewSource,                          // 'wikipedia' | 'ai' — UI labels AI-sourced content
+      wikipediaUrl:           wiki?.url || '',
       news,
       stock,
-      generatedAt: Date.now(),
+      generatedAt:            Date.now(),
+      dynamicUpdatedAt:       Date.now(),             // news + stock freshness — same ts on initial research
     });
   } catch (e) {
     console.error('insights:', e.message);
@@ -1577,6 +1609,54 @@ ${postingText?'Job posting context: '+postingText.slice(0,600):''}
     }
     res.status(500).json({ error: e.message });
   }
+});
+
+// Dynamic-only refresh: re-fetches news + stock without running AI.
+// Purpose: keep fast-changing signals fresh without spending AI tokens. UI
+// calls this on tab open if last refresh is >30 min old, and on explicit
+// "Refresh prices & news" button click. NO tokenCapMiddleware since no AI.
+app.post('/api/insights/refresh-dynamic', authMiddleware, async (req, res) => {
+  const { company, ticker: providedTicker, finnhubKey } = req.body;
+  if (!company) return res.status(400).json({ error: 'company required' });
+
+  let stock = null;
+  let ticker = providedTicker || null;
+  if (finnhubKey) {
+    try {
+      // If we don't have a ticker from the prior research, resolve one now.
+      // (This makes the endpoint self-sufficient — can be called even if
+      //  the stored insights didn't persist a ticker for some reason.)
+      if (!ticker) {
+        const sr = await fetchTimeout(`https://finnhub.io/api/v1/search?q=${encodeURIComponent(company)}&token=${finnhubKey}`);
+        if (sr.ok) {
+          const sd = await sr.json();
+          const match = (sd.result||[]).find(r => r.type==='Common Stock' && !r.symbol.includes('.'));
+          if (match) ticker = match.symbol;
+        }
+      }
+      if (ticker) {
+        const [qr,pr] = await Promise.allSettled([
+          fetchTimeout(`https://finnhub.io/api/v1/quote?symbol=${ticker}&token=${finnhubKey}`),
+          fetchTimeout(`https://finnhub.io/api/v1/stock/profile2?symbol=${ticker}&token=${finnhubKey}`),
+        ]);
+        const q = qr.status==='fulfilled'&&qr.value.ok ? await qr.value.json() : {};
+        const p = pr.status==='fulfilled'&&pr.value.ok ? await pr.value.json() : {};
+        stock = { ticker, price: q.c, change: q.d, changePct: q.dp,
+                  marketCap: p.marketCapitalization ? p.marketCapitalization*1e6 : null };
+      } else {
+        stock = { error: 'No public ticker found' };
+      }
+    } catch (e) {
+      stock = { error: e.message };
+    }
+  }
+
+  // News is free (Finnhub if ticker+key, Google News RSS otherwise)
+  let news = [];
+  try { news = await fetchCompanyNews(company, ticker, finnhubKey); }
+  catch (e) { console.warn('refresh-dynamic news fail:', e.message); }
+
+  res.json({ stock, news, dynamicUpdatedAt: Date.now() });
 });
 
 app.post('/api/outreach-targets', authMiddleware, tokenCapMiddleware, async (req, res) => {

@@ -173,11 +173,20 @@ t('No growing/shrinking trend badge in section header', () => {
   const wf = src.slice(wfStart, wfEnd);
   if (wf.includes('insight-section-badge') && wf.includes('trendColor')) throw new Error('trend badge in header');
 });
-t('Stat cards use consistent border layout', () => {
+t('Stat cards are borderless (v1.8.0 insights refactor — user asked for cleaner look)', () => {
   const wfStart = src.indexOf('function renderWorkforceSection');
   const wfEnd   = src.indexOf('\nfunction renderCompensationSection');
   const wf = src.slice(wfStart, wfEnd);
-  if (!wf.includes('border-right:1px solid var(--border)')) throw new Error('no bordered stat cards');
+  // After the v1.8.0 refactor, the stat card helper must NOT add a border-right.
+  // Old code: `border-right:1px solid var(--border)` inside statCard. The
+  // visual cluttered horizontal stripe between cards is gone by user request.
+  if (/statCard\s*=\s*\([^)]*\)\s*=>\s*value\s*\?\s*`\s*<div[^>]*border-right:\s*1px/.test(wf)) {
+    throw new Error('statCard still adds border-right — insights refactor regressed');
+  }
+  // And the outer statsRow should not wrap everything in a boxed border
+  if (/statsRow\s*=\s*`[\s\S]{0,200}border:\s*1px\s+solid/.test(wf)) {
+    throw new Error('statsRow container still has outer border — insights refactor regressed');
+  }
 });
 t('avgTenure is a stat card (not tiny sub-label)', () => {
   const wfStart = src.indexOf('function renderWorkforceSection');
@@ -383,12 +392,15 @@ t('.insight-card-value uses display serif', () => {
 
 // ── Insights tab: editorial layout + readable type ──────────────────────────
 console.log('\n── Insights tab layout');
-t('Overview strip uses hairline top/bottom — no card box', () => {
+t('Overview strip is borderless (v1.8.0 — user asked to remove horizontal lines)', () => {
   const m = src.match(/\.insights-grid\s*\{[^}]*\}/);
   if (!m) throw new Error('.insights-grid rule missing');
-  if (/\bborder\s*:\s*1px/.test(m[0])) throw new Error('outer box border still present on .insights-grid');
-  if (!/border-top:\s*1px/.test(m[0]))    throw new Error('top hairline missing');
-  if (!/border-bottom:\s*1px/.test(m[0])) throw new Error('bottom hairline missing');
+  // Old design had hairline top + bottom borders. User feedback: "remove
+  // horizontal section lines and lot of horizontal free space". Both should
+  // now be absent.
+  if (/\bborder\s*:\s*1px/.test(m[0]))     throw new Error('outer box border still present on .insights-grid');
+  if (/border-top:\s*1px/.test(m[0]))      throw new Error('top hairline should be removed (refactor regression)');
+  if (/border-bottom:\s*1px/.test(m[0]))   throw new Error('bottom hairline should be removed (refactor regression)');
 });
 t('.insight-card has no right-border or background', () => {
   const m = src.match(/^\.insight-card\s*\{[^}]*\}/m);

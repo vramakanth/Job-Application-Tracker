@@ -443,7 +443,7 @@ t('News is fetched from public sources, not hallucinated by AI', () => {
   }
 });
 
-t('Company overview comes from Wikipedia, not AI', () => {
+t('Company overview comes from Wikipedia first, AI only as fallback', () => {
   if (!/async function fetchWikipediaSummary/.test(serverSrc)) {
     throw new Error('fetchWikipediaSummary helper missing');
   }
@@ -454,18 +454,35 @@ t('Company overview comes from Wikipedia, not AI', () => {
   if (!/User-Agent.*Summit/.test(serverSrc)) {
     throw new Error('Wikipedia fetch missing required User-Agent header');
   }
-  // Schema must NOT include "companyOverview" anymore
   const insightsIdx = serverSrc.indexOf("app.post('/api/insights'");
-  const block = serverSrc.slice(insightsIdx, insightsIdx + 6000);
+  const block = serverSrc.slice(insightsIdx, insightsIdx + 8000);
   const noComments = block.replace(/\/\/[^\n]*/g, '');
   const schemaMatch = noComments.match(/usr\s*=\s*`[\s\S]+?`/);
+  // The primary schema must NOT request companyOverview — Wikipedia handles
+  // that. AI is asked for companyFallback (conditional) when Wikipedia has
+  // nothing, which is a distinct field.
   if (/"companyOverview":/.test(schemaMatch[0])) {
     throw new Error('companyOverview still in AI schema — should come from Wikipedia');
   }
-  // Wikipedia extract used as AI grounding context + attached to response
-  if (!/wikiContext/.test(block))        throw new Error('Wikipedia extract not used as AI grounding');
-  if (!/companyOverview:\s*wiki\?/.test(block)) throw new Error('Wikipedia extract not attached to companyOverview in response');
-  if (!/wikipediaUrl:\s*wiki\?/.test(block))    throw new Error('Wikipedia source URL not attached to response for attribution');
+  // Wikipedia extract must be passed as AI grounding context
+  if (!/wikiContext/.test(block)) throw new Error('Wikipedia extract not used as AI grounding');
+  // Response's companyOverview should start from Wikipedia, then fall back to
+  // AI via an intermediate variable. Accept either the old direct-assignment
+  // pattern or the new conditional merge pattern.
+  const hasDirectAssign = /companyOverview:\s*wiki\?/.test(block);
+  const hasIntermediate = /let\s+companyOverview\s*=\s*wiki\?\.extract/.test(block) ||
+                          /companyOverview\s*=\s*wiki\?\.extract/.test(block);
+  if (!hasDirectAssign && !hasIntermediate) {
+    throw new Error('Wikipedia extract not preferred in companyOverview assignment');
+  }
+  // AI fallback must only fire when Wikipedia has no extract — guard against
+  // accidental AI calls for well-documented companies
+  if (hasIntermediate && !/if\s*\(\s*!companyOverview/.test(block)) {
+    throw new Error('AI fallback not gated on !companyOverview — would fire even when Wikipedia succeeds');
+  }
+  if (!/wikipediaUrl:\s*wiki\?/.test(block)) {
+    throw new Error('Wikipedia source URL not attached to response for attribution');
+  }
 });
 
 t('Overview structured facts (founded/hq/industry/employees) come from Wikidata, not AI', () => {
@@ -539,7 +556,9 @@ t('Frontend error-state fallback shape does not reference removed fields', () =>
 
 t('/api/insights returns distinct 429 response when all providers rate-limited', () => {
   const insightsIdx = serverSrc.indexOf("app.post('/api/insights'");
-  const block = serverSrc.slice(insightsIdx, insightsIdx + 5500);
+  // Slice window intentionally generous — handler grew when AI company
+  // fallback + merge logic was added in v1.8.0
+  const block = serverSrc.slice(insightsIdx, insightsIdx + 9000);
   if (!/status\(429\)/.test(block))                       throw new Error('insights does not return 429 distinctly');
   if (!/error:\s*['"]rate_limited['"]/.test(block))       throw new Error('no error code "rate_limited" returned');
 });
@@ -2405,6 +2424,153 @@ t('Mention dropdown dismissed on editor blur + teardown', () => {
   const tdBody = feSrc.slice(tdIdx, tdIdx + 800);
   if (!/_hideMention/.test(tdBody)) {
     throw new Error('teardown does not hide mention dropdown — leaks UI');
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// Insights pane refactor (v1.8.0)
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── Insights refactor');
+
+t('Insights header no longer duplicates company · title (shown in detail header)', () => {
+  const idx = feSrc.indexOf('function renderInsightsTab');
+  const body = feSrc.slice(idx, idx + 3000);
+  // The class was .insights-subtitle showing `${j.company} · ${j.title}`.
+  // Header region should no longer contain that template fragment.
+  if (/insights-subtitle[\s\S]{0,200}\$\{esc\(j\.company\)\}\s*·\s*\$\{esc\(j\.title\)\}/.test(body)) {
+    throw new Error('insights header still renders duplicate company · title');
+  }
+});
+
+t('Insights header has split refresh buttons (dynamic + full AI re-run)', () => {
+  const idx = feSrc.indexOf('function renderInsightsTab');
+  const body = feSrc.slice(idx, idx + 3500);
+  // Primary cheap refresh button — uses the new function
+  if (!/onclick="refreshDynamicInsights\('\$\{j\.id\}'\)"/.test(body)) {
+    throw new Error('no "Refresh prices & news" button wired to refreshDynamicInsights');
+  }
+  // Full AI re-research button — same runInsights call, re-labeled. Both
+  // the button and the label must exist; they don't have to be adjacent
+  // in the template because a spinner SVG sits between them.
+  if (!/onclick="runInsights\('\$\{j\.id\}'\)"/.test(body)) {
+    throw new Error('no runInsights button');
+  }
+  if (!/Re-run research/.test(body)) {
+    throw new Error('no "Re-run research" label for the AI-expensive action');
+  }
+});
+
+t('refreshDynamicInsights preserves AI fields, replaces only stock+news', () => {
+  if (!/async function refreshDynamicInsights/.test(feSrc)) throw new Error('refreshDynamicInsights missing');
+  const idx = feSrc.indexOf('async function refreshDynamicInsights');
+  // Scope strictly to this function's body — the next `async function` header
+  // is the upper bound. Otherwise we bleed into runInsights, which legitimately
+  // sets insightsLoading=true and falsely fails this test.
+  const nextFn = feSrc.indexOf('async function ', idx + 30);
+  const body = feSrc.slice(idx, nextFn > idx ? nextFn : idx + 2500);
+  // Must call the new endpoint
+  if (!/\/api\/insights\/refresh-dynamic/.test(body)) throw new Error('does not call /api/insights/refresh-dynamic');
+  // Must spread old insights first, then overlay stock+news (preserves AI fields)
+  if (!/\.\.\.j_ins,?/.test(body) && !/\.\.\.j\.insights/.test(body)) {
+    throw new Error('merge does not spread prior insights first — AI fields might be lost');
+  }
+  // Must set dynamicUpdatedAt timestamp
+  if (!/dynamicUpdatedAt/.test(body)) throw new Error('no dynamicUpdatedAt timestamp update');
+  // Must NOT reset insightsLoading flag (independent action — "Re-run research"
+  // button should stay clickable during a dynamic refresh)
+  if (/insightsLoading\s*=\s*true/.test(body)) {
+    throw new Error('dynamic refresh sets insightsLoading=true, disabling the other button');
+  }
+});
+
+t('Backend /api/insights/refresh-dynamic exists, is auth-gated, no token cap', () => {
+  if (!/app\.post\(['"]\/api\/insights\/refresh-dynamic['"]/.test(serverSrc)) {
+    throw new Error('refresh-dynamic endpoint missing');
+  }
+  const routeMatch = serverSrc.match(/app\.post\(['"]\/api\/insights\/refresh-dynamic['"],\s*([^,]+),\s*async/);
+  if (!routeMatch) throw new Error('refresh-dynamic route handler signature unexpected');
+  // Must use authMiddleware
+  if (!/authMiddleware/.test(routeMatch[1])) throw new Error('refresh-dynamic not auth-gated');
+  // Must NOT use tokenCapMiddleware (no AI is called)
+  if (/tokenCapMiddleware/.test(routeMatch[1])) throw new Error('refresh-dynamic uses tokenCapMiddleware but makes no AI calls');
+});
+
+t('refresh-dynamic endpoint does not call callAI (pure data refresh)', () => {
+  const idx = serverSrc.indexOf("app.post('/api/insights/refresh-dynamic'");
+  if (idx < 0) throw new Error('route not found');
+  // Take a generous slice; callAI should not appear within the handler
+  const handlerEnd = serverSrc.indexOf('\n});', idx);
+  const body = serverSrc.slice(idx, handlerEnd);
+  if (/callAI\(/.test(body)) throw new Error('refresh-dynamic calls callAI — defeats the purpose');
+});
+
+t('Insights tab open triggers dynamic refresh when data is >30 min old', () => {
+  const idx = feSrc.indexOf("if (t === 'insights')");
+  if (idx < 0) throw new Error('insights tab-switch branch missing');
+  const body = feSrc.slice(idx, idx + 1500);
+  if (!/30\s*\*\s*60\s*\*\s*1000|thirtyMinMs|1800000\b/.test(body)) {
+    throw new Error('no 30-minute staleness threshold for auto-refresh');
+  }
+  if (!/refreshDynamicInsights\(/.test(body)) {
+    throw new Error('tab-open does not trigger dynamic refresh');
+  }
+  // Must not trigger if already refreshing (race guard)
+  if (!/_dynamicRefreshing/.test(body)) {
+    throw new Error('no in-flight guard — could fire multiple concurrent refreshes');
+  }
+});
+
+t('Backend /api/insights asks AI for company fallback when Wikipedia is empty', () => {
+  // If Wikipedia has no extract (or a tiny one), the AI prompt includes a
+  // "companyFallback" schema so we can still show something for startups.
+  const idx = serverSrc.indexOf("app.post('/api/insights'");
+  const handlerEnd = serverSrc.indexOf('\n});', idx);
+  const body = serverSrc.slice(idx, handlerEnd);
+  if (!/companyFallback/.test(body)) {
+    throw new Error('no companyFallback schema in AI prompt');
+  }
+  // Must only include fallback schema when needed (conditional based on wiki.extract)
+  if (!/wiki\?\.extract\s*\|\|\s*wiki\.extract\.length\s*<|needAiCompanyFallback/.test(body)) {
+    throw new Error('fallback not conditioned on absent/short Wikipedia extract');
+  }
+});
+
+t('Insights response flags AI-sourced company overview with companyOverviewSource', () => {
+  const idx = serverSrc.indexOf("app.post('/api/insights'");
+  const handlerEnd = serverSrc.indexOf('\n});', idx);
+  const body = serverSrc.slice(idx, handlerEnd);
+  if (!/companyOverviewSource/.test(body)) throw new Error('no companyOverviewSource field');
+  // Must distinguish wikipedia from ai
+  if (!/['"]wikipedia['"]/.test(body) || !/['"]ai['"]/.test(body)) {
+    throw new Error('companyOverviewSource missing both wikipedia and ai values');
+  }
+});
+
+t('Frontend labels AI-generated company overviews (so user knows source)', () => {
+  const idx = feSrc.indexOf('function renderInsightsTab');
+  const body = feSrc.slice(idx, idx + 8000);
+  // When companyOverviewSource === 'ai', show an "AI-generated" badge instead
+  // of the Wikipedia link
+  if (!/companyOverviewSource\s*===\s*['"]ai['"]/.test(body)) {
+    throw new Error('no check for AI-generated source label');
+  }
+  if (!/AI-generated/.test(body)) {
+    throw new Error('no AI-generated badge text');
+  }
+});
+
+t('CSS cleanup: no horizontal borders on insights-grid + news items', () => {
+  // Per user feedback: these lines felt cluttered. Their removal is a
+  // regression guard — if someone reintroduces borders, this fails.
+  const gridLine = feSrc.match(/\.insights-grid\s*\{[^}]+\}/);
+  if (!gridLine) throw new Error('insights-grid CSS rule not found');
+  if (/border-top:\s*1px\s+solid/.test(gridLine[0]) || /border-bottom:\s*1px\s+solid/.test(gridLine[0])) {
+    throw new Error('.insights-grid still has border-top/bottom after refactor');
+  }
+  const newsLine = feSrc.match(/\.insight-news-item\s*\{[^}]+\}/);
+  if (!newsLine) throw new Error('insight-news-item CSS rule not found');
+  if (/border-bottom/.test(newsLine[0])) {
+    throw new Error('.insight-news-item still has border-bottom after refactor');
   }
 });
 

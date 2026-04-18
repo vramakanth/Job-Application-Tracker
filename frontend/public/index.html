@@ -471,15 +471,17 @@ input[type=\"file\"] { display: none; }
 .insights-subtitle { font-size: 13px; color: var(--text2); font-family: var(--mono); letter-spacing: 0.01em; }
 .insights-refresh-btn { padding: 8px 15px; background: transparent; color: var(--text2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; transition: all .15s; }
 .insights-refresh-btn:hover { border-color: var(--border2); color: var(--text); }
-/* Overview stat strip — flat fields, hairline top/bottom, no box */
-.insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0; margin-bottom: 36px; padding: 20px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+/* Overview stat strip — flat fields, NO borders above/below (user feedback:
+   horizontal lines made the pane feel cluttered). Just vertical space. */
+.insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0; margin-bottom: 28px; padding: 6px 0 18px; }
 .insight-card { padding: 4px 20px 4px 0; background: transparent; }
 .insight-card:last-child { padding-right: 0; }
 .insight-card-label { font-size: 11px; font-family: var(--mono); color: var(--text3); letter-spacing: .08em; margin-bottom: 7px; text-transform: uppercase; }
 .insight-card-value { font-size: 20px; font-weight: 500; color: var(--text); font-family: var(--font-display); letter-spacing: -0.01em; line-height: 1.2; }
 .insight-card-sub { font-size: 12px; color: var(--text3); margin-top: 4px; }
-/* Editorial section — no per-section border, generous margin, amber tick in header */
-.insight-section { margin-bottom: 44px; flex-shrink: 0; width: 100%; }
+/* Editorial section — no per-section border. Reduced margin (was 44px —
+   too much whitespace on a long page of content). */
+.insight-section { margin-bottom: 28px; flex-shrink: 0; width: 100%; }
 .insight-section:last-child { margin-bottom: 0; }
 .insight-section-header { display: flex; align-items: center; gap: 0; margin-bottom: 16px; }
 .insight-section-header::before { content: ''; display: inline-block; width: 3px; height: 13px; background: var(--accent-bg); border-radius: 1px; margin-right: 12px; flex-shrink: 0; }
@@ -498,9 +500,8 @@ input[type=\"file\"] { display: none; }
 .insight-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 24px; gap: 14px; text-align: center; }
 .insight-empty svg { opacity: 0.15; }
 .insight-empty p { font-size: 14px; color: var(--text2); line-height: 1.7; max-width: 320px; }
-.insight-news-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); text-decoration: none; transition: opacity .12s; }
-.insight-news-item:hover { opacity: .8; }
-.insight-news-item:last-child { border-bottom: none; }
+.insight-news-item { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; text-decoration: none; transition: opacity .12s; }
+.insight-news-item:hover { opacity: .7; }
 .insight-news-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; margin-top: 7px; }
 .insight-news-content { flex: 1; min-width: 0; }
 .insight-news-headline { font-size: 15px; color: var(--text); line-height: 1.5; margin-bottom: 4px; }
@@ -918,7 +919,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       Don't have an account? <a onclick="showScreen('register')">Create one</a>
       <br><a onclick="showScreen('forgot')" style="font-size:12px;color:var(--text3)">Forgot password?</a>
     </div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.7.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.8.0 · private beta</div>
   </div>
 </div>
 
@@ -958,7 +959,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     </div>
     <button id="register-btn" class="auth-btn" onclick="doRegister()">Create account</button>
     <div class="auth-switch">Already have an account? <a onclick="showScreen('login')">Sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.7.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.8.0 · private beta</div>
   </div>
 </div>
 
@@ -974,7 +975,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <div class="auth-field"><label>CONFIRM PASSWORD</label><input id="recover-confirmpw" type="password" placeholder="Confirm new password"></div>
     <button id="recover-btn" class="auth-btn" onclick="recoverAccount()">Reset password</button>
     <div class="auth-switch"><a onclick="showScreen('login')">Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.7.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.8.0 · private beta</div>
   </div>
 </div>
 
@@ -1051,7 +1052,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       <div class="user-avatar" id="user-avatar" style="display:flex">VR</div>
       <div style="flex:1;min-width:0">
         <div class="user-name" id="user-name-display">user</div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.7.0</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.8.0</div>
       </div>
 
       <button class="user-bar-settings" onclick="doLogout()" title="Sign out" style="color:var(--text3)" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">
@@ -1258,7 +1259,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
 <script>
 const API = '';
-const APP_VERSION = '1.7.0';
+const APP_VERSION = '1.8.0';
 let token = localStorage.getItem('applied_token');
 let currentUser = localStorage.getItem('applied_user');
 let jobs = {}, currentJobId = null, currentFilter = 'all', activeDetailTab = 'notes';
@@ -2730,11 +2731,19 @@ function switchTab(t) {
   }
   activeDetailTab = t;
   renderDetail();
-  // Auto-fetch insights on first load only (no auto-refresh)
+  // Insights tab: first-load runs full research. Subsequent opens trigger a
+  // cheap (no-AI) dynamic refresh if the news+stock data is >30 min old —
+  // keeps live data fresh without spending tokens.
   if (t === 'insights') {
     const j = jobs[currentJobId];
     if (j && !j.insights && !insightsLoading) {
       runInsights(currentJobId);
+    } else if (j && j.insights) {
+      const lastDynamic = j.insights.dynamicUpdatedAt || j.insights.generatedAt || 0;
+      const thirtyMinMs = 30 * 60 * 1000;
+      if (Date.now() - lastDynamic > thirtyMinMs && !j.insights._dynamicRefreshing) {
+        refreshDynamicInsights(currentJobId);
+      }
     }
   }
   // Auto-generate interview questions on first open if none exist
@@ -4526,15 +4535,18 @@ function renderInsightsTab(j) {
     <div class="insights-inner">
     <div class="insights-header">
       <div class="insights-header-left">
-        <div class="insights-subtitle">${esc(j.company)} · ${esc(j.title)}</div>
-        ${ins?.generatedAt ? `<div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px">Updated ${timeSince(ins.generatedAt)}</div>` : ''}
+        ${ins?.generatedAt ? `<div style="font-size:11px;color:var(--text3);font-family:var(--mono)">Research: ${timeSince(ins.generatedAt)}${ins.dynamicUpdatedAt && ins.dynamicUpdatedAt !== ins.generatedAt ? ` · Prices & news: ${timeSince(ins.dynamicUpdatedAt)}` : ''}</div>` : ''}
         ${ins?._lastError ? `<div style="font-size:11px;color:var(--red);margin-top:2px">⚠ Last refresh failed</div>` : ''}
       </div>
       <div style="display:flex;align-items:center;gap:8px">
-        <button class="insights-refresh-btn" id="insights-run-btn" onclick="runInsights('${j.id}')" ${insightsLoading ? 'disabled' : ''}>
+        ${ins ? `<button class="insights-refresh-btn" title="Refresh stock prices and latest news (no AI tokens used)" onclick="refreshDynamicInsights('${j.id}')" ${insightsLoading ? 'disabled' : ''}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 6a5 5 0 018.5-3.5L11 4M11 6a5 5 0 01-8.5 3.5L1 8M11 1v3h-3M1 11V8h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Refresh prices &amp; news
+        </button>` : ''}
+        <button class="insights-refresh-btn" id="insights-run-btn" onclick="runInsights('${j.id}')" ${insightsLoading ? 'disabled' : ''} title="Regenerate AI research (uses tokens)">
           ${insightsLoading
             ? `<svg width="12" height="12" viewBox="0 0 12 12" style="animation:spin 0.8s linear infinite" fill="none"><circle cx="6" cy="6" r="4.5" stroke="rgba(26,25,23,0.3)" stroke-width="1.5"/><path d="M6 1.5A4.5 4.5 0 0110.5 6" stroke="#1a1917" stroke-width="1.5" stroke-linecap="round"/></svg> Researching...`
-            : `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M6 2v4l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> ${ins ? 'Refresh now' : 'Research this role'}`}
+            : `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M6 2v4l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> ${ins ? 'Re-run research' : 'Research this role'}`}
         </button>
     </div>
     </div>
@@ -4587,7 +4599,9 @@ function renderInsightsTab(j) {
       </div>
       <div class="insight-section-body">
         <div class="insight-ai-text">${formatAiText(ins.companyOverview || '')}</div>
-        ${ins.wikipediaUrl ? `<div style="margin-top:10px;font-size:11px;color:var(--text3);font-family:var(--mono)">Source: <a href="${esc(ins.wikipediaUrl)}" target="_blank" style="color:var(--text2);text-decoration:none;border-bottom:1px dotted var(--text3)">Wikipedia</a></div>` : ''}
+        ${ins.companyOverviewSource === 'ai'
+          ? `<div style="margin-top:10px;font-size:11px;color:var(--text3);font-family:var(--mono)">Source: <span style="display:inline-flex;align-items:center;gap:4px;padding:1px 7px;background:rgba(232,168,56,0.1);border:0.5px solid rgba(232,168,56,0.3);border-radius:3px;color:var(--accent-bg)">AI-generated</span> <span style="color:var(--text3);margin-left:6px">no public encyclopedia entry for this company</span></div>`
+          : (ins.wikipediaUrl ? `<div style="margin-top:10px;font-size:11px;color:var(--text3);font-family:var(--mono)">Source: <a href="${esc(ins.wikipediaUrl)}" target="_blank" style="color:var(--text2);text-decoration:none;border-bottom:1px dotted var(--text3)">Wikipedia</a></div>` : '')}
       </div>
     </div>
 
@@ -4706,7 +4720,7 @@ function renderCultureSection(culture) {
       <div class="insight-rating-score">${parseFloat(r.score).toFixed(1)}</div>
     </div>`;
   }).join('');
-  const summary = culture.summary ? `<div class="insight-ai-text" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">${formatAiText(culture.summary)}</div>` : '';
+  const summary = culture.summary ? `<div class="insight-ai-text" style="margin-top:14px">${formatAiText(culture.summary)}</div>` : '';
   const extras = [
     culture.ceoApproval ? `CEO approval: <strong style="color:var(--text)">${culture.ceoApproval}%</strong>` : '',
     culture.recommend ? `Would recommend: <strong style="color:var(--text)">${culture.recommend}%</strong>` : '',
@@ -4735,9 +4749,11 @@ function renderWorkforceSection(wf) {
 
   const esc2 = s => typeof s === 'string' ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : String(s||'');
 
-  // Stat card helper — consistent height, top-aligned label+value
+  // Stat card helper — consistent height, top-aligned label+value.
+  // NOTE: Borders removed (user feedback: the table-like border was cluttering).
+  // Cards are now spaced via padding + gap only.
   const statCard = (label, value, sub) => value ? `
-    <div style="padding:14px 16px;border-right:1px solid var(--border);min-width:90px">
+    <div style="padding:10px 24px 10px 0;min-width:90px">
       <div style="font-size:10px;font-family:var(--mono);font-weight:600;color:var(--text3);letter-spacing:.5px;margin-bottom:6px;white-space:nowrap">${label}</div>
       <div style="font-size:18px;font-weight:700;color:var(--text);line-height:1">${value}</div>
       ${sub ? `<div style="font-size:11px;color:var(--text2);margin-top:5px;line-height:1.4">${sub}</div>` : ''}
@@ -4759,9 +4775,9 @@ function renderWorkforceSection(wf) {
   const ab        = wf.ageBrackets  || {};
   const locs      = wf.topLocations || [];
 
-  // Stats: headcount, full-time, remote, avg tenure — all in one bordered row
+  // Stats: headcount, full-time, remote, avg tenure — flat row, no border box
   const statsRow = `
-    <div style="display:flex;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:20px;flex-wrap:wrap">
+    <div style="display:flex;margin-bottom:16px;flex-wrap:wrap;gap:8px">
       ${statCard('HEADCOUNT', wf.headcount ? esc2(wf.headcount) : null, wf.headcount ? 'employees' : null)}
       ${wf.fullTimePct ? statCard('FULL-TIME', wf.fullTimePct + '%', null) : ''}
       ${wf.remoteRatio !== undefined && wf.remoteRatio !== null ? statCard('REMOTE', wf.remoteRatio + '%', null) : ''}
@@ -4832,9 +4848,9 @@ function renderWorkforceSection(wf) {
       <div style="font-size:13px;color:var(--text2);line-height:1.6">${esc2(wf.visaNote)}</div>
     </div>` : '';
 
-  // Data note
+  // Data note — just top padding, no dividing line
   const noteBlock = wf.note ? `
-    <div style="padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--text3);line-height:1.6">${esc2(wf.note)}</div>` : '';
+    <div style="padding-top:6px;font-size:11px;color:var(--text3);line-height:1.6">${esc2(wf.note)}</div>` : '';
 
   return `<div class="insight-section">
     <div class="insight-section-header">
@@ -5040,6 +5056,53 @@ function relativeDate(dateStr) {
   } catch { return String(dateStr); }
 }
 
+
+// Dynamic-only refresh: pulls fresh news + stock from the backend WITHOUT
+// spending AI tokens. Called from the "Refresh prices & news" button and
+// on insights-tab open when the last dynamic refresh is >30 min old.
+// Preserves all AI-generated fields (roleIntel, culture, workforce, flags,
+// companyOverview) — those only change when the user explicitly hits
+// "Re-run research".
+async function refreshDynamicInsights(jobId) {
+  const j = jobs[jobId]; if (!j || !j.insights) return;
+  const savedFinnhubKey = localStorage.getItem('finnhub_key') || '';
+  // Tiny UI hint: flip the refresh button to spinning by setting the flag
+  // but DON'T set insightsLoading (which would disable the "Re-run research"
+  // button too — these are independent actions).
+  const j_ins = j.insights;
+  j_ins._dynamicRefreshing = true;
+  renderDetail();
+  try {
+    const res = await fetch(API + '/api/insights/refresh-dynamic', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({
+        company:    j.company,
+        ticker:     j_ins.stock?.ticker || null,
+        finnhubKey: savedFinnhubKey,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || err.detail || 'refresh failed');
+    }
+    const d = await res.json();
+    // Merge — preserve AI fields, replace only stock/news/dynamicUpdatedAt
+    j.insights = {
+      ...j_ins,
+      stock:            d.stock || j_ins.stock,
+      news:             d.news  || j_ins.news,
+      dynamicUpdatedAt: d.dynamicUpdatedAt || Date.now(),
+      _dynamicRefreshing: false,
+    };
+    scheduleSave();
+  } catch (e) {
+    console.warn('[insights] dynamic refresh failed:', e.message);
+    j.insights._dynamicRefreshing = false;
+    // Don't alert — this is a background-ish action; just log.
+  }
+  renderDetail();
+}
 
 async function runInsights(jobId) {
   const j = jobs[jobId]; if (!j) return;
@@ -8200,7 +8263,7 @@ setInterval(() => {
     </div>
     <button class="auth-btn" id="forgot-btn" onclick="doForgot()">Send recovery email</button>
     <div class="auth-switch" style="margin-top:12px"><a onclick="showScreen('login')">← Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.7.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.8.0 · private beta</div>
   </div>
 </div>
 
