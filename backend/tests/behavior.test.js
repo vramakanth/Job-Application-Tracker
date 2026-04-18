@@ -2809,11 +2809,14 @@ t('News items preserve per-item publisher in source field', () => {
 // ════════════════════════════════════════════════════════════════════════════
 console.log('\n── Parse robustness + job-list');
 
-t('Job list header row: company + zero-padded # on the same flex line', () => {
-  // User feedback: number used to take its own line. Now on the same row as
-  // company, right-justified, zero-padded ("#01", "#02", ...).
+t('Job list header row: #NN + company + date on one line; title + pills on their own rows', () => {
+  // v1.12.0: user asked for 3-column header (#NN, company, date) with title
+  // and state pills on their own rows below. Ensures the visual hierarchy is:
+  //   row 1: meta identity (number, company, when added)
+  //   row 2: title (the thing you're applying to)
+  //   row 3: status pills + star (quick-scan state)
   const idx = feSrc.indexOf('function renderJobList');
-  const body = feSrc.slice(idx, idx + 2000);
+  const body = feSrc.slice(idx, idx + 2500);
   if (!/job-item-header-row/.test(body)) {
     throw new Error('job-item-header-row wrapper not added to markup');
   }
@@ -2823,9 +2826,25 @@ t('Job list header row: company + zero-padded # on the same flex line', () => {
   if (!/#\$\{String\(i\s*\+\s*1\)/.test(body)) {
     throw new Error('job number missing "#" prefix');
   }
-  // CSS must define the flex row with space-between
-  if (!/\.job-item-header-row\s*\{[^}]*display:\s*flex[^}]*justify-content:\s*space-between/.test(feSrc)) {
-    throw new Error('.job-item-header-row CSS missing flex + space-between');
+  // Date must now be on the header row, not the meta row
+  if (!/class=['"]job-item-date['"][\s\S]{0,100}fmtDate\(j\.createdAt\)/.test(body)) {
+    throw new Error('date not present on header row (should be #NN | company | date)');
+  }
+  // CSS must define the header row as a flex row
+  if (!/\.job-item-header-row\s*\{[^}]*display:\s*flex/.test(feSrc)) {
+    throw new Error('.job-item-header-row CSS missing display: flex');
+  }
+  // Company must flex to fill the middle (truncating with ellipsis)
+  if (!/\.job-item-company\s*\{[^}]*flex:\s*1[^}]*text-overflow:\s*ellipsis/.test(feSrc)
+      && !/\.job-item-company\s*\{[^}]*text-overflow:\s*ellipsis[^}]*flex:\s*1/.test(feSrc)) {
+    throw new Error('.job-item-company missing flex:1 + ellipsis truncation');
+  }
+  // Meta row must NOT contain the createdAt date anymore (that moved up)
+  const metaStart = body.indexOf('class="job-item-meta"');
+  const metaEnd   = body.indexOf('</div>\n      </div>', metaStart);
+  const metaBlock = body.slice(metaStart, metaEnd);
+  if (/fmtDate\(j\.createdAt\)/.test(metaBlock)) {
+    throw new Error('date still on meta row — should have moved to header row');
   }
 });
 

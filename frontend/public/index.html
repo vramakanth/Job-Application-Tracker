@@ -156,7 +156,7 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .search-input::placeholder { color: var(--text3); }
 .search-input:focus { border-color: var(--border2); }
 
-.filter-tabs { display: flex; gap: 4px; padding: 0 16px 10px; flex-wrap: wrap; }
+.filter-tabs { display: flex; gap: 4px; padding: 0 16px 12px; flex-wrap: wrap; border-bottom: 0.5px solid var(--border); margin-bottom: 2px; }
 .filter-tab { padding: 4px 10px; border-radius: 100px; font-size: 11px; font-family: var(--mono); cursor: pointer; border: 0.5px solid var(--border); color: var(--text2); background: transparent; transition: all 0.15s; white-space: nowrap; }
 .filter-tab.active { background: var(--accent); color: #0e0e0f; border-color: transparent; font-weight: 500; }
 /* Stale pill — matches the stale chip shown on each job tile (red-orange, square) */
@@ -171,11 +171,13 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .job-item { padding: 12px; border-radius: var(--radius-sm); cursor: pointer; margin-bottom: 4px; border: 0.5px solid transparent; transition: all 0.15s; }
 .job-item:hover { background: var(--bg3); }
 .job-item.active { background: var(--bg3); border-color: var(--border); }
-/* Header row: company name (left, grows) + #NN (right, mono). Frees up the
-   row the number used to occupy. */
-.job-item-header-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
-.job-item-company { font-size: 11px; color: var(--text2); font-family: var(--mono); display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+/* Header row: #NN (fixed left) + company (flex middle, truncates) + date
+   (fixed right). All three live on a single row so the title underneath
+   and the pills below that get their own rows uncluttered. */
+.job-item-header-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 2px; }
+.job-item-company { font-size: 11px; color: var(--text2); font-family: var(--mono); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .job-num { font-size: 10px; color: var(--text3); font-family: var(--mono); letter-spacing: 0.02em; flex-shrink: 0; }
+.job-item-date { font-size: 10px; color: var(--text3); font-family: var(--mono); flex-shrink: 0; }
 .job-item-title { font-size: 13px; font-weight: 500; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .job-item-meta { display: flex; align-items: center; gap: 6px; }
 
@@ -277,7 +279,17 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .notes-editor pre code { background: transparent; padding: 0; font-size: 12px; line-height: 1.5; display: block; }
 .notes-editor a { color: var(--accent); text-decoration: underline; text-decoration-color: var(--border2); text-underline-offset: 2px; }
 .notes-editor a:hover { text-decoration-color: var(--accent); }
-.notes-editor hr { border: none; border-top: 0.5px solid var(--border); margin: 16px 0; }
+/* Section break (inserted HR). Old styling (0.5px solid var(--border)) was
+   nearly invisible in light mode. Use a full 1px centered gradient so it
+   has definition at any zoom/theme and clearly reads as a deliberate break. */
+.notes-editor hr,
+.notes-editor-content hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, var(--border2) 15%, var(--border2) 85%, transparent 100%);
+  margin: 22px 0;
+  opacity: 0.9;
+}
 .notes-editor table { border-collapse: collapse; margin: 10px 0; width: 100%; table-layout: fixed; }
 .notes-editor table td, .notes-editor table th { border: 0.5px solid var(--border); padding: 6px 10px; vertical-align: top; position: relative; }
 .notes-editor table th { background: var(--bg2); font-weight: 600; }
@@ -923,7 +935,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       Don't have an account? <a onclick="showScreen('register')">Create one</a>
       <br><a onclick="showScreen('forgot')" style="font-size:12px;color:var(--text3)">Forgot password?</a>
     </div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.11.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.13.3 · private beta</div>
   </div>
 </div>
 
@@ -963,7 +975,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     </div>
     <button id="register-btn" class="auth-btn" onclick="doRegister()">Create account</button>
     <div class="auth-switch">Already have an account? <a onclick="showScreen('login')">Sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.11.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.13.3 · private beta</div>
   </div>
 </div>
 
@@ -979,7 +991,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <div class="auth-field"><label>CONFIRM PASSWORD</label><input id="recover-confirmpw" type="password" placeholder="Confirm new password"></div>
     <button id="recover-btn" class="auth-btn" onclick="recoverAccount()">Reset password</button>
     <div class="auth-switch"><a onclick="showScreen('login')">Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.11.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.13.3 · private beta</div>
   </div>
 </div>
 
@@ -1056,7 +1068,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       <div class="user-avatar" id="user-avatar" style="display:flex">VR</div>
       <div style="flex:1;min-width:0">
         <div class="user-name" id="user-name-display">user</div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.11.0</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.13.3</div>
       </div>
 
       <button class="user-bar-settings" onclick="doLogout()" title="Sign out" style="color:var(--text3)" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">
@@ -1263,7 +1275,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
 <script>
 const API = '';
-const APP_VERSION = '1.11.0';
+const APP_VERSION = '1.13.3';
 let token = localStorage.getItem('applied_token');
 let currentUser = localStorage.getItem('applied_user');
 let jobs = {}, currentJobId = null, currentFilter = 'all', activeDetailTab = 'notes';
@@ -2506,8 +2518,9 @@ function renderJobList() {
       ${bulkMode ? `<input type="checkbox" ${bulkSelected.has(j.id)?'checked':''} onclick="toggleBulkSelect('${j.id}',event)" style="flex-shrink:0;margin-top:2px;accent-color:var(--accent-bg)">` : ''}
       <div class="job-item-body">
         <div class="job-item-header-row">
-          <div class="job-item-company">${esc(j.company)}</div>
-          <div class="job-num">#${String(i+1).padStart(2,'0')}</div>
+          <span class="job-num">#${String(i+1).padStart(2,'0')}</span>
+          <span class="job-item-company">${esc(j.company)}</span>
+          <span class="job-item-date">${fmtDate(j.createdAt)}</span>
         </div>
         <div class="job-item-title">${esc(j.title)}</div>
         <div class="job-item-meta">
@@ -2518,7 +2531,6 @@ function renderJobList() {
           ${j.deadline && new Date(j.deadline) <= new Date(Date.now()+86400000*3) ? '<span style="font-size:9px;padding:1px 4px;background:rgba(239,68,68,0.12);color:var(--red);border-radius:3px">⏰</span>' : ''}
           <span style="flex:1"></span>
           <button onclick="event.stopPropagation();toggleWatchlist('${j.id}')" title="${j.watchlist?'Remove from watchlist':'Add to watchlist'}" style="padding:3px 4px;background:none;border:none;cursor:pointer;font-size:13px;line-height:1;color:${j.watchlist?'var(--accent-bg)':'var(--border2)'};transition:color .15s;flex-shrink:0;border-radius:3px;min-width:20px;text-align:center">${j.watchlist?'★':'☆'}</button>
-          <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">${fmtDate(j.createdAt)}</span>
         </div>
       </div>
     </div>`).join('');
@@ -3875,12 +3887,12 @@ function renderNotesToolbar(jobId) {
     <button title="Checklist" onclick="notesInsertChecklist()">☑</button>
     <div class="sep"></div>
     <button class="${isBlock('blockquote')}" title="Quote" onclick="notesFormatBlock('blockquote')">&rdquo;</button>
-    <button title="Section break (horizontal line)" onclick="notesCmd('insertHorizontalRule')" style="letter-spacing:-1px;font-weight:700">━</button>
-    <button title="Insert timestamp" onclick="notesInsertTimestamp()">🕐</button>
-    <button title="Table (3×3)" onclick="notesInsertTable()">⌗</button>
+    <button title="Section break (horizontal line)" onclick="notesCmd('insertHorizontalRule')" style="font-size:14px;line-height:1">§</button>
+    <button title="Insert timestamp" onclick="notesInsertTimestamp()" style="padding:4px 8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></button>
+    <button title="Table (3×3)" onclick="notesInsertTable()" style="padding:4px 8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="1"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg></button>
     <div class="sep"></div>
-    <button title="Link" onclick="notesLinkPrompt()">🔗</button>
-    <button title="Unlink" onclick="notesCmd('unlink')">⌧</button>
+    <button title="Link" onclick="notesLinkPrompt()" style="padding:4px 8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+    <button title="Unlink" onclick="notesCmd('unlink')" style="padding:4px 8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.84 12.25l1.72-1.71h-.02a5 5 0 0 0-.12-7.07 5 5 0 0 0-6.95 0l-1.72 1.71"/><path d="M5.17 11.75l-1.71 1.71a5 5 0 0 0 .12 7.07 5 5 0 0 0 6.95 0l1.71-1.71"/><line x1="8" y1="2" x2="8" y2="5"/><line x1="2" y1="8" x2="5" y2="8"/><line x1="16" y1="19" x2="16" y2="22"/><line x1="19" y1="16" x2="22" y2="16"/></svg></button>
     <div class="sep"></div>
     <button title="Mention (@)" onclick="notesInsertAtTrigger()">@</button>
     <div class="sep"></div>
@@ -8387,7 +8399,7 @@ setInterval(() => {
     </div>
     <button class="auth-btn" id="forgot-btn" onclick="doForgot()">Send recovery email</button>
     <div class="auth-switch" style="margin-top:12px"><a onclick="showScreen('login')">← Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.11.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.13.3 · private beta</div>
   </div>
 </div>
 
