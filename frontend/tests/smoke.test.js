@@ -58,7 +58,8 @@ t('showSettingsSection re-populates finnhub key', () => {
 // ── Insights ────────────────────────────────────────────────────────────────
 console.log('\n── Insights');
 t('Financial section exists',  () => has('Financial Data'));
-t('Stock section exists',      () => has('Stock &amp; financials'));
+// Stock section was removed in v1.10.0 — stock is now inlined inside "About
+// the company". See the tests in behavior.test.js for the new contract.
 t('Finnhub key in localStorage', () => has("finnhub_key"));
 
 // ── Extension ───────────────────────────────────────────────────────────────
@@ -449,11 +450,12 @@ t('Orphan .insight-section radius override removed', () => {
 });
 t('Partial-data warning banner rendered when ins._partial', () => {
   if (!src.includes('ins._partial ?')) throw new Error('no ins._partial check in renderInsightsTab');
-  // The banner should reference "Partial research" and point at Refresh
   const idx = src.indexOf('ins._partial ?');
   const body = src.slice(idx, idx + 600);
   if (!body.includes('Partial research')) throw new Error('banner copy missing');
-  if (!body.includes('Refresh'))          throw new Error('banner does not direct to refresh');
+  // v1.10.0: refresh buttons removed per user feedback. Banner no longer
+  // directs users to click "Refresh" — auto-refresh handles it. The banner
+  // just informs; user can switch tabs + back if they need to retry.
 });
 
 // ── Status simplification (5 statuses; filter pills match dropdown) ─────────

@@ -413,31 +413,36 @@ t('Insights schema removes AI-hallucinated demographic guesses (genderSplit/ageB
 });
 
 t('News is fetched from public sources, not hallucinated by AI', () => {
-  // 1. Helper must exist
   if (!/async function fetchCompanyNews/.test(serverSrc)) {
     throw new Error('fetchCompanyNews helper missing');
   }
-  // 2. Must hit Finnhub company-news and/or Google News RSS — the two keyless+semi-keyless sources
-  if (!/finnhub\.io\/api\/v1\/company-news/.test(serverSrc)) {
-    throw new Error('fetchCompanyNews not calling Finnhub company-news endpoint');
+  // v1.10.0: Finnhub dropped (inaccurate results per user feedback). Now
+  // queries Yahoo Finance RSS (ticker-gated) and Google News RSS (keyword)
+  // in parallel.
+  if (!/feeds\.finance\.yahoo\.com\/rss/.test(serverSrc)) {
+    throw new Error('fetchCompanyNews not using Yahoo Finance RSS');
   }
   if (!/news\.google\.com\/rss\/search/.test(serverSrc)) {
-    throw new Error('fetchCompanyNews not falling back to Google News RSS');
+    throw new Error('fetchCompanyNews not using Google News RSS');
   }
-  // 3. Schema must NOT include "news" anymore (AI used to hallucinate fake URLs)
+  // Finnhub news MUST NOT be reintroduced — regression guard
+  if (/finnhub\.io\/api\/v1\/company-news/.test(serverSrc)) {
+    throw new Error('Finnhub company-news endpoint reintroduced — was removed for inaccurate results');
+  }
+  // Schema must NOT include "news" (prevents AI hallucinating fake URLs)
   const insightsIdx = serverSrc.indexOf("app.post('/api/insights'");
-  const block = serverSrc.slice(insightsIdx, insightsIdx + 5500);
+  const block = serverSrc.slice(insightsIdx, insightsIdx + 9000);
   const noComments = block.replace(/\/\/[^\n]*/g, '');
   const schemaMatch = noComments.match(/usr\s*=\s*`[\s\S]+?`/);
   if (!schemaMatch) throw new Error('insights prompt template not found');
   if (/"news":/.test(schemaMatch[0])) {
-    throw new Error('news field still in AI schema — should be fetched from public sources instead');
+    throw new Error('news field still in AI schema — should be fetched from public sources');
   }
-  // 4. Endpoint must run fetchCompanyNews in parallel with callAI (Promise.all)
+  // Endpoint must run fetchCompanyNews in parallel with callAI (Promise.all)
   if (!/Promise\.all\([\s\S]*fetchCompanyNews/.test(block)) {
     throw new Error('insights endpoint not running fetchCompanyNews in parallel with callAI');
   }
-  // 5. fetchCompanyNews result must be attached to the response
+  // fetchCompanyNews result must be attached to the response
   if (!/news,/.test(block)) {
     throw new Error('fetched news not attached to insights response');
   }
@@ -520,13 +525,19 @@ t('Overview structured facts (founded/hq/industry/employees) come from Wikidata,
   }
 });
 
-t('Wikipedia attribution link rendered under company overview', () => {
+t('Wikipedia attribution is rendered under company overview when available', () => {
   if (!/ins\.wikipediaUrl/.test(feSrc)) {
-    throw new Error('frontend not rendering Wikipedia attribution link');
+    throw new Error('frontend not referencing ins.wikipediaUrl at all');
   }
-  // Must be a real <a> with target=_blank, not hidden
-  if (!/ins\.wikipediaUrl\s*\?\s*`[^`]*<a[^>]+href=[^>]+>\s*Wikipedia/.test(feSrc)) {
-    throw new Error('Wikipedia attribution not rendered as a visible link');
+  // v1.10.0: attribution is now routed through the unified renderSectionSource
+  // helper. The About-the-company template must pass the Wikipedia URL through
+  // as `{label:'Wikipedia', url: ins.wikipediaUrl}` or keep the old inline <a>.
+  const aboutIdx = feSrc.indexOf('About the company');
+  const block = feSrc.slice(aboutIdx, aboutIdx + 2500);
+  const hasHelperCall = /label:\s*['"]Wikipedia['"]\s*,\s*url:\s*ins\.wikipediaUrl/.test(block);
+  const hasInlineLink = /ins\.wikipediaUrl\s*\?\s*`[^`]*<a[^>]+href=[^>]+>\s*Wikipedia/.test(block);
+  if (!hasHelperCall && !hasInlineLink) {
+    throw new Error('Wikipedia attribution not wired in About-the-company section');
   }
 });
 
@@ -2442,21 +2453,24 @@ t('Insights header no longer duplicates company · title (shown in detail header
   }
 });
 
-t('Insights header has split refresh buttons (dynamic + full AI re-run)', () => {
+t('Insights header has NO refresh buttons (v1.10.0 — auto-refresh handles it)', () => {
+  // User feedback in v1.10.0: "Remove both refresh buttons, since we are
+  // auto refreshing anyway." The dynamic refresh still exists as a function
+  // called from switchTab (auto-refresh on tab open if data >30 min old),
+  // but neither button should appear in the rendered header. This is a
+  // regression guard — if someone adds the buttons back, this fails.
   const idx = feSrc.indexOf('function renderInsightsTab');
-  const body = feSrc.slice(idx, idx + 3500);
-  // Primary cheap refresh button — uses the new function
-  if (!/onclick="refreshDynamicInsights\('\$\{j\.id\}'\)"/.test(body)) {
-    throw new Error('no "Refresh prices & news" button wired to refreshDynamicInsights');
+  const bodyEnd = feSrc.indexOf('function renderOverviewCards');
+  const body = feSrc.slice(idx, bodyEnd > idx ? bodyEnd : idx + 6000);
+  if (/onclick="refreshDynamicInsights\(/.test(body)) {
+    throw new Error('"Refresh prices & news" button reintroduced — was removed per user feedback');
   }
-  // Full AI re-research button — same runInsights call, re-labeled. Both
-  // the button and the label must exist; they don't have to be adjacent
-  // in the template because a spinner SVG sits between them.
-  if (!/onclick="runInsights\('\$\{j\.id\}'\)"/.test(body)) {
-    throw new Error('no runInsights button');
+  if (/onclick="runInsights\(/.test(body)) {
+    throw new Error('"Re-run research" / runInsights button reintroduced — was removed per user feedback');
   }
-  if (!/Re-run research/.test(body)) {
-    throw new Error('no "Re-run research" label for the AI-expensive action');
+  // Auto-refresh orchestration still exists — just not wired to a button
+  if (!/async function refreshDynamicInsights/.test(feSrc)) {
+    throw new Error('refreshDynamicInsights function was accidentally deleted — needed for auto-refresh on tab open');
   }
 });
 
@@ -2572,6 +2586,371 @@ t('CSS cleanup: no horizontal borders on insights-grid + news items', () => {
   if (/border-bottom/.test(newsLine[0])) {
     throw new Error('.insight-news-item still has border-bottom after refactor');
   }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// Notes: section break + timestamp buttons (v1.9.0)
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── Notes section break + timestamp');
+
+t('Toolbar has clearly-labeled section-break button', () => {
+  // HR existed via execCommand('insertHorizontalRule') but the old `—` glyph
+  // was easy to miss. Title now reads "section break" so the tooltip helps
+  // discovery.
+  const idx = feSrc.indexOf('function renderNotesToolbar');
+  const body = feSrc.slice(idx, idx + 5000);
+  if (!/title="Section break[^"]*"\s+onclick="notesCmd\('insertHorizontalRule'\)"/.test(body)) {
+    throw new Error('section-break button missing or mislabeled');
+  }
+});
+
+t('Toolbar has timestamp insert button wired to notesInsertTimestamp', () => {
+  const idx = feSrc.indexOf('function renderNotesToolbar');
+  const body = feSrc.slice(idx, idx + 5000);
+  if (!/onclick="notesInsertTimestamp\(\)"/.test(body)) {
+    throw new Error('timestamp button missing from toolbar');
+  }
+});
+
+t('_formatHumaneTimestamp produces human-readable format', () => {
+  if (!/function _formatHumaneTimestamp/.test(feSrc)) {
+    throw new Error('_formatHumaneTimestamp helper not defined');
+  }
+  const idx = feSrc.indexOf('function _formatHumaneTimestamp');
+  const body = feSrc.slice(idx, idx + 2500);
+  // Must cover ordinal suffix edge cases (11th/12th/13th are special)
+  if (!/mod100\s*>=\s*11\s*&&\s*mod100\s*<=\s*13/.test(body)) {
+    throw new Error('timestamp format does not handle 11th/12th/13th teens correctly');
+  }
+  // Must emit 12-hour format with am/pm (not 24-hour or AM/PM caps)
+  if (!/'am'|"am"/.test(body) || !/'pm'|"pm"/.test(body)) {
+    throw new Error('timestamp uses wrong meridiem format — should be lowercase am/pm');
+  }
+  // Must include day names AND month names (not abbreviated)
+  if (!/['"]Monday['"]/.test(body) || !/['"]January['"]/.test(body)) {
+    throw new Error('timestamp not using full day/month names');
+  }
+});
+
+t('Timestamp is inserted as bold paragraph with trailing empty line for continued typing', () => {
+  if (!/function notesInsertTimestamp/.test(feSrc)) {
+    throw new Error('notesInsertTimestamp missing');
+  }
+  const idx = feSrc.indexOf('function notesInsertTimestamp');
+  const body = feSrc.slice(idx, idx + 1500);
+  // Must wrap in <strong> so timestamp stands out as an anchor for the entry
+  if (!/<strong>\$\{esc\(stamp\)\}<\/strong>|<strong>\$\{stamp\}<\/strong>/.test(body)) {
+    throw new Error('timestamp not wrapped in <strong> — would be indistinguishable from prose');
+  }
+  // Must leave an empty paragraph after so caret lands ready for typing
+  if (!/<p><br>/.test(body)) {
+    throw new Error('no trailing empty paragraph — caret would be stuck at end of bold timestamp');
+  }
+  // Must schedule save + re-render toolbar (active-state update)
+  if (!/scheduleNotesSave/.test(body)) {
+    throw new Error('timestamp insert does not schedule save');
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// Insights pane cleanup (v1.10.0)
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── Insights v1.10.0 cleanup');
+
+t('Yahoo Finance + Google News are both queried (Finnhub news dropped)', () => {
+  // User feedback: Finnhub's company-news returned low-quality results. We
+  // replaced it with Yahoo Finance RSS (ticker-gated) and Google News RSS.
+  const idx = serverSrc.indexOf('async function fetchCompanyNews');
+  const body = serverSrc.slice(idx, idx + 5000);
+  if (!/feeds\.finance\.yahoo\.com\/rss\/2\.0\/headline/.test(body)) {
+    throw new Error('Yahoo Finance RSS not called');
+  }
+  if (!/news\.google\.com\/rss\/search/.test(body)) {
+    throw new Error('Google News RSS not called');
+  }
+  // Both feeds run in parallel via Promise.all on a tasks array
+  if (!/Promise\.all\(tasks\)/.test(body)) {
+    throw new Error('news feeds not queried in parallel');
+  }
+  // Must dedupe by URL — Yahoo and Google often surface the same article
+  if (!/seen\.has|dedupe/i.test(body)) {
+    throw new Error('no dedup logic — duplicate articles from both feeds would surface');
+  }
+  // Must sort by date so fresh news surfaces first
+  if (!/items\.sort\(/.test(body)) {
+    throw new Error('news items not sorted — user sees arbitrary order');
+  }
+});
+
+t('Standalone Stock section was removed (stock now inlined in About the company)', () => {
+  const idx = feSrc.indexOf('function renderInsightsTab');
+  const bodyEnd = feSrc.indexOf('function renderOverviewCards');
+  const body = feSrc.slice(idx, bodyEnd > idx ? bodyEnd : idx + 10000);
+  // The old section had an <svg> tree-bar icon + "Stock &amp; financials" title
+  if (/Stock &amp; financials/.test(body)) {
+    throw new Error('"Stock & financials" section reintroduced as a standalone — should live inside About the company');
+  }
+  // About the company section must call renderInlineStock
+  if (!/renderInlineStock\(ins\.stock/.test(body)) {
+    throw new Error('renderInlineStock not called from About the company');
+  }
+});
+
+t('renderInlineStock handles all three states (no key / private / public)', () => {
+  if (!/function renderInlineStock/.test(feSrc)) {
+    throw new Error('renderInlineStock helper missing');
+  }
+  const idx = feSrc.indexOf('function renderInlineStock');
+  const body = feSrc.slice(idx, idx + 3000);
+  // 1. No Finnhub key → inline hint pointing to Settings
+  if (!/!hasFinnhub/.test(body)) {
+    throw new Error('renderInlineStock does not branch on hasFinnhub');
+  }
+  if (!/openSettings\(['"]financial['"]\)/.test(body)) {
+    throw new Error('no-key branch does not link to Settings');
+  }
+  // 2. No stock data / error → returns empty string (private company — silence is correct)
+  if (!/!s\s*\|\|\s*s\.error/.test(body) || !/return\s*['"]{2}/.test(body)) {
+    throw new Error('private-company branch should render nothing, not a placeholder');
+  }
+  // 3. Stock prices updated timestamp shown when data is present
+  if (!/Stock prices updated/.test(body)) {
+    throw new Error('no stock-data timestamp shown');
+  }
+});
+
+t('Finnhub "API key set" badge is removed from insights UI', () => {
+  // User feedback: when the key IS set, showing "API key set" was clutter.
+  // Only the "not set" hint should appear (now inline in About the company).
+  const idx = feSrc.indexOf('function renderInsightsTab');
+  const bodyEnd = feSrc.indexOf('function renderOverviewCards');
+  const body = feSrc.slice(idx, bodyEnd > idx ? bodyEnd : idx + 10000);
+  if (/API key set/.test(body)) {
+    throw new Error('"API key set" badge still present — should only show the negative case');
+  }
+});
+
+t('renderSectionSource helper used for every major insights section', () => {
+  if (!/function renderSectionSource/.test(feSrc)) {
+    throw new Error('renderSectionSource helper missing');
+  }
+  // Count uses — must be called for at least: About company, About role,
+  // Culture, Signals, News, Compensation, Workforce
+  const idx = feSrc.indexOf('function renderInsightsTab');
+  const afterTab = feSrc.slice(idx);
+  const calls = (afterTab.match(/renderSectionSource\(/g) || []).length;
+  if (calls < 6) {
+    throw new Error(`renderSectionSource called only ${calls} times — expected ≥6 (one per major section)`);
+  }
+});
+
+t('Layoff status is a minimal checkmark/X, not a colored banner box', () => {
+  const idx = feSrc.indexOf('function renderWorkforceSection');
+  const bodyEnd = feSrc.indexOf('function renderCompensationSection', idx);
+  const body = feSrc.slice(idx, bodyEnd > idx ? bodyEnd : idx + 8000);
+  // Must extract layoffBanner block
+  const layoffMatch = body.match(/const\s+layoffBanner\s*=\s*hasLayoffs\s*\?[\s\S]*?:\s*`[^`]*`;/);
+  if (!layoffMatch) throw new Error('layoffBanner block not found in renderWorkforceSection');
+  const block = layoffMatch[0];
+  // Must NOT use the old green/red colored backgrounds (rgba panels)
+  if (/rgba\(16,\s*185,\s*129,\s*0\.\d+\)/.test(block)) {
+    throw new Error('layoff banner still using green rgba background — should be minimal icon+text');
+  }
+  if (/rgba\(184,\s*50,\s*37,\s*0\.\d+\)/.test(block)) {
+    throw new Error('layoff banner still using red rgba background — should be minimal icon+text');
+  }
+  // Must still distinguish via checkmark SVG (no layoffs) vs X SVG (layoffs)
+  if (!/polyline\s+points=['"]20 6 9 17 4 12/.test(block)) {
+    throw new Error('no checkmark SVG for no-layoffs state');
+  }
+  if (!/line\s+x1=['"]18['"]\s+y1=['"]6['"]\s+x2=['"]6['"]\s+y2=['"]18['"]/.test(block)) {
+    throw new Error('no X-mark SVG for has-layoffs state');
+  }
+});
+
+t('Workforce + compensation sections receive generatedAt for attribution timestamp', () => {
+  // Both sections pass generatedAt through to renderSectionSource so the user
+  // sees when the AI-synthesized data was produced.
+  if (!/function renderWorkforceSection\(wf,\s*generatedAt\)/.test(feSrc)) {
+    throw new Error('renderWorkforceSection signature missing generatedAt param');
+  }
+  // Compensation uses the `ins` parameter — renderSectionSource call must
+  // reference ins.generatedAt. Compensation is ~10K chars (bullet chart,
+  // breakdown, geo, negotiation) so we slice generously up to the function's
+  // closing `\n}` or a 15K cap.
+  const compIdx = feSrc.indexOf('function renderCompensationSection');
+  const nextFn  = feSrc.indexOf('\nfunction ', compIdx + 30);
+  const compBody = feSrc.slice(compIdx, nextFn > compIdx ? nextFn : compIdx + 15000);
+  if (!/renderSectionSource\([\s\S]{0,500}ins\s*&&\s*ins\.generatedAt/.test(compBody)
+      && !/renderSectionSource\([\s\S]{0,500}ins\?\.generatedAt/.test(compBody)) {
+    throw new Error('compensation section does not pass ins.generatedAt to its source line');
+  }
+});
+
+t('News items preserve per-item publisher in source field', () => {
+  // Google News RSS <item> blocks carry a <source> tag; Yahoo-sourced items
+  // are hard-coded to "Yahoo Finance". Both paths must populate `source`.
+  const idx = serverSrc.indexOf('async function fetchCompanyNews');
+  const body = serverSrc.slice(idx, idx + 5000);
+  if (!/['"]Yahoo Finance['"]/.test(body)) {
+    throw new Error('Yahoo branch does not tag source as "Yahoo Finance"');
+  }
+  if (!/it\.source/.test(body)) {
+    throw new Error('Google branch does not pass through per-item publisher from <source> tag');
+  }
+  // The result list is capped at 6 (from 5) since merging two feeds gives more
+  if (!/slice\(0,\s*6\)/.test(body)) {
+    throw new Error('news cap not 6 (expected after merging Yahoo + Google)');
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// Job-list layout + parsing robustness (v1.11.0)
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── Parse robustness + job-list');
+
+t('Job list header row: company + zero-padded # on the same flex line', () => {
+  // User feedback: number used to take its own line. Now on the same row as
+  // company, right-justified, zero-padded ("#01", "#02", ...).
+  const idx = feSrc.indexOf('function renderJobList');
+  const body = feSrc.slice(idx, idx + 2000);
+  if (!/job-item-header-row/.test(body)) {
+    throw new Error('job-item-header-row wrapper not added to markup');
+  }
+  if (!/padStart\(2,\s*['"]0['"]\)/.test(body)) {
+    throw new Error('job number not zero-padded (expected padStart)');
+  }
+  if (!/#\$\{String\(i\s*\+\s*1\)/.test(body)) {
+    throw new Error('job number missing "#" prefix');
+  }
+  // CSS must define the flex row with space-between
+  if (!/\.job-item-header-row\s*\{[^}]*display:\s*flex[^}]*justify-content:\s*space-between/.test(feSrc)) {
+    throw new Error('.job-item-header-row CSS missing flex + space-between');
+  }
+});
+
+t('Salary extractor handles deferred "Salary Range Information $X - $Y USD Annual" format', () => {
+  // Regression guard for the BD.com case the user reported. Also exercises
+  // several other real-world formats. We eval the helper out of server.js
+  // so the assertion reflects the actual deployed behavior.
+  const match = serverSrc.match(/function extractSalaryFromText[\s\S]+?\n\}\n/);
+  if (!match) throw new Error('extractSalaryFromText helper not found');
+  let extract;
+  eval(match[0] + '\nextract = extractSalaryFromText;');
+  const cases = [
+    // BD case — salary buried after preamble + unusual punctuation
+    ['Prefix... Salary Range Information$124,700.00 - $205,800.00 USD Annual', '$125k–$206k'],
+    // Hyphen / en-dash / em-dash separators
+    ['$80,000 - $100,000', '$80k–$100k'],
+    ['$80,000 – $100,000', '$80k–$100k'],
+    ['$80,000 — $100,000', '$80k–$100k'],
+    // "to" spelled out
+    ['$80,000 to $100,000', '$80k–$100k'],
+    // K-suffix
+    ['$80k - $100k', '$80k–$100k'],
+    // Non-USD currencies
+    ['£50,000 - £80,000', '£50k–£80k'],
+    ['€70,000 - €90,000', '€70k–€90k'],
+    // Single annualized with explicit period hint
+    ['$150,000/year', '$150k'],
+    ['$45 per hour', '$45'],
+  ];
+  for (const [input, expected] of cases) {
+    const got = extract(input);
+    if (got !== expected) throw new Error(`salary extract fail: ${JSON.stringify(input)} → ${got} (expected ${expected})`);
+  }
+});
+
+t('Salary extractor rejects common false positives (years, counts, wide price ranges)', () => {
+  const match = serverSrc.match(/function extractSalaryFromText[\s\S]+?\n\}\n/);
+  let extract;
+  eval(match[0] + '\nextract = extractSalaryFromText;');
+  const negatives = [
+    'Experience: 5-10 years',         // no currency symbol
+    'Serves 10-100 customers',        // no currency symbol
+    'Revenue: $1M to $100M',          // 100× range — too wide
+    'Price point: $50 - $500',        // too wide + no salary hint
+    'Between 3-5 years required',     // no currency
+  ];
+  for (const n of negatives) {
+    const got = extract(n);
+    if (got !== null) throw new Error(`false positive: ${JSON.stringify(n)} → ${got}`);
+  }
+});
+
+t('Client forwards pre-extracted salary + tail text to extract-fields', () => {
+  // If /api/parse-job already found a salary (via regex on full text), the
+  // client must forward it so the AI doesn't guess. Also forward tail slice
+  // for long postings — compensation sections often sit at the bottom.
+  const idx = feSrc.indexOf('async function parseJobUrl');
+  const body = feSrc.slice(idx, idx + 6000);
+  if (!/body\.domSalary\s*=\s*data\.salary/.test(body)) {
+    throw new Error('client does not forward pre-extracted salary to extract-fields');
+  }
+  if (!/text\.length\s*>\s*5000/.test(body) || !/body\.tailText\s*=\s*text\.slice\(-\s*2000\)/.test(body)) {
+    throw new Error('client does not send tail slice for long postings');
+  }
+});
+
+t('Server extract-fields runs regex fallback on full text before calling AI', () => {
+  // Defense in depth: even if the client forgot to forward domSalary, the
+  // server runs its own extractSalaryFromText pass on postingText + tailText.
+  const idx = serverSrc.indexOf("app.post('/api/extract-fields'");
+  const endIdx = serverSrc.indexOf('\n});', idx);
+  const body = serverSrc.slice(idx, endIdx);
+  if (!/extractSalaryFromText\(postingText\)/.test(body)) {
+    throw new Error('extract-fields does not regex-scan postingText for salary');
+  }
+  if (!/extractSalaryFromText\(tailText\)/.test(body)) {
+    throw new Error('extract-fields does not regex-scan tailText for salary');
+  }
+});
+
+t('Server extract-fields AI payload includes tail when provided', () => {
+  const idx = serverSrc.indexOf("app.post('/api/extract-fields'");
+  const endIdx = serverSrc.indexOf('\n});', idx);
+  const body = serverSrc.slice(idx, endIdx);
+  // Must concatenate head + tail when tailText is present so AI sees salary
+  // sections at the end of long postings.
+  if (!/tailText\s*\?\s*`[^`]*\$\{postingText\.slice\(0,\s*3000\)\}[^`]*\$\{tailText\.slice\(0,\s*1500\)\}/.test(body)) {
+    throw new Error('extract-fields does not concatenate head + tail for AI input');
+  }
+});
+
+t('Parse-status cycle helper exists and displays progressive hints', () => {
+  // User feedback: parsing feels frozen after "Open" because only one
+  // "Fetching..." message is shown. Now we cycle through stage-appropriate
+  // hints at 3s/7s/12s/20s elapsed so the user knows work is still happening.
+  if (!/function _startParseStatusCycle/.test(feSrc)) {
+    throw new Error('_startParseStatusCycle helper missing');
+  }
+  const idx = feSrc.indexOf('function _startParseStatusCycle');
+  const end = feSrc.indexOf('async function parseJobUrl', idx);
+  const body = feSrc.slice(idx, end > idx ? end : idx + 2000);
+  // Must use setTimeout per-stage and return a cancel closure
+  if (!/setTimeout\(/.test(body))          throw new Error('no setTimeout — hints would not be scheduled');
+  if (!/timers\.forEach\(clearTimeout\)/.test(body)) {
+    throw new Error('no cancellation path — transitioning to phase 2 would leak phase 1 timers');
+  }
+  // parseJobUrl must use the helper AND cancel it on phase boundaries
+  const parseIdx = feSrc.indexOf('async function parseJobUrl');
+  const parseBody = feSrc.slice(parseIdx, parseIdx + 6000);
+  const cycleStarts = (parseBody.match(/_startParseStatusCycle\(/g) || []).length;
+  if (cycleStarts < 2) throw new Error('expected cycle started in both phase 1 and phase 2');
+  const cancels = (parseBody.match(/cancelCycle\(\)/g) || []).length;
+  if (cancels < 2) throw new Error('cycle not cancelled at phase transitions (timers leak)');
+});
+
+t('Jina timeout raised to 18s for JS-heavy SPA career portals', () => {
+  // User reported slow parses. Many SPA portals take 12+ seconds for Jina
+  // to hydrate the DOM before salary text appears. 18s gives headroom.
+  const idx = serverSrc.indexOf("fetchTimeout('https://r.jina.ai");
+  if (idx < 0) throw new Error('Jina call site not found');
+  const body = serverSrc.slice(idx, idx + 800);
+  const m = body.match(/,\s*(\d+)\s*\)/);
+  if (!m) throw new Error('Jina fetchTimeout has no explicit timeout');
+  const t = parseInt(m[1], 10);
+  if (t < 18000) throw new Error(`Jina timeout is ${t}ms — expected ≥18000 for SPA sites`);
 });
 
 // ════════════════════════════════════════════════════════════════════════════

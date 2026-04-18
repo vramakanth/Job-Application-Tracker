@@ -171,7 +171,11 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .job-item { padding: 12px; border-radius: var(--radius-sm); cursor: pointer; margin-bottom: 4px; border: 0.5px solid transparent; transition: all 0.15s; }
 .job-item:hover { background: var(--bg3); }
 .job-item.active { background: var(--bg3); border-color: var(--border); }
-.job-item-company { font-size: 11px; color: var(--text2); font-family: var(--mono); margin-bottom: 2px; display: flex; align-items: center; gap: 6px; }
+/* Header row: company name (left, grows) + #NN (right, mono). Frees up the
+   row the number used to occupy. */
+.job-item-header-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.job-item-company { font-size: 11px; color: var(--text2); font-family: var(--mono); display: flex; align-items: center; gap: 6px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.job-num { font-size: 10px; color: var(--text3); font-family: var(--mono); letter-spacing: 0.02em; flex-shrink: 0; }
 .job-item-title { font-size: 13px; font-weight: 500; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .job-item-meta { display: flex; align-items: center; gap: 6px; }
 
@@ -919,7 +923,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       Don't have an account? <a onclick="showScreen('register')">Create one</a>
       <br><a onclick="showScreen('forgot')" style="font-size:12px;color:var(--text3)">Forgot password?</a>
     </div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.8.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.11.0 · private beta</div>
   </div>
 </div>
 
@@ -959,7 +963,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     </div>
     <button id="register-btn" class="auth-btn" onclick="doRegister()">Create account</button>
     <div class="auth-switch">Already have an account? <a onclick="showScreen('login')">Sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.8.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.11.0 · private beta</div>
   </div>
 </div>
 
@@ -975,7 +979,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <div class="auth-field"><label>CONFIRM PASSWORD</label><input id="recover-confirmpw" type="password" placeholder="Confirm new password"></div>
     <button id="recover-btn" class="auth-btn" onclick="recoverAccount()">Reset password</button>
     <div class="auth-switch"><a onclick="showScreen('login')">Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.8.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.11.0 · private beta</div>
   </div>
 </div>
 
@@ -1052,7 +1056,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       <div class="user-avatar" id="user-avatar" style="display:flex">VR</div>
       <div style="flex:1;min-width:0">
         <div class="user-name" id="user-name-display">user</div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.8.0</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.11.0</div>
       </div>
 
       <button class="user-bar-settings" onclick="doLogout()" title="Sign out" style="color:var(--text3)" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">
@@ -1259,7 +1263,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
 <script>
 const API = '';
-const APP_VERSION = '1.8.0';
+const APP_VERSION = '1.11.0';
 let token = localStorage.getItem('applied_token');
 let currentUser = localStorage.getItem('applied_user');
 let jobs = {}, currentJobId = null, currentFilter = 'all', activeDetailTab = 'notes';
@@ -2193,6 +2197,24 @@ function scheduleSave() {
 }
 
 // ── URL PARSING ──
+// Progressive-status helper: cycles through a list of hints at specified
+// elapsed-time marks. Returns a cancellation function. We use this during
+// the parse flow because the two network calls (fetchATS + AI extract)
+// each have unpredictable duration — Jina can take 15+ seconds for SPA
+// sites, and a one-shot "Extracting..." message feels like the app hung.
+function _startParseStatusCycle(el, stages) {
+  if (!el) return () => {};
+  const timers = [];
+  stages.forEach(([delayMs, msg]) => {
+    timers.push(setTimeout(() => {
+      // Only replace if element still reflects the most-recent parse call —
+      // avoids overwriting a subsequent phase's message.
+      el.innerHTML = spinner() + ' ' + msg;
+    }, delayMs));
+  });
+  return () => timers.forEach(clearTimeout);
+}
+
 async function parseJobUrl() {
   let url = document.getElementById('job-url').value.trim();
   if (!url) { alert('Paste a job posting URL first.'); return; }
@@ -2204,7 +2226,16 @@ async function parseJobUrl() {
   btn.disabled = true;
   btn.textContent = 'Parsing...';
   statusEl.style.display = 'flex';
-  statusEl.innerHTML = spinner() + ' Fetching job posting...';
+  statusEl.innerHTML = spinner() + ' Fetching job posting…';
+
+  // Phase 1 status cycle: covers the /api/parse-job call which can take
+  // anywhere from <1s (simple page) to 15s (SPA needing Jina render).
+  let cancelCycle = _startParseStatusCycle(statusEl, [
+    [3000,  'Rendering the page…'],
+    [7000,  'Some sites take a bit longer — still working…'],
+    [12000, 'This page needs JavaScript to render — almost there…'],
+    [20000, 'Still working — some company career portals are slow…'],
+  ]);
 
   pendingHtml = null;
   pendingText = null;
@@ -2216,6 +2247,9 @@ async function parseJobUrl() {
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       body: JSON.stringify({ url })
     });
+
+    // Phase 1 done — cancel its timers
+    cancelCycle();
 
     if (!res.ok) throw new Error('Server error');
     const data = await res.json();
@@ -2229,18 +2263,33 @@ async function parseJobUrl() {
     const hasFields = fields && Object.values(fields).some(v => v !== null);
 
     if (!hasFields && text) {
-      statusEl.innerHTML = spinner() + ' Extracting details with AI...';
+      statusEl.innerHTML = spinner() + ' Extracting title, company, salary…';
+      // Phase 2 status cycle: AI extract call. Usually 2-6s but can stall
+      // on provider rate limits with fallback through Groq → OpenRouter → Google.
+      cancelCycle = _startParseStatusCycle(statusEl, [
+        [4000, 'AI is reading the posting…'],
+        [9000, 'Still extracting — the primary AI provider may be busy…'],
+      ]);
       try {
+        // The parse-job response may have already pre-extracted salary via
+        // regex on the full text (before slicing). Forward that so the AI
+        // doesn't have to rediscover it from a potentially truncated slice.
+        // Also send the tail of long postings — salary/comp blocks are
+        // usually at the bottom of career pages.
+        const body = { url, postingText: text.slice(0, 5000) };
+        if (data.salary) body.domSalary = data.salary;
+        if (text.length > 5000) body.tailText = text.slice(-2000);
         const aiRes = await fetch(API + '/api/extract-fields', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-          body: JSON.stringify({ url, postingText: text.slice(0, 5000) })
+          body: JSON.stringify(body)
         });
         if (aiRes.ok) {
           const extracted = await aiRes.json();
           if (extracted) finalFields = { ...finalFields, ...extracted };
         }
       } catch(e) {}
+      cancelCycle();
     }
 
     // Populate form fields
@@ -2307,6 +2356,7 @@ async function parseJobUrl() {
     }
 
   } catch(e) {
+    cancelCycle();
     console.error('Parse error:', e);
     statusEl.innerHTML = `<span style="color:var(--amber)">⚠</span> Could not reach server — please fill in manually`;
   }
@@ -2454,9 +2504,11 @@ function renderJobList() {
   list.innerHTML = filtered.map((j, i) => `
     <div class="job-item${currentJobId===j.id?' active':''}" onclick="bulkMode?toggleBulkSelect('${j.id}',event):selectJob('${j.id}')">
       ${bulkMode ? `<input type="checkbox" ${bulkSelected.has(j.id)?'checked':''} onclick="toggleBulkSelect('${j.id}',event)" style="flex-shrink:0;margin-top:2px;accent-color:var(--accent-bg)">` : ''}
-      <div class="job-num">${i+1}</div>
       <div class="job-item-body">
-        <div class="job-item-company">${esc(j.company)}</div>
+        <div class="job-item-header-row">
+          <div class="job-item-company">${esc(j.company)}</div>
+          <div class="job-num">#${String(i+1).padStart(2,'0')}</div>
+        </div>
         <div class="job-item-title">${esc(j.title)}</div>
         <div class="job-item-meta">
           <div class="status-dot" style="background:${statusColor(j.status)}"></div>
@@ -3823,7 +3875,8 @@ function renderNotesToolbar(jobId) {
     <button title="Checklist" onclick="notesInsertChecklist()">☑</button>
     <div class="sep"></div>
     <button class="${isBlock('blockquote')}" title="Quote" onclick="notesFormatBlock('blockquote')">&rdquo;</button>
-    <button title="Horizontal rule" onclick="notesCmd('insertHorizontalRule')">—</button>
+    <button title="Section break (horizontal line)" onclick="notesCmd('insertHorizontalRule')" style="letter-spacing:-1px;font-weight:700">━</button>
+    <button title="Insert timestamp" onclick="notesInsertTimestamp()">🕐</button>
     <button title="Table (3×3)" onclick="notesInsertTable()">⌗</button>
     <div class="sep"></div>
     <button title="Link" onclick="notesLinkPrompt()">🔗</button>
@@ -3891,6 +3944,46 @@ function notesInsertTable() {
     `</tbody></table><p><br></p>`;
   try { document.execCommand('insertHTML', false, html); }
   catch (e) { console.warn('[notes] insert table failed:', e); }
+  scheduleNotesSave();
+  renderNotesToolbar(_notes.jobId);
+}
+
+// ── Timestamps ──
+// Produces a humane, readable timestamp like "Monday 17th April 2026 · 2 pm"
+// or with minutes when non-zero: "Monday 17th April 2026 · 2:35 pm". The
+// dot middle separates date from time without feeling like punctuation.
+function _formatHumaneTimestamp(d = new Date()) {
+  const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  // Ordinal suffix: 1st, 2nd, 3rd, 4th-20th, 21st, 22nd, 23rd, 24th-30th, 31st
+  const ordinal = (n) => {
+    const mod100 = n % 100;
+    if (mod100 >= 11 && mod100 <= 13) return n + 'th';
+    const mod10 = n % 10;
+    return n + (['th','st','nd','rd'][mod10] || 'th');
+  };
+  const h = d.getHours();
+  const m = d.getMinutes();
+  const ampm = h >= 12 ? 'pm' : 'am';
+  const h12  = h % 12 || 12;
+  const time = m === 0 ? `${h12} ${ampm}` : `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
+  return `${days[d.getDay()]} ${ordinal(d.getDate())} ${months[d.getMonth()]} ${d.getFullYear()} · ${time}`;
+}
+
+// Inserts a timestamp as a bold paragraph so it visually anchors a new
+// thought / entry. Caret lands on the empty line below, ready for content.
+// We wrap in <strong> rather than a custom class so the output is portable
+// if the user copies it elsewhere.
+function notesInsertTimestamp() {
+  if (!_notes.editor) return;
+  _notes.editor.focus();
+  const stamp = _formatHumaneTimestamp();
+  // esc() matters even though the content is entirely our own — the ordinal
+  // helper and months are all safe strings, but this is defense-in-depth if
+  // a future localization change pulls from user data.
+  const html = `<p><strong>${esc(stamp)}</strong></p><p><br></p>`;
+  try { document.execCommand('insertHTML', false, html); }
+  catch (e) { console.warn('[notes] insert timestamp failed:', e); }
   scheduleNotesSave();
   renderNotesToolbar(_notes.jobId);
 }
@@ -4535,34 +4628,9 @@ function renderInsightsTab(j) {
     <div class="insights-inner">
     <div class="insights-header">
       <div class="insights-header-left">
-        ${ins?.generatedAt ? `<div style="font-size:11px;color:var(--text3);font-family:var(--mono)">Research: ${timeSince(ins.generatedAt)}${ins.dynamicUpdatedAt && ins.dynamicUpdatedAt !== ins.generatedAt ? ` · Prices & news: ${timeSince(ins.dynamicUpdatedAt)}` : ''}</div>` : ''}
+        ${ins?.generatedAt ? `<div style="font-size:11px;color:var(--text3);font-family:var(--mono)">Research generated ${timeSince(ins.generatedAt)}</div>` : ''}
         ${ins?._lastError ? `<div style="font-size:11px;color:var(--red);margin-top:2px">⚠ Last refresh failed</div>` : ''}
-      </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        ${ins ? `<button class="insights-refresh-btn" title="Refresh stock prices and latest news (no AI tokens used)" onclick="refreshDynamicInsights('${j.id}')" ${insightsLoading ? 'disabled' : ''}>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 6a5 5 0 018.5-3.5L11 4M11 6a5 5 0 01-8.5 3.5L1 8M11 1v3h-3M1 11V8h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Refresh prices &amp; news
-        </button>` : ''}
-        <button class="insights-refresh-btn" id="insights-run-btn" onclick="runInsights('${j.id}')" ${insightsLoading ? 'disabled' : ''} title="Regenerate AI research (uses tokens)">
-          ${insightsLoading
-            ? `<svg width="12" height="12" viewBox="0 0 12 12" style="animation:spin 0.8s linear infinite" fill="none"><circle cx="6" cy="6" r="4.5" stroke="rgba(26,25,23,0.3)" stroke-width="1.5"/><path d="M6 1.5A4.5 4.5 0 0110.5 6" stroke="#1a1917" stroke-width="1.5" stroke-linecap="round"/></svg> Researching...`
-            : `<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1.5"/><path d="M6 2v4l2.5 1.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> ${ins ? 'Re-run research' : 'Research this role'}`}
-        </button>
-    </div>
-    </div>
-
-    <div class="insight-section">
-      <div class="insight-section-header">
-        <div class="insight-section-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
-        <div class="insight-section-title">Stock &amp; financials</div>
-        <span class="insight-section-badge">${hasFinnhub ? 'API key set' : 'API key required'}</span>
-      </div>
-      <div class="insight-section-body">
-        ${hasFinnhub
-          ? (ins && ins.stock
-              ? renderStockData(ins.stock)
-              : `<div style="font-size:12px;color:var(--text3)">Financial data loads when you click <strong style="color:var(--text)">Refresh now</strong>. Finnhub key is set — stock data will be fetched automatically.</div>`)
-          : `<div style="font-size:12px;color:var(--text2);margin-bottom:0">Add your Finnhub API key in <a href="#" onclick="openSettings('financial');return false;" style="color:var(--blue)">Settings → Financial Data</a> to see live stock price, market cap and analyst ratings.</div>`}
+        ${insightsLoading ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;display:flex;align-items:center;gap:6px"><svg width="10" height="10" viewBox="0 0 12 12" style="animation:spin 0.8s linear infinite" fill="none"><circle cx="6" cy="6" r="4.5" stroke="rgba(0,0,0,0.15)" stroke-width="1.5"/><path d="M6 1.5A4.5 4.5 0 0110.5 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Researching…</div>` : ''}
       </div>
     </div>
 
@@ -4573,13 +4641,13 @@ function renderInsightsTab(j) {
       <div>
         <div style="font-size:14px;font-weight:600;color:var(--red);margin-bottom:6px">Research failed</div>
         <div style="font-size:13px;color:var(--text2);line-height:1.6;margin-bottom:8px">${esc(ins._error)}</div>
-        <div style="font-size:12px;color:var(--text3)">This may be a temporary AI provider issue. Click <strong style="color:var(--text)">Refresh now</strong> to try again.</div>
+        <div style="font-size:12px;color:var(--text3)">This may be a temporary AI provider issue. Data auto-refreshes — if the error persists, switch away and back.</div>
       </div>
     </div>` : `
     ${ins._error ? `<div style="margin-bottom:16px;padding:10px 14px;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-sm);font-size:13px;color:var(--red)">⚠ Last refresh failed — showing previously cached data</div>` : ''}
     ${ins._partial ? `<div style="margin-bottom:16px;padding:10px 14px;background:rgba(232,168,56,0.07);border:1px solid rgba(232,168,56,0.28);border-radius:var(--radius-sm);font-size:13px;color:var(--accent-bg);display:flex;align-items:center;gap:8px">
       <span>⚠</span>
-      <span style="color:var(--text2)">Partial research returned — some sections (e.g. role, culture, news) may be empty. Click <strong style="color:var(--text)">Refresh now</strong> to retry.</span>
+      <span style="color:var(--text2)">Partial research returned — some sections may be empty.</span>
     </div>` : ''}
     <div class="insights-grid">
       ${ins.overview ? renderOverviewCards(ins.overview) : ''}
@@ -4595,13 +4663,16 @@ function renderInsightsTab(j) {
       <div class="insight-section-header">
         <div class="insight-section-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8a2 2 0 00-2 2v2h12V5a2 2 0 00-2-2z"/></svg></div>
         <div class="insight-section-title">About the company</div>
-        ${ins.generatedAt ? `<span class="insight-section-badge">${timeSince(ins.generatedAt)}</span>` : ''}
       </div>
       <div class="insight-section-body">
         <div class="insight-ai-text">${formatAiText(ins.companyOverview || '')}</div>
-        ${ins.companyOverviewSource === 'ai'
-          ? `<div style="margin-top:10px;font-size:11px;color:var(--text3);font-family:var(--mono)">Source: <span style="display:inline-flex;align-items:center;gap:4px;padding:1px 7px;background:rgba(232,168,56,0.1);border:0.5px solid rgba(232,168,56,0.3);border-radius:3px;color:var(--accent-bg)">AI-generated</span> <span style="color:var(--text3);margin-left:6px">no public encyclopedia entry for this company</span></div>`
-          : (ins.wikipediaUrl ? `<div style="margin-top:10px;font-size:11px;color:var(--text3);font-family:var(--mono)">Source: <a href="${esc(ins.wikipediaUrl)}" target="_blank" style="color:var(--text2);text-decoration:none;border-bottom:1px dotted var(--text3)">Wikipedia</a></div>` : '')}
+        ${renderInlineStock(ins.stock, ins.dynamicUpdatedAt, hasFinnhub)}
+        ${renderSectionSource(
+          ins.companyOverviewSource === 'ai'
+            ? { label: 'AI-generated', highlight: true, note: 'no public encyclopedia entry for this company' }
+            : (ins.wikipediaUrl ? { label: 'Wikipedia', url: ins.wikipediaUrl } : { label: '—' }),
+          ins.generatedAt
+        )}
       </div>
     </div>
 
@@ -4612,6 +4683,7 @@ function renderInsightsTab(j) {
       </div>
       <div class="insight-section-body">
         <div class="insight-ai-text">${formatAiText(ins.roleIntel || '')}</div>
+        ${renderSectionSource({ label: 'AI synthesis', note: 'based on job posting + public company context' }, ins.generatedAt)}
       </div>
     </div>
 
@@ -4625,11 +4697,12 @@ function renderInsightsTab(j) {
       </div>
       <div class="insight-section-body">
         ${ins.culture ? renderCultureSection(ins.culture) : '<div class="insight-ai-text">No culture data available.</div>'}
+        ${ins.culture ? renderSectionSource({ label: 'AI synthesis', note: 'aggregated from employee review signals' }, ins.generatedAt) : ''}
       </div>
     </div>
 
 
-    ${ins.workforce ? renderWorkforceSection(ins.workforce) : ''}
+    ${ins.workforce ? renderWorkforceSection(ins.workforce, ins.generatedAt) : ''}
 
     <div class="insight-section">
       <div class="insight-section-header">
@@ -4638,6 +4711,7 @@ function renderInsightsTab(j) {
       </div>
       <div class="insight-section-body">
         ${ins.flags ? renderFlags(ins.flags) : ''}
+        ${ins.flags ? renderSectionSource({ label: 'AI synthesis', note: 'inferred from public signals + company context' }, ins.generatedAt) : ''}
       </div>
     </div>
 
@@ -4645,9 +4719,11 @@ function renderInsightsTab(j) {
       <div class="insight-section-header">
         <div class="insight-section-icon"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16a2 2 0 002-2V4a2 2 0 00-2-2H8a2 2 0 00-2 2v16a2 2 0 01-2 2zm0 0a2 2 0 01-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z"/></svg></div>
         <div class="insight-section-title">Latest news</div>
+        ${ins.dynamicUpdatedAt ? `<span class="insight-section-badge">retrieved ${timeSince(ins.dynamicUpdatedAt)}</span>` : ''}
       </div>
       <div class="insight-section-body no-pad">
         ${ins.news && ins.news.length ? renderNews(ins.news) : '<div style="padding:16px;font-size:13px;color:var(--text3)">No recent news found.</div>'}
+        ${ins.news && ins.news.length ? renderSectionSource({ label: 'Yahoo Finance + Google News', note: 'per-item publisher shown on each headline' }, ins.dynamicUpdatedAt) : ''}
       </div>
     </div>
 
@@ -4655,7 +4731,7 @@ function renderInsightsTab(j) {
     ` : `
     <div class="insight-empty">
       <svg width="56" height="56" viewBox="0 0 56 56" fill="none"><circle cx="28" cy="28" r="26" stroke="currentColor" stroke-width="2"/><path d="M20 28h16M28 20v16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-      <p>Click <strong>Research this role</strong> to get AI-powered insights about ${esc(j.company)} and the ${esc(j.title)} position.</p>
+      <p>${insightsLoading ? 'Researching ' + esc(j.company) + '…' : 'Research will auto-load when you open this tab.'}</p>
     </div>`}
   </div>
   </div>`;
@@ -4675,13 +4751,26 @@ function renderOverviewCards(ov) {
     </div>`).join('');
 }
 
-function renderStockData(s) {
-  if (!s || s.error) return `<div style="font-size:12px;color:var(--text3);margin-top:4px">${s && s.error ? esc(s.error) : 'No stock data available (private company or not found).'}</div>`;
+// Renders the 4-stat financial row that lives INSIDE the "About the company"
+// section body (under the overview paragraph). Three display modes:
+//   1. no Finnhub key       → a small hint pointing to Settings → Financial
+//   2. key set but no stock → nothing renders (probably a private company;
+//                              the absence is itself the answer, no need for
+//                              noise)
+//   3. stock data present   → 4-stat row + stock-update timestamp
+function renderInlineStock(s, dynamicUpdatedAt, hasFinnhub) {
+  if (!hasFinnhub) {
+    return `<div style="margin-top:14px;padding:10px 14px;background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius-sm);font-size:12px;color:var(--text3)">
+      Add your Finnhub API key in <a href="#" onclick="openSettings('financial');return false;" style="color:var(--blue)">Settings → Financial Data</a> to see live stock price, market cap and 52-week range.
+    </div>`;
+  }
+  if (!s || s.error) return '';  // private company — no row to render
+
   const change = parseFloat(s.change || 0);
   const changeColor = change >= 0 ? 'var(--green)' : 'var(--red)';
   const sign = change >= 0 ? '+' : '';
   return `
-    <div class="insights-grid" style="margin-top:10px">
+    <div class="insights-grid" style="margin-top:14px">
       <div class="insight-card">
         <div class="insight-card-label">Stock (${esc(s.ticker||'')})</div>
         <div class="insight-card-value">$${parseFloat(s.price||0).toFixed(2)}</div>
@@ -4691,7 +4780,37 @@ function renderStockData(s) {
       ${s.peRatio ? `<div class="insight-card"><div class="insight-card-label">P/E ratio</div><div class="insight-card-value">${parseFloat(s.peRatio).toFixed(1)}</div></div>` : ''}
       ${s.week52High ? `<div class="insight-card"><div class="insight-card-label">52-week range</div><div class="insight-card-value" style="font-size:14px">$${parseFloat(s.week52Low||0).toFixed(0)}–$${parseFloat(s.week52High).toFixed(0)}</div></div>` : ''}
     </div>
-    ${s.analystTarget ? `<div style="margin-top:8px;font-size:12px;color:var(--text2)">Analyst target: <strong style="color:var(--text)">$${parseFloat(s.analystTarget).toFixed(2)}</strong> · ${esc(s.recommendation||'')}</div>` : ''}`;
+    ${s.analystTarget ? `<div style="margin-top:8px;font-size:12px;color:var(--text2)">Analyst target: <strong style="color:var(--text)">$${parseFloat(s.analystTarget).toFixed(2)}</strong> · ${esc(s.recommendation||'')}</div>` : ''}
+    ${dynamicUpdatedAt ? `<div style="margin-top:6px;font-size:11px;color:var(--text3);font-family:var(--mono)">Stock prices updated ${timeSince(dynamicUpdatedAt)} · Finnhub</div>` : ''}`;
+}
+
+// Kept under the old name too so any latent references don't break. Calls the
+// new helper with safe defaults.
+function renderStockData(s) {
+  return renderInlineStock(s, null, true);
+}
+
+// Unified source-attribution line for any insights section. Single place to
+// tweak the visual treatment when we want to de-emphasize / re-emphasize
+// provenance.
+//
+// opts = { label, url?, highlight?, note? }
+//   label     — primary source name ("Wikipedia", "AI synthesis", etc.)
+//   url       — optional link to the source
+//   highlight — if true, label is rendered as an amber badge (for AI content)
+//   note      — optional tail text (de-emphasized)
+//
+// `updatedAt` — optional timestamp; rendered as " · updated X ago"
+function renderSectionSource(opts, updatedAt) {
+  if (!opts || !opts.label) return '';
+  const labelHtml = opts.highlight
+    ? `<span style="display:inline-flex;align-items:center;padding:1px 7px;background:rgba(232,168,56,0.1);border:0.5px solid rgba(232,168,56,0.3);border-radius:3px;color:var(--accent-bg)">${esc(opts.label)}</span>`
+    : opts.url
+      ? `<a href="${esc(opts.url)}" target="_blank" style="color:var(--text2);text-decoration:none;border-bottom:1px dotted var(--text3)">${esc(opts.label)}</a>`
+      : `<span style="color:var(--text2)">${esc(opts.label)}</span>`;
+  const noteHtml = opts.note ? ` <span style="color:var(--text3);margin-left:4px">· ${esc(opts.note)}</span>` : '';
+  const tsHtml   = updatedAt ? ` <span style="color:var(--text3);margin-left:4px">· updated ${timeSince(updatedAt)}</span>` : '';
+  return `<div style="margin-top:12px;font-size:11px;color:var(--text3);font-family:var(--mono)">Source: ${labelHtml}${noteHtml}${tsHtml}</div>`;
 }
 
 function renderCultureSection(culture) {
@@ -4744,7 +4863,7 @@ function renderFlags(flags) {
 
 
 
-function renderWorkforceSection(wf) {
+function renderWorkforceSection(wf, generatedAt) {
   if (!wf) return '';
 
   const esc2 = s => typeof s === 'string' ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : String(s||'');
@@ -4784,18 +4903,21 @@ function renderWorkforceSection(wf) {
       ${wf.avgTenure ? statCard('AVG TENURE', esc2(wf.avgTenure), null) : ''}
     </div>`;
 
-  // Layoff status — prominently visible
-  const layoffBanner = wf.recentLayoffs && wf.recentLayoffs !== 'null' && wf.recentLayoffs !== 'None'
-    ? `<div style="margin-bottom:16px;padding:12px 14px;background:rgba(184,50,37,0.07);border:1px solid rgba(184,50,37,0.22);border-radius:var(--radius-sm);display:flex;gap:10px;align-items:flex-start">
-        <span style="font-size:16px;flex-shrink:0">⚠</span>
+  // Layoff status — just a checkmark or X + brief text. No colored boxes.
+  // Per user feedback: the green/red panels were heavy for what's essentially
+  // a yes/no signal.
+  const hasLayoffs = wf.recentLayoffs && wf.recentLayoffs !== 'null' && wf.recentLayoffs !== 'None';
+  const layoffBanner = hasLayoffs
+    ? `<div style="margin-bottom:14px;display:flex;gap:10px;align-items:flex-start;font-size:13px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:3px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         <div>
-          <div style="font-size:11px;font-weight:600;color:var(--red);font-family:var(--mono);margin-bottom:3px">RECENT LAYOFFS</div>
-          <div style="font-size:13px;color:var(--text2);line-height:1.5">${esc2(wf.recentLayoffs)}</div>
+          <div style="color:var(--text);font-weight:500">Recent layoffs</div>
+          <div style="color:var(--text2);line-height:1.5;margin-top:1px">${esc2(wf.recentLayoffs)}</div>
         </div>
       </div>`
-    : `<div style="margin-bottom:16px;display:flex;gap:8px;align-items:center;padding:10px 14px;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.18);border-radius:var(--radius-sm)">
+    : `<div style="margin-bottom:14px;display:flex;gap:10px;align-items:center;font-size:13px;color:var(--text2)">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>
-        <span style="font-size:13px;color:var(--text2)">No major layoffs reported in the past 2 years</span>
+        <span>No major layoffs reported in the past 2 years</span>
       </div>`;
 
   // Locations — pin icon list
@@ -4865,6 +4987,7 @@ function renderWorkforceSection(wf) {
       ${ageBlock}
       ${visaBlock}
       ${noteBlock}
+      ${renderSectionSource({ label: 'AI synthesis', note: 'estimated from public data — review before acting' }, generatedAt)}
     </div>
   </div>`;
 }
@@ -5005,6 +5128,7 @@ function renderCompensationSection(comp, ins) {
         ${neg.tactic ? `<div style="font-size:12px;color:var(--text2);line-height:1.6;padding:10px;background:var(--bg3);border-radius:var(--radius-sm);border-left:3px solid ${levColor}">${esc(neg.tactic)}</div>` : ''}
       </div>` : ''}
 
+      ${renderSectionSource({ label: 'AI estimate', note: 'synthesized from market data — verify against levels.fyi / Glassdoor' }, ins && ins.generatedAt)}
     </div>
   </div>`;
 }
@@ -8263,7 +8387,7 @@ setInterval(() => {
     </div>
     <button class="auth-btn" id="forgot-btn" onclick="doForgot()">Send recovery email</button>
     <div class="auth-switch" style="margin-top:12px"><a onclick="showScreen('login')">← Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.8.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.11.0 · private beta</div>
   </div>
 </div>
 

@@ -446,40 +446,77 @@ SELECT ?founded ?hqLabel ?industryLabel ?employees WHERE {
   }
 }
 
-async function fetchCompanyNews(company, ticker, finnhubKey) {
+async function fetchCompanyNews(company, ticker, _finnhubKey) {
+  // Finnhub company-news was removed — it returned low-quality matches
+  // (press releases, promotional content, unrelated items). We now query
+  // two keyless RSS feeds in parallel and merge+dedupe by URL.
+  //
+  // Sources in priority order:
+  //   1. Yahoo Finance RSS — ticker-gated, so only runs for public companies.
+  //      Strong financial-specific curation; good for earnings, guidance,
+  //      analyst moves, M&A. Free, no key required.
+  //   2. Google News RSS — keyless, searchable by company name. Broader net;
+  //      catches non-financial press (partnerships, layoffs, product news).
+  //      Each <item> carries its own <source> tag naming the actual publisher
+  //      (Reuters, Bloomberg, TechCrunch, etc.) which we surface to the user.
+  //
+  // Each item is tagged with `source` so the UI can display per-item
+  // attribution. Merged list is sorted by date (newest first) and capped at 6.
   const items = [];
+  const seen = new Set();
 
-  // 1. Finnhub — best quality, dated, tied to a real ticker. Only reachable
-  //    if the insights call already resolved the ticker AND the user has
-  //    provided a Finnhub API key.
-  if (ticker && finnhubKey) {
-    try {
-      const from = new Date(Date.now() - 90 * 86400 * 1000).toISOString().slice(0, 10);
-      const to   = new Date().toISOString().slice(0, 10);
-      const r = await fetchTimeout(
-        `https://finnhub.io/api/v1/company-news?symbol=${ticker}&from=${from}&to=${to}&token=${finnhubKey}`,
-        {}, 8000
-      );
-      if (r.ok) {
-        const data = await r.json();
-        for (const item of (data || []).slice(0, 5)) {
-          if (!item.headline || !item.url) continue;
-          items.push({
-            headline: item.headline,
-            source:   item.source || 'Finnhub',
-            date:     item.datetime ? new Date(item.datetime * 1000).toISOString().slice(0, 10) : '',
-            url:      item.url,
-            sentiment: '',
-          });
+  const parseItem = (block, extract) => ({
+    headline:  extract(block, 'title'),
+    url:       extract(block, 'link'),
+    pubDate:   extract(block, 'pubDate'),
+    source:    extract(block, 'source'),
+  });
+  const tagExtract = (block, tag) => {
+    const m = new RegExp(`<${tag}[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${tag}>`).exec(block);
+    return m ? m[1].trim() : '';
+  };
+  const addItem = (headline, source, pubDate, url) => {
+    if (!headline || !url) return;
+    // Dedupe on URL — Yahoo and Google sometimes surface the same article
+    const key = url.split('?')[0];
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push({
+      headline:  headline.trim(),
+      source:    (source || 'News').trim(),
+      date:      pubDate ? new Date(pubDate).toISOString().slice(0, 10) : '',
+      url,
+      sentiment: '',
+    });
+  };
+
+  // Run both feeds in parallel. Either failing is fine — we fall back to the
+  // other. If both fail, news[] is empty and the UI shows a graceful empty state.
+  const tasks = [];
+
+  // 1. Yahoo Finance RSS (ticker-only)
+  if (ticker) {
+    tasks.push((async () => {
+      try {
+        const r = await fetchTimeout(
+          `https://feeds.finance.yahoo.com/rss/2.0/headline?s=${encodeURIComponent(ticker)}&region=US&lang=en-US`,
+          { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SummitBot/1.0)' } },
+          8000
+        );
+        if (!r.ok) return;
+        const xml = await r.text();
+        const itemRe = /<item>([\s\S]*?)<\/item>/g;
+        let m;
+        while ((m = itemRe.exec(xml)) && items.length < 12) {
+          const it = parseItem(m[1], tagExtract);
+          addItem(it.headline, 'Yahoo Finance', it.pubDate, it.url);
         }
-      }
-    } catch (e) { console.warn('finnhub news fail:', e.message); }
+      } catch (e) { console.warn('yahoo news fail:', e.message); }
+    })());
   }
 
-  // 2. Google News RSS — keyless, works for any company name. Minimal XML
-  //    parsing via regex; items are <item>…</item>. Google returns a redirect
-  //    URL that resolves to the actual publisher, which is fine.
-  if (items.length === 0) {
+  // 2. Google News RSS (keyword-based, works for any company)
+  tasks.push((async () => {
     try {
       const q = encodeURIComponent(company);
       const r = await fetchTimeout(
@@ -487,36 +524,30 @@ async function fetchCompanyNews(company, ticker, finnhubKey) {
         { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SummitBot/1.0)' } },
         8000
       );
-      if (r.ok) {
-        const xml = await r.text();
-        const itemRe = /<item>([\s\S]*?)<\/item>/g;
-        const extract = (block, tag) => {
-          const m = new RegExp(`<${tag}[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?</${tag}>`).exec(block);
-          return m ? m[1].trim() : '';
-        };
-        let m;
-        while ((m = itemRe.exec(xml)) && items.length < 5) {
-          const block = m[1];
-          const headline = extract(block, 'title');
-          const url      = extract(block, 'link');
-          const pubDate  = extract(block, 'pubDate');
-          const source   = extract(block, 'source') || 'News';
-          if (!headline || !url) continue;
-          // Strip the "— Publisher" suffix Google appends to Title; keep clean headline
-          const cleanHeadline = headline.replace(/\s+[—-]\s+[^—-]+$/, '').trim();
-          items.push({
-            headline: cleanHeadline || headline,
-            source,
-            date:     pubDate ? new Date(pubDate).toISOString().slice(0, 10) : '',
-            url,
-            sentiment: '',
-          });
-        }
+      if (!r.ok) return;
+      const xml = await r.text();
+      const itemRe = /<item>([\s\S]*?)<\/item>/g;
+      let m;
+      while ((m = itemRe.exec(xml)) && items.length < 12) {
+        const it = parseItem(m[1], tagExtract);
+        // Google appends " — Publisher" to titles; strip for a clean headline
+        const cleanHeadline = (it.headline || '').replace(/\s+[—-]\s+[^—-]+$/, '').trim() || it.headline;
+        addItem(cleanHeadline, it.source || 'Google News', it.pubDate, it.url);
       }
-    } catch (e) { console.warn('google news RSS fail:', e.message); }
-  }
+    } catch (e) { console.warn('google news fail:', e.message); }
+  })());
 
-  return items;
+  await Promise.all(tasks);
+
+  // Sort newest first; undated items sink to the bottom
+  items.sort((a, b) => {
+    if (!a.date && !b.date) return 0;
+    if (!a.date) return 1;
+    if (!b.date) return -1;
+    return b.date.localeCompare(a.date);
+  });
+
+  return items.slice(0, 6);
 }
 
 // callAI(order, sys, usr, maxTok, req, endpoint)
@@ -1131,11 +1162,14 @@ const { cleanJobUrl, slugFallback } = require('./ats-helpers');
 async function fetchATS(rawUrl) {
   const url = cleanJobUrl(rawUrl);
 
-  // 1. Jina.ai reader renders JS and bypasses most bot blocks
+  // 1. Jina.ai reader renders JS and bypasses most bot blocks.
+  // Timeout 18s because many SPA career portals (Workday, iCIMS variants,
+  // bd.com, unicorn-startup-of-the-week.com) need 10+ seconds to hydrate
+  // before salary/description text is in the DOM. 12s was clipping them.
   try {
     const r = await fetchTimeout('https://r.jina.ai/' + url, {
       headers: { 'User-Agent': UA, Accept: 'text/plain,*/*', 'X-Return-Format': 'text' }
-    }, 12000);
+    }, 18000);
     if (r.ok) {
       const raw = await r.text();
       // Jina returns MARKDOWN. Strip all markdown syntax to leave clean prose —
@@ -1238,15 +1272,85 @@ function htmlToText(html) {
     .replace(/[ \t]+/g,' ').replace(/\n{4,}/g,'\n\n\n').trim();
 }
 
+// Extract a salary range or single annualized/hourly salary from free text.
+// Intentionally general — handles variations across every posting we've seen,
+// with zero site-specific branching.
+//
+// Patterns covered:
+//   $120,000 - $150,000           (comma, hyphen)
+//   $120,000.00 – $150,000.00     (en-dash, trailing decimals)
+//   $120k – $150k                 (K-suffix)
+//   $120,000 to $150,000          (spelled-out "to")
+//   £80,000 - £120,000            (GBP)
+//   €80,000 - €120,000            (EUR)
+//   $124,700 USD Annual           (single, with period hint)
+//   $60/hour                      (hourly single)
+//   Salary Range $120k - $150k    (label-prefixed — regex doesn't care)
+//
+// Returns a normalized string like "$120k–$150k" (using en-dash).
 function extractSalaryFromText(text) {
-  const m = text.match(/\$([\d,]+(?:\.\d+)?)\s*[kK]?\s*[-\u2013\u2014to]+\s*\$([\d,]+(?:\.\d+)?)\s*[kK]?/);
-  if (!m) return null;
-  const isK = /[kK]/.test(m[0]);
-  const fmt = (raw) => {
-    const n = parseFloat(raw.replace(/,/g,'')) * (isK && parseFloat(raw.replace(/,/g,'')) < 1000 ? 1000 : 1);
-    return n >= 1000 ? '$' + Math.round(n/1000) + 'k' : '$' + Math.round(n).toLocaleString();
-  };
-  return fmt(m[1]) + '\u2013' + fmt(m[2]);
+  if (!text) return null;
+  // Accept $, £, € as currency symbols. ISO codes (USD/GBP/EUR/CAD) can
+  // appear after the numbers — still fine, we anchor on the symbol.
+  const CUR = '[$£€]';
+  const NUM = '\\d{1,3}(?:,\\d{3})*(?:\\.\\d+)?|\\d+(?:\\.\\d+)?';
+  const KSFX = '\\s*[kK]?';
+  // Separator: hyphen, en-dash, em-dash, or " to " (spaces matter for "to"
+  // to avoid matching a random "to" inside prose).
+  const JOIN = '\\s*(?:[-\\u2013\\u2014]|\\bto\\b)\\s*';
+
+  // Range pattern — single currency symbol on first number; optional on second
+  // (common: "$120k - 150k" without $ on second half).
+  const rangeRe = new RegExp(
+    `(${CUR})\\s*(${NUM})${KSFX}${JOIN}(?:${CUR})?\\s*(${NUM})${KSFX}`,
+    'g'
+  );
+
+  // Walk all matches — many postings mention incidental dollar figures
+  // (e.g. "1000+ customers", "$100 gift card"). A salary range has TWO
+  // numbers both >= 30 (treating k-notation) and the larger should be
+  // within 3× of the smaller. This filters out false positives like
+  // "$1M ARR to $10M ARR" (revenue ranges) or $50-$500 (product prices).
+  let best = null;
+  let m;
+  while ((m = rangeRe.exec(text)) !== null) {
+    const sym = m[1];
+    const raw1 = m[2], raw2 = m[3];
+    const hasK = /k/i.test(m[0]);
+    const n1 = parseFloat(raw1.replace(/,/g, '')) * (hasK && parseFloat(raw1.replace(/,/g, '')) < 1000 ? 1000 : 1);
+    const n2 = parseFloat(raw2.replace(/,/g, '')) * (hasK && parseFloat(raw2.replace(/,/g, '')) < 1000 ? 1000 : 1);
+    // Sanity filters. Hourly salary floors are ~$15; annual ~$20k.
+    const lo = Math.min(n1, n2), hi = Math.max(n1, n2);
+    if (lo < 15) continue;                    // rules out "1-10 years"
+    if (hi / lo > 5) continue;                // rules out out-of-band ranges
+    if (hi < 25 && lo < 25) {
+      // Looks like an hourly range (both under $25) — OK if the surrounding
+      // text has an hourly hint; otherwise skip to avoid grabbing "5-10" etc.
+      const ctx = text.slice(Math.max(0, m.index - 40), Math.min(text.length, m.index + m[0].length + 40));
+      if (!/hour|hr\b|hourly/i.test(ctx)) continue;
+    }
+    const fmt = (n) => n >= 1000 ? sym + Math.round(n/1000) + 'k' : sym + Math.round(n).toLocaleString();
+    // Prefer the FIRST credible match (salary labels typically come before
+    // the body) — return immediately rather than iterating.
+    best = fmt(Math.min(n1, n2)) + '\u2013' + fmt(Math.max(n1, n2));
+    return best;
+  }
+
+  // Single salary with explicit period — "$150,000 per year", "$60/hour"
+  const singleRe = new RegExp(
+    `(${CUR})\\s*(${NUM})${KSFX}\\s*(?:USD|CAD|GBP|EUR)?\\s*(annually|per\\s*year|/\\s*year|/\\s*yr|yearly|annual|hourly|per\\s*hour|/\\s*hour|/\\s*hr)`,
+    'i'
+  );
+  const sm = text.match(singleRe);
+  if (sm) {
+    const sym = sm[1];
+    const hasK = /k/i.test(sm[0]);
+    const n = parseFloat(sm[2].replace(/,/g, '')) * (hasK && parseFloat(sm[2].replace(/,/g, '')) < 1000 ? 1000 : 1);
+    if (n < 15) return null;
+    return n >= 1000 ? sym + Math.round(n/1000) + 'k' : sym + Math.round(n).toLocaleString();
+  }
+
+  return null;
 }
 
 function extractSalaryFromHtml(html) {
@@ -1392,13 +1496,32 @@ app.post('/api/find-posting-mirror', authMiddleware, tokenCapMiddleware, async (
 
 app.post('/api/extract-fields', authMiddleware, tokenCapMiddleware, async (req, res) => {
   const postingText = req.body.postingText || req.body.text || '';
-  const domSalary = req.body.salary || null; // pre-extracted from DOM (bdi, JSON-LD)
+  const tailText    = req.body.tailText || '';
+  // domSalary: precise salary pre-extracted by the client (from JSON-LD, <bdi>
+  // tags, or a regex pass on the untruncated fetchATS text). Always trusted
+  // over AI guesses — AI tends to hallucinate round numbers.
+  let domSalary = req.body.salary || null;
   if (!postingText) return res.status(400).json({ error: 'postingText required' });
-  // If the browser already extracted salary precisely, tell AI to use it
+
+  // Belt-and-suspenders: re-scan the text we have for a salary range using the
+  // same extractor fetchATS uses. Most postings leak the salary in a "Salary
+  // Range Information $X – $Y" footer that sits AFTER the main job description
+  // — so we also scan the tail slice if provided. Cheaper + more reliable than
+  // the AI for literal numeric extraction.
+  if (!domSalary) {
+    domSalary = extractSalaryFromText(postingText) || extractSalaryFromText(tailText) || null;
+  }
+
   const salaryHint = domSalary ? `The salary is already confirmed as ${domSalary} — use this exactly.` : '';
   const sys = `Extract job posting details. Return ONLY valid JSON, no markdown.
 Fields: title(string), company(string), location(city+state only, null if remote-only), workType("Remote"|"Hybrid"|"On-site"|null), remote(boolean), salary(ONLY real dollar amounts like "$120k–$150k" or null — never invent, never use "Competitive" or "DOE"). ${salaryHint}`;
-  const usr = `Extract from this job posting:\n\n${postingText.slice(0, 4000)}`;
+  // If we have tail text, include it in the AI input — compensation/pay-range
+  // blocks commonly appear below the main description and would otherwise be
+  // truncated out of the slice.
+  const payload = tailText
+    ? `${postingText.slice(0, 3000)}\n\n[...]\n\n${tailText.slice(0, 1500)}`
+    : postingText.slice(0, 4000);
+  const usr = `Extract from this job posting:\n\n${payload}`;
   try {
     const parsed = parseJson(await callAI(['groq','openrouter','google'], sys, usr, 400, req, 'extract-fields'));
     // Always prefer DOM-extracted salary over AI-guessed salary
