@@ -692,7 +692,7 @@ input[type=\"file\"] { display: none; }
   12%  { background-color: rgba(232,168,56,0.08); }
   100% { background-color: rgba(232,168,56,0.0); }
 }
-/* v1.19.3: highlight new-from-inbox job cards. Tells the user "this just
+/* v1.19.4: highlight new-from-inbox job cards. Tells the user "this just
    arrived from the extension" without a toast or extra chrome. Animation
    self-removes via animationend listener; class is one-shot. */
 .job-item.inbox-just-added { animation: inboxArrive 2s ease-out; }
@@ -701,7 +701,7 @@ input[type=\"file\"] { display: none; }
   70%  { background-color: rgba(232,168,56,0.06); border-color: rgba(232,168,56,0.15); }
   100% { background-color: transparent; border-color: transparent; }
 }
-/* v1.19.3: passive advisory when an extension-add was silently skipped
+/* v1.19.4: passive advisory when an extension-add was silently skipped
    because it matched an existing job. Different tint from inbox-just-added
    so the user can tell at a glance: amber = new arrival, blue = duplicate
    caught. Same one-shot lifecycle. */
@@ -955,7 +955,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       Don't have an account? <a onclick="showScreen('register')">Create one</a>
       <br><a onclick="showScreen('recover')" style="font-size:12px;color:var(--text3)">Forgot password? Use a recovery code</a>
     </div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.3 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.4 · private beta</div>
   </div>
 </div>
 
@@ -983,7 +983,8 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     </div>
     <div class="auth-field">
       <label>EMAIL (optional)</label>
-      <input id="reg-email" type="email" placeholder="For password recovery" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('reg-password').focus()">
+      <input id="reg-email" type="email" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('reg-password').focus()">
+      <div style="font-size:11px;color:var(--text3);margin-top:6px;line-height:1.5">For future notifications. Summit is end-to-end encrypted &mdash; we can&rsquo;t use email to recover your password. Only your recovery codes can do that.</div>
     </div>
     <div class="auth-field">
       <label>PASSWORD</label>
@@ -995,7 +996,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     </div>
     <button id="register-btn" class="auth-btn" onclick="doRegister()">Create account</button>
     <div class="auth-switch">Already have an account? <a onclick="showScreen('login')">Sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.3 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.4 · private beta</div>
   </div>
 </div>
 
@@ -1011,7 +1012,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <div class="auth-field"><label>CONFIRM PASSWORD</label><input id="recover-confirmpw" type="password" placeholder="Confirm new password"></div>
     <button id="recover-btn" class="auth-btn" onclick="recoverAccount()">Reset password</button>
     <div class="auth-switch"><a onclick="showScreen('login')">Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.3 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.4 · private beta</div>
   </div>
 </div>
 
@@ -1088,7 +1089,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       <div class="user-avatar" id="user-avatar" style="display:flex">VR</div>
       <div style="flex:1;min-width:0">
         <div class="user-name" id="user-name-display">user</div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.19.3</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.19.4</div>
       </div>
 
       <button class="user-bar-settings" onclick="doLogout()" title="Sign out" style="color:var(--text3)" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">
@@ -1297,7 +1298,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
 <script>
 const API = '';
-const APP_VERSION = '1.19.3';
+const APP_VERSION = '1.19.4';
 let token = localStorage.getItem('applied_token');
 let currentUser = localStorage.getItem('applied_user');
 let jobs = {}, currentJobId = null, currentFilter = 'all', activeDetailTab = 'notes';
@@ -1306,7 +1307,7 @@ let sessionTailoredResume = null, sessionTailoredCover = null;
 let sessionTailoredResumeHtml = null, sessionTailoredCoverHtml = null;
 let activeTailorDoc = 'resume'; // which doc type is selected in tailoring UI
 let pendingHtml = null, pendingText = null;
-// v1.19.3: carry req ID + label from the URL parse (JSON-LD / HTML scrape /
+// v1.19.4: carry req ID + label from the URL parse (JSON-LD / HTML scrape /
 // AI extract) so addJob can stamp it on the new job record. Kept as module
 // state rather than a form input — it's a silent metadata field, not
 // something the user should have to see or edit.
@@ -1529,8 +1530,14 @@ function showApp() {
 
   // Notes editor is now inline (no CDN / no module imports) — nothing to prefetch.
 
-  // v1.19.3: start polling inbox for near-instant extension-added job pickup
+  // v1.19.4: start polling inbox for near-instant extension-added job pickup
   _startInboxPolling();
+
+  // v1.19.4: if an extension announced itself while the user was on a
+  // pre-login screen, the banner handler returned early. Re-check here so
+  // a stale extension still surfaces a banner — just on the app chrome,
+  // not the landing page.
+  if (_extIsStale()) _renderStaleExtensionBanner();
 }
 
 // ── AUTH ──
@@ -1820,8 +1827,12 @@ async function doRegister() {
   const err = document.getElementById('register-error');
   const btn = document.getElementById('register-btn');
   err.classList.remove('show');
-  if (!u||!p||!e) { showErr(err,'Please fill in all fields.'); return; }
-  if (!e.includes('@')) { showErr(err,'Please enter a valid email address.'); return; }
+  // v1.19.4: email is truly optional now. Summit is end-to-end encrypted and
+  // can't recover accounts via email, so there's no functional requirement
+  // for it. Only username + password are required; email is reserved for
+  // future notification features.
+  if (!u||!p) { showErr(err,'Please enter a username and password.'); return; }
+  if (e && !e.includes('@')) { showErr(err,'Please enter a valid email address (or leave it blank).'); return; }
   if (p.length < 8) { showErr(err,'Password must be at least 8 characters.'); return; }
   if (p!==c) { showErr(err,'Passwords do not match.'); return; }
 
@@ -2021,7 +2032,12 @@ async function doLogout() {
   // is gone, the PUT would 401 and the user's last typing would be lost.
   // We await so state is deterministic before we clear everything.
   try { await tearDownNotesEditor(); } catch {}
-  _stopInboxPolling();  // v1.19.3: halt inbox drain loop
+  _stopInboxPolling();  // v1.19.4: halt inbox drain loop
+  // v1.19.4: stale-ext banner is only shown post-login, so remove it on
+  // logout. Don't write the dismiss flag — if the user re-logs-in and the
+  // extension is still stale, we want the banner back.
+  const sb = document.getElementById('stale-ext-banner');
+  if (sb) { sb.remove(); document.body.style.paddingTop = ''; }
   const bg = document.getElementById('mountain-bg'); if(bg) bg.style.display='';
   token=null; currentUser=null; jobs={}; currentJobId=null;
   dataKey=null; // Zero-knowledge: clear key from memory
@@ -2110,7 +2126,7 @@ async function loadJobs() {
       });
     });
 
-    // v1.19.3 backfill: jobs added before reqId tracking don't have one.
+    // v1.19.4 backfill: jobs added before reqId tracking don't have one.
     // We can't re-scrape the page, but we can extract from the URL alone
     // for the common ATS patterns (Workday req-codes, LinkedIn/Greenhouse
     // numeric IDs). Best-effort — leaves reqId empty for anything that
@@ -2127,17 +2143,17 @@ async function loadJobs() {
     });
     if (strippedAnyNotes || backfilledAny) scheduleSave();
   } catch(e) { console.error('loadJobs error:', e); jobs={}; }
-  // v1.19.3: drain any pending inbox entries (posted by the extension while
+  // v1.19.4: drain any pending inbox entries (posted by the extension while
   // the user was away). Fold them into jobs BEFORE rendering so new additions
   // appear on the very first paint.
   await _drainInbox();
   renderJobList();
-  _applyInboxHighlights();  // v1.19.3: highlight any entries that arrived while away
-  _applyDupeAdvisory();     // v1.19.3: advisory for silently-skipped duplicates
+  _applyInboxHighlights();  // v1.19.4: highlight any entries that arrived while away
+  _applyDupeAdvisory();     // v1.19.4: advisory for silently-skipped duplicates
   renderStaleNudge();
 }
 
-// ── Job inbox drain (v1.19.3) ───────────────────────────────────────────────
+// ── Job inbox drain (v1.19.4) ───────────────────────────────────────────────
 // The extension can't encrypt (no dataKey), so it POSTs plaintext jobs to
 // /api/jobs/inbox. We poll/drain that inbox here, merge entries into the
 // encrypted `jobs` store, and DELETE each consumed entry atomically.
@@ -2162,7 +2178,7 @@ let _inboxJustAdded = new Set();
 // user knows a duplicate add happened while they were away.
 let _inboxDupeMatched = new Map();  // existingJobId -> { candidate, reason }
 
-// ── Dedupe helpers (v1.19.3) ────────────────────────────────────────────────
+// ── Dedupe helpers (v1.19.4) ────────────────────────────────────────────────
 // Centralized "is this a duplicate?" decision so the paste-URL path and the
 // inbox drain path use identical rules. Returns { job, reason } on hit or
 // null on miss.
@@ -2377,7 +2393,7 @@ async function _drainInbox() {
         if (!deleted) continue;  // racing tab got it first
       } catch { continue; }
 
-      // v1.19.3: dedupe check before merge. The user wasn't present when
+      // v1.19.4: dedupe check before merge. The user wasn't present when
       // the extension posted this, so we can't show a decision modal —
       // policy is: duplicates are silently skipped (not merged) but we
       // track them so the existing card can get a passive advisory flash
@@ -2413,7 +2429,7 @@ async function _drainInbox() {
         resume:   null,
         cover:    null,
         source:   entry.source || 'extension',
-        // v1.19.3: carry requisition ID onto the merged job so future
+        // v1.19.4: carry requisition ID onto the merged job so future
         // dedupe checks against this job work correctly.
         reqId:      entry.reqId      || '',
         reqIdLabel: entry.reqIdLabel || '',
@@ -2457,7 +2473,7 @@ function _applyInboxHighlights() {
   _inboxJustAdded.clear();
 }
 
-// v1.19.3: passive advisory for inbox entries skipped as duplicates.
+// v1.19.4: passive advisory for inbox entries skipped as duplicates.
 // Flashes the existing matched card in blue so the user understands a
 // duplicate add happened while they were away. No modal — they weren't
 // present at the add. One-shot, self-cleaning, same pattern as highlights.
@@ -2718,7 +2734,7 @@ async function parseJobUrl() {
 
     // Populate form fields via shared helper
     let filled = _populateFormFields(finalFields);
-    // v1.19.3: req ID is a silent field — stash for addJob to stamp on the
+    // v1.19.4: req ID is a silent field — stash for addJob to stamp on the
     // new job record rather than rendering a form input. Overwritten below
     // if the extension-bridge path produces a new set of fields.
     pendingReqId      = finalFields?.reqId      || null;
@@ -3013,7 +3029,7 @@ function addJob() {
   const workType = document.getElementById('job-worktype')?.value || '';
   const url      = document.getElementById('job-url').value.trim();
 
-  // v1.19.3: dedupe candidate — the fields we'll compare against existing
+  // v1.19.4: dedupe candidate — the fields we'll compare against existing
   // jobs. reqId comes from the URL parse pipeline (stashed in pendingReqId)
   // and is the primary match signal when present. URL is the fallback signal.
   const candidate = { title, company, url, reqId: pendingReqId || '' };
@@ -3045,7 +3061,7 @@ function _commitAddJob(title, company, url, workType) {
     tailoredResume: null, tailoredCover: null,
     postingHtml: pendingHtml,
     postingText: pendingText,
-    // v1.19.3: requisition ID — silent metadata, used for dedupe. Empty if
+    // v1.19.4: requisition ID — silent metadata, used for dedupe. Empty if
     // the extraction pipeline didn't find one (small companies, custom pages).
     reqId:      pendingReqId      || '',
     reqIdLabel: pendingReqIdLabel || '',
@@ -4323,14 +4339,25 @@ function _notifyExtensionSessionChanged() {
 // Stale-extension banner: renders once in the app shell, dismissal is
 // remembered per (stale version + min version) pair so the banner re-appears
 // when we bump MIN_EXTENSION_VERSION again in a future release.
+//
+// Gated on signed-in state: the banner never appears on the landing/login/
+// register/recover screens. Two reasons —
+//   1. It's the first thing a new visitor sees on an amber-on-aurora
+//      background, which is both confusing (they haven't installed the
+//      extension yet) and visually noisy (low contrast).
+//   2. The "Download update" link calls downloadExtension() which hits an
+//      auth-protected endpoint. Unauthenticated users get a 401 and nothing
+//      happens, which reads as broken.
+// So we wait for login, then render if the extension is still stale.
 function _renderStaleExtensionBanner() {
+  if (!token || !currentUser) return;              // gated post-login only
   if (document.getElementById('stale-ext-banner')) return; // already shown
   const dismissKey = `applied_stale_ext_dismissed_${_extensionVersion}_${MIN_EXTENSION_VERSION}`;
   if (localStorage.getItem(dismissKey) === '1') return;
 
   const banner = document.createElement('div');
   banner.id = 'stale-ext-banner';
-  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9000;background:rgba(232,168,56,0.12);border-bottom:1px solid rgba(232,168,56,0.3);padding:10px 18px;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text);font-family:var(--font)';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:9000;background:rgba(232,168,56,0.18);border-bottom:1px solid rgba(232,168,56,0.45);padding:10px 18px;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--text);font-family:var(--font);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)';
   banner.innerHTML = `
     <span style="color:var(--accent-bg);font-size:14px">↻</span>
     <span>Your Summit extension (v${esc(_extensionVersion)}) is out of date. Update to v${MIN_EXTENSION_VERSION}+ for reliable parsing on bot-protected sites.</span>

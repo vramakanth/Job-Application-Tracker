@@ -3933,5 +3933,86 @@ t('BEHAVIOR: _findDuplicateJob — reqId takes priority over URL (both match)', 
 });
 
 // ════════════════════════════════════════════════════════════════════════════
+// v1.19.4 — bug fixes (stale-ext banner gating + email truly optional)
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── v1.19.4 bug-fix guards');
+
+t('Stale-ext banner is gated on post-login state (no pre-login render)', () => {
+  const idx = feSrc.indexOf('function _renderStaleExtensionBanner');
+  if (idx < 0) throw new Error('_renderStaleExtensionBanner missing');
+  const body = feSrc.slice(idx, idx + 2000);
+  // Must short-circuit when no token or no current user — otherwise the
+  // banner renders on the landing/login screens where the Download link
+  // would 401 (auth-protected endpoint) and the amber tint has bad
+  // contrast over the aurora background.
+  if (!/!token\s*\|\|\s*!currentUser/.test(body)) {
+    throw new Error('_renderStaleExtensionBanner does not gate on token + currentUser');
+  }
+});
+
+t('showApp re-triggers stale banner (catches ext announced before login)', () => {
+  // If the extension posted summit-ext-ready while the user was still on
+  // the landing screen, the handler called _renderStaleExtensionBanner
+  // which short-circuited (no token yet). After login, showApp() must
+  // re-check so the banner appears on the app chrome.
+  const idx = feSrc.indexOf('function showApp');
+  if (idx < 0) throw new Error('showApp missing');
+  const body = feSrc.slice(idx, idx + 2500);
+  if (!/_extIsStale\(\)\s*&&?\s*_renderStaleExtensionBanner\(\)|if\s*\(_extIsStale\(\)\)\s*_renderStaleExtensionBanner/.test(body)) {
+    throw new Error('showApp does not re-trigger stale-ext banner post-login');
+  }
+});
+
+t('doLogout dismisses the stale banner (no lingering amber on landing)', () => {
+  const idx = feSrc.indexOf('async function doLogout');
+  if (idx < 0) throw new Error('doLogout missing');
+  const body = feSrc.slice(idx, idx + 3000);
+  if (!/stale-ext-banner/.test(body)) {
+    throw new Error('doLogout does not clean up the stale banner');
+  }
+  // Must not write the dismiss flag — if user logs back in and ext is
+  // still stale, we want the banner to reappear.
+  // (This is documented in the comment; we verify behavior by checking
+  //  that doLogout references the banner element but NOT the dismissKey.)
+  const cleanupSnippet = body.match(/stale-ext-banner[\s\S]{0,300}/);
+  if (cleanupSnippet && /dismissKey|localStorage\.setItem/.test(cleanupSnippet[0])) {
+    throw new Error('doLogout should remove the banner but NOT write the dismiss flag');
+  }
+});
+
+t('Registration email truly optional — validator does not block on missing email', () => {
+  const idx = feSrc.indexOf('async function doRegister');
+  if (idx < 0) throw new Error('doRegister missing');
+  const body = feSrc.slice(idx, idx + 1500);
+  // The old validator was `if (!u||!p||!e)`. v1.19.4 changed to `if (!u||!p)`.
+  // That's a straight regression guard: the email `!e` check must NOT be
+  // combined with username/password as a hard required.
+  if (/if\s*\(\s*!u\s*\|\|\s*!p\s*\|\|\s*!e\s*\)/.test(body)) {
+    throw new Error('doRegister still blocks on missing email (pre-v1.19.4 behavior)');
+  }
+  // But if email IS provided, we still shape-validate it.
+  if (!/e\s*&&\s*!e\.includes\(/.test(body)) {
+    throw new Error('doRegister does not shape-validate email when provided');
+  }
+});
+
+t('Registration email copy does not mention password recovery', () => {
+  // Zero-knowledge encryption means email cannot be used for password
+  // recovery. The old placeholder was "For password recovery" — dishonest.
+  // Should not appear anywhere in the registration form.
+  const regIdx = feSrc.indexOf('id="screen-register"');
+  if (regIdx < 0) throw new Error('register screen missing');
+  const body = feSrc.slice(regIdx, regIdx + 3000);
+  if (/[Ff]or password recovery/.test(body)) {
+    throw new Error('registration form still promises email-for-password-recovery');
+  }
+  // Positive check: the new helper text should mention that recovery codes,
+  // not email, are the recovery path.
+  if (!/recovery code/i.test(body)) {
+    throw new Error('registration form does not mention recovery codes as the actual recovery path');
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);
