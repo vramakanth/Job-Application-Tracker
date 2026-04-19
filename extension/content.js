@@ -102,7 +102,29 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (remote) workType = 'Remote';
       else if (employmentType && /part/i.test(employmentType)) workType = null; // employmentType isn't the same as workType; don't force
 
-      fields = { title, company, location, salary, workType, remote };
+      // Requisition / job ID from JobPosting.identifier. Same extraction
+      // semantics as the server-side parseJobPostingLD: accept short
+      // alphanumerics, reject URL-shaped values.
+      let reqId = null, reqIdLabel = null;
+      const idField = job.identifier;
+      const idCandidates = Array.isArray(idField) ? idField : (idField ? [idField] : []);
+      for (const cand of idCandidates) {
+        let v = null, label = null;
+        if (typeof cand === 'string') v = cand;
+        else if (cand && typeof cand === 'object') {
+          v = cand.value != null ? String(cand.value) : null;
+          label = cand.name ? String(cand.name) : null;
+        }
+        if (!v) continue;
+        v = v.trim();
+        if (/^https?:\/\//i.test(v)) continue;
+        if (!/^[A-Za-z0-9][A-Za-z0-9._\-]{2,40}$/.test(v)) continue;
+        reqId = v;
+        reqIdLabel = label || 'Job Identifier';
+        break;
+      }
+
+      fields = { title, company, location, salary, workType, remote, reqId, reqIdLabel };
       break;
     } catch {}
   }
@@ -137,9 +159,83 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   // If we got JSON-LD fields but they lacked salary, backfill from DOM salary.
   if (fields && !fields.salary && salary) fields.salary = salary;
 
+  // ── 4. Requisition ID fallback — label-anchored DOM scrape ───────────────
+  // For pages where JSON-LD didn't carry a JobPosting.identifier. We look
+  // for elements whose text is a known label ("Job ID", "Requisition Number",
+  // etc.) and pull the value from the element's sibling/next/parent-next
+  // structure. Very conservative — we require a true label anchor rather
+  // than matching "#123" anywhere in the body (which would false-positive on
+  // reference numbers in job descriptions).
+  if (!(fields && fields.reqId)) {
+    const domReq = _extractReqIdFromDom();
+    if (domReq) {
+      fields = fields || { title:null, company:null, location:null, salary:null, workType:null, remote:false };
+      fields.reqId = domReq.reqId;
+      fields.reqIdLabel = domReq.label;
+    }
+  }
+
   sendResponse({ fields, bodyText, salary, url: location.href });
   return true;
 });
+
+// ── Label-anchored req ID scraper ─────────────────────────────────────────────
+// Walks the DOM looking for text that matches a known req-ID label pattern,
+// then inspects adjacent DOM positions for a value that fits the shape.
+// Returns { reqId, label } or null. Designed to err on the side of null —
+// a false positive here would corrupt dedupe and confuse the user.
+const _REQ_LABEL_RE = /^(?:\s*(?:job\s*id|job\s*number|job\s*code|req(?:uisition)?\s*(?:id|number|code|#)|posting\s*id|reference\s*id|requisition|req\s*#)\s*[:.\-]?\s*)$/i;
+const _REQ_VALUE_RE = /^[A-Z0-9][A-Z0-9._\-]{2,40}$/i;
+
+function _extractReqIdFromDom() {
+  // Prefer <dt>/<dd> and <th>/<td> pairs first — they're the most reliably
+  // structured and give us the cleanest label→value association.
+  for (const dt of document.querySelectorAll('dt, th')) {
+    const labelText = (dt.textContent || '').trim();
+    if (!_REQ_LABEL_RE.test(labelText)) continue;
+    // Matching value: next dd for dt; sibling td for th.
+    let valNode = null;
+    if (dt.tagName === 'DT' && dt.nextElementSibling?.tagName === 'DD') {
+      valNode = dt.nextElementSibling;
+    } else if (dt.tagName === 'TH' && dt.parentElement) {
+      // Same-row <td>: look at siblings in the same <tr>
+      const cells = [...dt.parentElement.children];
+      const idx = cells.indexOf(dt);
+      if (idx >= 0 && cells[idx + 1]) valNode = cells[idx + 1];
+    }
+    if (!valNode) continue;
+    const v = (valNode.textContent || '').trim();
+    if (_REQ_VALUE_RE.test(v)) {
+      return { reqId: v, label: labelText.replace(/[:.\-]\s*$/, '').trim() };
+    }
+  }
+  // Looser fallback: any element whose text IS the label (no surrounding content)
+  // and whose immediately following sibling has a value matching the shape.
+  const candidates = document.querySelectorAll('span, div, p, label, strong, b');
+  for (const el of candidates) {
+    const labelText = (el.textContent || '').trim();
+    if (!_REQ_LABEL_RE.test(labelText)) continue;
+    // Try next element sibling first
+    let sib = el.nextElementSibling;
+    let v = sib ? (sib.textContent || '').trim() : '';
+    // If no next sibling, try parent's next sibling (common in <div><label>Label</label></div><div>Value</div>)
+    if (!_REQ_VALUE_RE.test(v) && el.parentElement?.nextElementSibling) {
+      v = (el.parentElement.nextElementSibling.textContent || '').trim();
+    }
+    // Still nothing — maybe the label and value are both in the parent
+    // as text nodes: "<p><b>Job ID</b> R-12345</p>". Pull parent text,
+    // strip the label, see what's left.
+    if (!_REQ_VALUE_RE.test(v) && el.parentElement) {
+      const parentTxt = (el.parentElement.textContent || '').trim();
+      const stripped = parentTxt.replace(labelText, '').replace(/^[\s:.\-]+/, '').trim();
+      if (_REQ_VALUE_RE.test(stripped)) v = stripped;
+    }
+    if (_REQ_VALUE_RE.test(v)) {
+      return { reqId: v, label: labelText.replace(/[:.\-]\s*$/, '').trim() };
+    }
+  }
+  return null;
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // BRIDGE — only active on jobsummit.app

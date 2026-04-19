@@ -3366,5 +3366,332 @@ t('frontend: _via unextractable status message offers upload + extension (v1.18)
 });
 
 // ════════════════════════════════════════════════════════════════════════════
+// v1.19.2 — Job inbox (extension → webapp handoff)
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── v1.19.2 inbox contract');
+
+t('INBOX_DIR defined and included in bootstrap mkdir list', () => {
+  if (!/const INBOX_DIR\s*=/.test(serverSrc)) throw new Error('INBOX_DIR constant not defined');
+  const m = serverSrc.match(/for\s*\(const d of \[([^\]]+)\]\)/);
+  if (!m || !m[1].includes('INBOX_DIR')) throw new Error('INBOX_DIR not in bootstrap list');
+});
+
+t('POST /api/jobs/inbox requires title + company (auth-protected)', () => {
+  const idx = serverSrc.indexOf("app.post('/api/jobs/inbox'");
+  if (idx < 0) throw new Error('POST /api/jobs/inbox missing');
+  const body = serverSrc.slice(idx, idx + 1500);
+  if (!/authMiddleware/.test(body)) throw new Error('POST /api/jobs/inbox is not auth-protected');
+  if (!/title required/.test(body))   throw new Error('does not reject missing title');
+  if (!/company required/.test(body)) throw new Error('does not reject missing company');
+  // Must generate an id + receivedAt timestamp
+  if (!/crypto\.randomBytes/.test(body)) throw new Error('does not generate random id');
+  if (!/receivedAt/.test(body))          throw new Error('does not record receivedAt');
+  // Must persist as a file per entry (for atomic delete)
+  if (!/fs\.writeFileSync/.test(body))   throw new Error('does not persist entry to disk');
+});
+
+t('GET /api/jobs/inbox returns FIFO list of entries (auth-protected)', () => {
+  const idx = serverSrc.indexOf("app.get('/api/jobs/inbox'");
+  if (idx < 0) throw new Error('GET /api/jobs/inbox missing');
+  const body = serverSrc.slice(idx, idx + 700);
+  if (!/authMiddleware/.test(body))  throw new Error('not auth-protected');
+  if (!/entries/.test(body))         throw new Error('does not return entries array');
+});
+
+t('DELETE /api/jobs/inbox/:id returns {deleted:true/false} for race safety', () => {
+  const idx = serverSrc.indexOf("app.delete('/api/jobs/inbox/:id'");
+  if (idx < 0) throw new Error('DELETE /api/jobs/inbox/:id missing');
+  const body = serverSrc.slice(idx, idx + 1200);
+  if (!/authMiddleware/.test(body))       throw new Error('not auth-protected');
+  // Must validate the id format to prevent path traversal
+  if (!/\/\^\[a-f0-9\]/.test(body))        throw new Error('does not validate id format');
+  // Must return deleted:true on success AND deleted:false on ENOENT
+  if (!/deleted:\s*true/.test(body))  throw new Error('does not return deleted:true on successful unlink');
+  if (!/deleted:\s*false/.test(body)) throw new Error('does not return deleted:false on ENOENT (race-safe)');
+  if (!/ENOENT/.test(body))           throw new Error('does not handle ENOENT as non-error');
+});
+
+t('Inbox TTL sweep runs at startup + hourly', () => {
+  if (!/function _sweepInboxTTL/.test(serverSrc)) throw new Error('_sweepInboxTTL missing');
+  if (!/INBOX_TTL_MS/.test(serverSrc))             throw new Error('INBOX_TTL_MS constant missing');
+  // Must be called at startup
+  const after = serverSrc.slice(serverSrc.indexOf('function _sweepInboxTTL'));
+  if (!/_sweepInboxTTL\(\);/.test(after))          throw new Error('_sweepInboxTTL not invoked at startup');
+  // And on a setInterval
+  if (!/setInterval\(_sweepInboxTTL/.test(after))  throw new Error('_sweepInboxTTL not scheduled on interval');
+  // Should .unref() the interval so it doesn't block process shutdown
+  if (!/\.unref\(\)/.test(after))                   throw new Error('sweep interval should .unref() so tests can exit cleanly');
+});
+
+t('Frontend _drainInbox helper exists and checks deleted flag before merging', () => {
+  if (!/async function _drainInbox/.test(feSrc)) throw new Error('_drainInbox missing');
+  const idx = feSrc.indexOf('async function _drainInbox');
+  const body = feSrc.slice(idx, idx + 3500);
+  // Must GET /api/jobs/inbox
+  if (!/\/api\/jobs\/inbox/.test(body))          throw new Error('does not fetch /api/jobs/inbox');
+  // Must DELETE each entry
+  if (!/method:\s*['"]DELETE['"]/.test(body))   throw new Error('does not DELETE consumed entries');
+  // Must check the deleted flag — otherwise racing tabs double-merge
+  if (!/deleted/.test(body))                     throw new Error('does not check deleted flag from DELETE response');
+  // Must call scheduleSave to persist the merged jobs
+  if (!/scheduleSave\(\)/.test(body))            throw new Error('does not call scheduleSave after merge');
+});
+
+t('Frontend drainInbox called from loadJobs (initial drain)', () => {
+  const idx = feSrc.indexOf('async function loadJobs');
+  const body = feSrc.slice(idx, idx + 4500);
+  if (!/_drainInbox\(\)/.test(body)) throw new Error('loadJobs does not call _drainInbox');
+});
+
+t('Frontend drainInbox wired to visibilitychange + focus (near-instant pickup)', () => {
+  if (!/visibilitychange[\s\S]{0,300}_drainInbox/.test(feSrc)) {
+    throw new Error('_drainInbox not wired to visibilitychange');
+  }
+  if (!/addEventListener\(['"]focus['"][\s\S]{0,200}_drainInbox/.test(feSrc)) {
+    throw new Error('_drainInbox not wired to window focus');
+  }
+});
+
+t('Frontend inbox polling interval starts on showApp, stops on doLogout', () => {
+  if (!/_startInboxPolling|_inboxPollHandle/.test(feSrc)) throw new Error('polling helpers missing');
+  const appIdx = feSrc.indexOf('function showApp()');
+  const appBody = feSrc.slice(appIdx, appIdx + 3000);
+  if (!/_startInboxPolling\(\)/.test(appBody)) throw new Error('showApp does not start polling');
+  const outIdx = feSrc.indexOf('async function doLogout');
+  const outBody = feSrc.slice(outIdx, outIdx + 2000);
+  if (!/_stopInboxPolling\(\)/.test(outBody)) throw new Error('doLogout does not stop polling');
+});
+
+t('Frontend polling is paused when tab is hidden (save server load)', () => {
+  const idx = feSrc.indexOf('function _startInboxPolling');
+  const body = feSrc.slice(idx, idx + 600);
+  if (!/visibilityState\s*===\s*['"]visible['"]/.test(body)) {
+    throw new Error('polling does not gate on visibilityState');
+  }
+});
+
+t('Newly-merged inbox jobs get inbox-just-added highlight class', () => {
+  // After a drain merges entries, the matching .job-item nodes should get
+  // a one-shot animation class (inbox-just-added) so the user sees the
+  // new arrival rather than it silently appearing.
+  if (!/_inboxJustAdded/.test(feSrc))         throw new Error('_inboxJustAdded tracking set missing');
+  if (!/_applyInboxHighlights/.test(feSrc))   throw new Error('_applyInboxHighlights helper missing');
+  // The drain must add merged jobIds to the tracking set
+  const drainIdx = feSrc.indexOf('async function _drainInbox');
+  const drainBody = feSrc.slice(drainIdx, drainIdx + 4500);
+  if (!/_inboxJustAdded\.add\(jobId\)/.test(drainBody)) {
+    throw new Error('_drainInbox does not add merged jobId to _inboxJustAdded');
+  }
+  // The highlight function must (a) query by data-job-id, (b) add the
+  // inbox-just-added class, (c) clear the set to avoid double-applying.
+  const hlIdx = feSrc.indexOf('function _applyInboxHighlights');
+  const hlBody = feSrc.slice(hlIdx, hlIdx + 800);
+  if (!/data-job-id/.test(hlBody))            throw new Error('highlight does not query by data-job-id');
+  if (!/inbox-just-added/.test(hlBody))       throw new Error('highlight does not add inbox-just-added class');
+  if (!/_inboxJustAdded\.clear\(\)/.test(hlBody)) throw new Error('highlight does not clear the set (would re-apply)');
+  // CSS animation must exist so the class actually does something visible
+  if (!/\.job-item\.inbox-just-added\s*\{[^}]*animation/.test(feSrc)) {
+    throw new Error('inbox-just-added CSS animation missing');
+  }
+  if (!/@keyframes\s+inboxArrive/.test(feSrc)) throw new Error('@keyframes inboxArrive missing');
+  // Job cards must have the data-job-id attribute or querySelector fails
+  if (!/data-job-id="\$\{j\.id\}"/.test(feSrc)) {
+    throw new Error('job-item template missing data-job-id attribute');
+  }
+});
+
+t('Highlight applied after both drain paths (loadJobs + live drain)', () => {
+  // The loadJobs path calls drain, then render, then highlights. The live
+  // drain path (from polling / visibilitychange / focus) does render+highlight
+  // inside _drainInbox itself.
+  const loadIdx = feSrc.indexOf('async function loadJobs');
+  const loadBody = feSrc.slice(loadIdx, loadIdx + 4800);
+  if (!/_applyInboxHighlights\(\)/.test(loadBody)) {
+    throw new Error('loadJobs does not apply inbox highlights after render');
+  }
+  const drainIdx = feSrc.indexOf('async function _drainInbox');
+  const drainBody = feSrc.slice(drainIdx, drainIdx + 4500);
+  if (!/_applyInboxHighlights\(\)/.test(drainBody)) {
+    throw new Error('_drainInbox does not apply inbox highlights after live render');
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// v1.19.3 — Duplicate detection (reqId + URL canonicalization)
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── v1.19.3 dedupe contract');
+
+t('Server parseJobPostingLD extracts reqId from JobPosting.identifier', () => {
+  const idx = serverSrc.indexOf('function parseJobPostingLD');
+  const body = serverSrc.slice(idx, idx + 3500);
+  if (!/job\.identifier/.test(body))      throw new Error('does not read JobPosting.identifier');
+  if (!/reqId/.test(body))                 throw new Error('does not produce reqId field');
+  // Must handle shape variations: string, PropertyValue object, array
+  if (!/Array\.isArray\(idField\)/.test(body)) throw new Error('does not handle array identifier shape');
+  // Must reject URL-shaped values (identifier sometimes set to the posting URL)
+  if (!/https\?:\\\/\\\//.test(body))      throw new Error('does not reject URL-shaped identifiers');
+  // Must apply the value shape regex
+  if (!/\[A-Za-z0-9\]\[A-Za-z0-9/.test(body)) throw new Error('does not validate reqId shape');
+});
+
+t('Server /api/jobs/inbox accepts + validates reqId', () => {
+  const idx = serverSrc.indexOf("app.post('/api/jobs/inbox'");
+  const body = serverSrc.slice(idx, idx + 2500);
+  if (!/b\.reqId/.test(body))              throw new Error('inbox POST does not read reqId');
+  if (!/\[A-Za-z0-9\]\[A-Za-z0-9/.test(body)) throw new Error('inbox POST does not validate reqId shape');
+  if (!/https\?:\\\/\\\//.test(body))      throw new Error('inbox POST does not reject URL-shaped reqId');
+  if (!/reqIdLabel/.test(body))            throw new Error('inbox POST does not accept reqIdLabel');
+});
+
+t('Server AI extract schema requests reqId + validates response', () => {
+  const idx = serverSrc.indexOf("app.post('/api/extract-fields'");
+  const body = serverSrc.slice(idx, idx + 3500);
+  if (!/reqId/.test(body))                 throw new Error('AI prompt does not request reqId');
+  // Must warn AI against URLs and invention
+  if (!/DO NOT invent/i.test(body) && !/never invent/i.test(body)) {
+    throw new Error('AI prompt does not warn against invention');
+  }
+  // Must re-validate AI output against shape regex — AI hallucinates
+  if (!/parsed\.reqId/.test(body))         throw new Error('AI response reqId is not re-validated');
+});
+
+t('Extension content.js extracts reqId from JSON-LD identifier', () => {
+  const contentSrc = fs.readFileSync(path.join(__dirname, '../../extension/content.js'), 'utf8');
+  if (!/job\.identifier/.test(contentSrc))    throw new Error('content.js does not read JobPosting.identifier');
+  if (!/reqId/.test(contentSrc))              throw new Error('content.js does not produce reqId field');
+  if (!/\[A-Za-z0-9\]\[A-Za-z0-9/.test(contentSrc)) throw new Error('content.js does not validate reqId shape');
+});
+
+t('Extension content.js has label-anchored DOM fallback for reqId', () => {
+  const contentSrc = fs.readFileSync(path.join(__dirname, '../../extension/content.js'), 'utf8');
+  if (!/_extractReqIdFromDom/.test(contentSrc)) throw new Error('DOM fallback helper missing');
+  // Must check dt/dd and th/td pairs first (most reliable)
+  if (!/querySelectorAll\('dt, th'\)/.test(contentSrc) && !/querySelectorAll\(["']dt, th/.test(contentSrc)) {
+    throw new Error('DOM fallback does not check dt/th pairs');
+  }
+  // Label regex must exist and cover the common wording
+  if (!/req.{0,20}uisition/i.test(contentSrc)) throw new Error('label regex does not cover "requisition"');
+});
+
+t('Extension popup.js forwards reqId in /api/jobs/inbox POST body', () => {
+  const popupSrc = fs.readFileSync(path.join(__dirname, '../../extension/popup.js'), 'utf8');
+  const idx = popupSrc.indexOf('async function addJob');
+  const body = popupSrc.slice(idx, idx + 3500);
+  if (!/body\.reqId/.test(body) && !/reqId:\s*pageData/.test(body) && !/reqId\s*=/.test(body)) {
+    throw new Error('popup does not forward reqId in POST body');
+  }
+});
+
+t('Webapp _findDuplicateJob helper exists + priority correct', () => {
+  if (!/function _findDuplicateJob/.test(feSrc)) throw new Error('_findDuplicateJob missing');
+  const idx = feSrc.indexOf('function _findDuplicateJob');
+  const body = feSrc.slice(idx, idx + 2500);
+  // Priority 1: reqId scoped by company
+  if (!/candReqId/.test(body))              throw new Error('does not check reqId');
+  if (!/toLowerCase\(\)/.test(body))        throw new Error('does not case-fold company');
+  // Priority 2: canonicalized URL
+  if (!/_canonicalizeJobUrl/.test(body))    throw new Error('does not canonicalize URLs');
+  // Returns match object with reason
+  if (!/reason:\s*['"]reqId['"]/.test(body)) throw new Error('does not report reqId reason');
+  if (!/reason:\s*['"]url['"]/.test(body))   throw new Error('does not report url reason');
+});
+
+t('Webapp _canonicalizeJobUrl strips tracking params + fragment + trailing slash', () => {
+  const idx = feSrc.indexOf('function _canonicalizeJobUrl');
+  const body = feSrc.slice(idx, idx + 1500);
+  // Must strip common tracking params
+  for (const p of ['refid','trk','utm_source','utm_campaign','gh_src']) {
+    if (!body.includes(p)) throw new Error(`tracking param "${p}" not stripped`);
+  }
+  // Must drop fragment
+  if (!/u\.hash\s*=\s*['"]{2}/.test(body)) throw new Error('does not drop fragment');
+  // Must drop trailing slash
+  if (!/endsWith\(['"]\/['"]\)/.test(body)) throw new Error('does not drop trailing slash');
+  // Must drop www.
+  if (!/\^www\\\./.test(body)) throw new Error('does not drop www. prefix');
+});
+
+t('Webapp addJob runs dedupe check before commit (uses _findDuplicateJob)', () => {
+  const idx = feSrc.indexOf('function addJob()');
+  if (idx < 0) throw new Error('addJob function missing');
+  const body = feSrc.slice(idx, idx + 1500);
+  if (!/_findDuplicateJob/.test(body)) throw new Error('addJob does not call _findDuplicateJob');
+  if (!/_showDuplicateModal/.test(body)) throw new Error('addJob does not show modal on match');
+  // Must also call _commitAddJob on no-match (save path)
+  if (!/_commitAddJob/.test(body)) throw new Error('addJob does not commit on no-match');
+});
+
+t('Webapp _commitAddJob stamps reqId + reqIdLabel on new jobs', () => {
+  const idx = feSrc.indexOf('function _commitAddJob');
+  if (idx < 0) throw new Error('_commitAddJob missing');
+  const body = feSrc.slice(idx, idx + 2000);
+  if (!/reqId:\s*pendingReqId/.test(body))      throw new Error('_commitAddJob does not stamp reqId');
+  if (!/reqIdLabel:\s*pendingReqIdLabel/.test(body)) throw new Error('_commitAddJob does not stamp reqIdLabel');
+});
+
+t('Duplicate modal has three actions: open / add-anyway / cancel', () => {
+  if (!/function _showDuplicateModal/.test(feSrc)) throw new Error('_showDuplicateModal missing');
+  const idx = feSrc.indexOf('function _showDuplicateModal');
+  const body = feSrc.slice(idx, idx + 5000);
+  if (!/dup-open-existing/.test(body))  throw new Error('no open-existing button');
+  if (!/dup-add-anyway/.test(body))     throw new Error('no add-anyway button');
+  if (!/Cancel/.test(body))             throw new Error('no cancel affordance');
+  // Must invoke selectJob on open
+  if (!/selectJob\(existing\.id\)/.test(body)) throw new Error('open-existing does not select the job');
+  // Must call the onAddAnyway continuation
+  if (!/onAddAnyway/.test(body))        throw new Error('no onAddAnyway continuation wiring');
+});
+
+t('Inbox drain runs dedupe check + tracks dupes for advisory', () => {
+  const idx = feSrc.indexOf('async function _drainInbox');
+  const body = feSrc.slice(idx, idx + 5000);
+  if (!/_findDuplicateJob/.test(body))           throw new Error('drain does not check for duplicates');
+  if (!/_inboxDupeMatched\.set/.test(body))      throw new Error('drain does not record dupes');
+  // Must skip merge (continue) on dupe, NOT still insert the job
+  if (!/continue;\s*\/\/[\s\S]{0,100}[Dd]/.test(body) && !/continue;[^}]*\}\s*\n\s*\/\/\s*Build/.test(body)) {
+    // softer check — just verify continue appears in the dupe branch
+    const dupeBranch = body.match(/if\s*\(dupe\)\s*\{[\s\S]{0,500}/);
+    if (!dupeBranch || !/continue;/.test(dupeBranch[0])) {
+      throw new Error('drain does not skip merge on duplicate');
+    }
+  }
+});
+
+t('Inbox drain stamps reqId + reqIdLabel on merged jobs', () => {
+  const idx = feSrc.indexOf('async function _drainInbox');
+  const body = feSrc.slice(idx, idx + 5000);
+  if (!/reqId:\s*entry\.reqId/.test(body))      throw new Error('drain does not carry reqId onto merged jobs');
+  if (!/reqIdLabel:\s*entry\.reqIdLabel/.test(body)) throw new Error('drain does not carry reqIdLabel');
+});
+
+t('Dupe advisory has its own animation + application helper', () => {
+  if (!/function _applyDupeAdvisory/.test(feSrc)) throw new Error('_applyDupeAdvisory missing');
+  if (!/\.job-item\.inbox-dupe-matched/.test(feSrc)) throw new Error('inbox-dupe-matched CSS rule missing');
+  if (!/@keyframes\s+inboxDupeMatch/.test(feSrc)) throw new Error('inboxDupeMatch keyframes missing');
+  // Should use a different color from inbox-just-added so user can distinguish
+  const anim = feSrc.match(/@keyframes\s+inboxDupeMatch[\s\S]{0,400}/);
+  if (anim && /232,168,56/.test(anim[0])) {
+    throw new Error('dupe advisory uses same amber as new-arrival — should be visually distinct');
+  }
+});
+
+t('loadJobs migration backfills reqId from URL where derivable', () => {
+  const idx = feSrc.indexOf('async function loadJobs');
+  const body = feSrc.slice(idx, idx + 5500);
+  if (!/_extractReqIdFromUrl/.test(body)) throw new Error('loadJobs does not call _extractReqIdFromUrl');
+  if (!/backfilledAny/.test(body))         throw new Error('loadJobs does not track backfill for save');
+});
+
+t('_extractReqIdFromUrl covers the top ATS URL patterns', () => {
+  if (!/function _extractReqIdFromUrl/.test(feSrc)) throw new Error('helper missing');
+  const idx = feSrc.indexOf('function _extractReqIdFromUrl');
+  const body = feSrc.slice(idx, idx + 2500);
+  // Must cover the big platforms
+  for (const host of ['myworkdayjobs', 'greenhouse', 'lever.co', 'linkedin', 'indeed', 'ashby']) {
+    if (!body.includes(host)) throw new Error(`${host} pattern missing`);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);

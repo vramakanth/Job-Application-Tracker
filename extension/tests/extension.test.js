@@ -441,8 +441,37 @@ t('doLogin/doLogout/doRegister/doRecover all call _notifyExtensionSessionChanged
   }
 });
 
-t('manifest version bumped to 2.3.0', () => {
-  if (manifest.version !== '2.3.0') throw new Error('manifest still at ' + manifest.version);
+t('manifest version bumped to 2.5.0', () => {
+  if (manifest.version !== '2.5.0') throw new Error('manifest still at ' + manifest.version);
+});
+
+// ── v2.4.0: inbox-based addJob (no more GET-modify-PUT of encrypted blob) ──
+t('addJob POSTs to /api/jobs/inbox (v2.4.0 — inbox handoff)', () => {
+  const idx = popup.indexOf('async function addJob');
+  if (idx < 0) throw new Error('addJob function missing');
+  const body = popup.slice(idx, idx + 3500);
+  if (!/\/api\/jobs\/inbox/.test(body))            throw new Error('addJob does not POST to /api/jobs/inbox');
+  if (!/method:\s*['"]POST['"]/.test(body))        throw new Error('addJob not using POST method');
+});
+
+t('addJob does NOT do GET+modify+PUT on /api/jobs (would corrupt encrypted blob)', () => {
+  // This was the v1.19 bug: extension GET'd {__enc:true,data:ct}, tried to
+  // splice a new job in, and PUT the corrupted envelope back. v2.4.0 moves
+  // the write path to the plaintext inbox instead.
+  const idx = popup.indexOf('async function addJob');
+  const body = popup.slice(idx, idx + 3500);
+  if (/method:\s*['"]PUT['"][\s\S]{0,200}\/api\/jobs['"]/.test(body)) {
+    throw new Error('addJob still PUTs to /api/jobs — this corrupts encrypted accounts');
+  }
+  // The GET is also gone — no reason to read the jobs blob anymore
+  if (/fetch\([^)]*\/api\/jobs['"]\s*,\s*\{[\s\S]{0,100}Authorization/.test(body)) {
+    const matches = body.match(/fetch\([^)]*\/api\/jobs[^)]*\)/g) || [];
+    for (const m of matches) {
+      if (!/inbox/.test(m)) {
+        throw new Error('addJob still reads /api/jobs directly — should only POST to /inbox');
+      }
+    }
+  }
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

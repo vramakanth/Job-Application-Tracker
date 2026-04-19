@@ -692,6 +692,25 @@ input[type=\"file\"] { display: none; }
   12%  { background-color: rgba(232,168,56,0.08); }
   100% { background-color: rgba(232,168,56,0.0); }
 }
+/* v1.19.3: highlight new-from-inbox job cards. Tells the user "this just
+   arrived from the extension" without a toast or extra chrome. Animation
+   self-removes via animationend listener; class is one-shot. */
+.job-item.inbox-just-added { animation: inboxArrive 2s ease-out; }
+@keyframes inboxArrive {
+  0%   { background-color: rgba(232,168,56,0.18); border-color: rgba(232,168,56,0.45); }
+  70%  { background-color: rgba(232,168,56,0.06); border-color: rgba(232,168,56,0.15); }
+  100% { background-color: transparent; border-color: transparent; }
+}
+/* v1.19.3: passive advisory when an extension-add was silently skipped
+   because it matched an existing job. Different tint from inbox-just-added
+   so the user can tell at a glance: amber = new arrival, blue = duplicate
+   caught. Same one-shot lifecycle. */
+.job-item.inbox-dupe-matched { animation: inboxDupeMatch 2.4s ease-out; }
+@keyframes inboxDupeMatch {
+  0%   { background-color: rgba(96,165,250,0.18); border-color: rgba(96,165,250,0.45); }
+  70%  { background-color: rgba(96,165,250,0.05); border-color: rgba(96,165,250,0.12); }
+  100% { background-color: transparent; border-color: transparent; }
+}
 .settings-group-label { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: 0.22em; text-transform: uppercase; padding: 0 0 6px; margin: 32px 0 20px; border-bottom: 1px solid var(--border); }
 .settings-group-label:first-child { margin-top: 0; }
 .settings-group-label--danger { color: var(--red); border-bottom-color: rgba(192,57,43,0.25); }
@@ -936,7 +955,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       Don't have an account? <a onclick="showScreen('register')">Create one</a>
       <br><a onclick="showScreen('recover')" style="font-size:12px;color:var(--text3)">Forgot password? Use a recovery code</a>
     </div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.3 · private beta</div>
   </div>
 </div>
 
@@ -976,7 +995,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     </div>
     <button id="register-btn" class="auth-btn" onclick="doRegister()">Create account</button>
     <div class="auth-switch">Already have an account? <a onclick="showScreen('login')">Sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.3 · private beta</div>
   </div>
 </div>
 
@@ -992,7 +1011,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <div class="auth-field"><label>CONFIRM PASSWORD</label><input id="recover-confirmpw" type="password" placeholder="Confirm new password"></div>
     <button id="recover-btn" class="auth-btn" onclick="recoverAccount()">Reset password</button>
     <div class="auth-switch"><a onclick="showScreen('login')">Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.0 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.3 · private beta</div>
   </div>
 </div>
 
@@ -1069,7 +1088,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       <div class="user-avatar" id="user-avatar" style="display:flex">VR</div>
       <div style="flex:1;min-width:0">
         <div class="user-name" id="user-name-display">user</div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.19.0</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.19.3</div>
       </div>
 
       <button class="user-bar-settings" onclick="doLogout()" title="Sign out" style="color:var(--text3)" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">
@@ -1278,7 +1297,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
 <script>
 const API = '';
-const APP_VERSION = '1.19.0';
+const APP_VERSION = '1.19.3';
 let token = localStorage.getItem('applied_token');
 let currentUser = localStorage.getItem('applied_user');
 let jobs = {}, currentJobId = null, currentFilter = 'all', activeDetailTab = 'notes';
@@ -1287,6 +1306,11 @@ let sessionTailoredResume = null, sessionTailoredCover = null;
 let sessionTailoredResumeHtml = null, sessionTailoredCoverHtml = null;
 let activeTailorDoc = 'resume'; // which doc type is selected in tailoring UI
 let pendingHtml = null, pendingText = null;
+// v1.19.3: carry req ID + label from the URL parse (JSON-LD / HTML scrape /
+// AI extract) so addJob can stamp it on the new job record. Kept as module
+// state rather than a form input — it's a silent metadata field, not
+// something the user should have to see or edit.
+let pendingReqId = null, pendingReqIdLabel = null;
 // ══════════════════════════════════════════════════════════════════
 // ZERO-KNOWLEDGE CRYPTO ENGINE — all key operations stay in browser
 // Server never sees plaintext data keys or job content
@@ -1504,6 +1528,9 @@ function showApp() {
   fetch(API + '/api/ping').catch(() => {});
 
   // Notes editor is now inline (no CDN / no module imports) — nothing to prefetch.
+
+  // v1.19.3: start polling inbox for near-instant extension-added job pickup
+  _startInboxPolling();
 }
 
 // ── AUTH ──
@@ -1648,78 +1675,84 @@ async function doRecover() {
 function showRecoveryCodesModal(codes, onDone, isNewAccount = false) {
   // Build entirely via DOM — no inline onclick with interpolated strings
   const overlay = document.createElement('div');
-  overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.72);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;-webkit-backdrop-filter:blur(2px)';
+  overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.82);z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)';
 
   const card = document.createElement('div');
-  card.style.cssText = 'background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:min(500px,100%);padding:28px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.5);position:relative';
+  card.style.cssText = 'background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:min(540px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.35);position:relative';
 
   // ── Close button (top-right) ──
   const closeBtn = document.createElement('button');
-  closeBtn.style.cssText = 'position:absolute;top:16px;right:16px;width:28px;height:28px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);font-size:16px;line-height:1';
+  closeBtn.style.cssText = 'position:absolute;top:18px;right:18px;width:28px;height:28px;background:transparent;border:none;cursor:pointer;color:var(--text3);font-size:18px;line-height:1;font-family:var(--font)';
   closeBtn.innerHTML = '&times;';
   closeBtn.title = 'Close';
+  closeBtn.onmouseover = () => closeBtn.style.color = 'var(--text)';
+  closeBtn.onmouseout  = () => closeBtn.style.color = 'var(--text3)';
   closeBtn.onclick = () => { document.body.removeChild(overlay); if (onDone) onDone(); };
   card.appendChild(closeBtn);
 
-  // ── Header ──
-  if (isNewAccount) {
-    const hdr = document.createElement('div');
-    hdr.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-right:40px';
-    hdr.innerHTML = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>';
-    const title = document.createElement('div');
-    title.style.cssText = 'font-size:17px;font-weight:700;color:var(--text)';
-    title.textContent = 'Save your recovery codes';
-    hdr.appendChild(title);
-    card.appendChild(hdr);
-    const warn = document.createElement('div');
-    warn.style.cssText = 'background:rgba(232,96,96,0.1);border:1px solid rgba(232,96,96,0.3);border-radius:6px;padding:12px;margin-bottom:14px;font-size:13px;color:var(--red);line-height:1.5';
-    warn.textContent = '⚠ These codes are your ONLY backup. If you lose your password and all codes, your encrypted data cannot be recovered.';
-    card.appendChild(warn);
-  } else {
-    const title = document.createElement('div');
-    title.style.cssText = 'font-size:17px;font-weight:700;color:var(--text);margin-bottom:6px;padding-right:40px';
-    title.textContent = 'New recovery codes generated';
-    card.appendChild(title);
-  }
+  // ── Header block (mirrors encryption warning modal) ──
+  const header = document.createElement('div');
+  header.style.cssText = 'padding:32px 36px 22px;border-bottom:1px solid var(--border)';
+  const eyebrow = document.createElement('div');
+  eyebrow.style.cssText = 'font-family:var(--mono);font-size:10px;color:var(--accent-bg);letter-spacing:0.22em;text-transform:uppercase;margin-bottom:12px';
+  eyebrow.textContent = isNewAccount ? 'Before you continue' : 'New codes generated';
+  header.appendChild(eyebrow);
+  const title = document.createElement('div');
+  title.style.cssText = 'font-family:var(--font-display);font-size:24px;font-weight:500;color:var(--text);letter-spacing:-0.015em;line-height:1.2';
+  title.textContent = isNewAccount ? 'Save your recovery codes.' : 'Your new recovery codes.';
+  header.appendChild(title);
+  const subtitle = document.createElement('div');
+  subtitle.style.cssText = 'font-size:13px;color:var(--text3);margin-top:10px;line-height:1.55';
+  subtitle.innerHTML = isNewAccount
+    ? 'Each code works once. This is your only backup if you forget your password. <strong style="color:var(--red)">We can\u2019t show them to you again.</strong>'
+    : 'Your previous codes are now invalid. Save these new ones somewhere safe \u2014 each works once.';
+  header.appendChild(subtitle);
+  card.appendChild(header);
 
-  // ── Description ──
-  const desc = document.createElement('div');
-  desc.style.cssText = 'font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6';
-  desc.innerHTML = 'Each code works <strong>once only</strong>. Store them in a password manager, print them, or write them somewhere safe. <strong style="color:var(--red)">You will not see these again.</strong>';
-  card.appendChild(desc);
-
-  // ── Code grid ──
-  const grid = document.createElement('div');
-  grid.style.cssText = 'background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:16px';
-  const gridInner = document.createElement('div');
-  gridInner.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px';
+  // ── Code list ── flat, mono, hairline separators between each code
+  const listWrap = document.createElement('div');
+  listWrap.style.cssText = 'padding:18px 36px 6px';
+  const list = document.createElement('div');
+  list.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;column-gap:28px;row-gap:0';
   codes.forEach((c, i) => {
     const cell = document.createElement('div');
-    cell.style.cssText = 'font-family:var(--mono);font-size:13px;letter-spacing:1.5px;color:var(--text);padding:6px 10px;background:var(--bg2);border-radius:4px;user-select:all';
-    cell.textContent = (i + 1) + '. ' + c;
-    gridInner.appendChild(cell);
+    cell.style.cssText = 'display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-family:var(--mono);font-size:13px;color:var(--text);user-select:all';
+    const num = document.createElement('span');
+    num.style.cssText = 'color:var(--text3);font-size:10px;letter-spacing:0.08em;min-width:18px';
+    num.textContent = String(i + 1).padStart(2, '0');
+    const code = document.createElement('span');
+    code.style.cssText = 'letter-spacing:1.5px';
+    code.textContent = c;
+    cell.appendChild(num);
+    cell.appendChild(code);
+    list.appendChild(cell);
   });
-  grid.appendChild(gridInner);
-  card.appendChild(grid);
+  listWrap.appendChild(list);
+  card.appendChild(listWrap);
 
-  // ── Action buttons: Copy + Print ──
+  // ── Action buttons: Copy + Print (text links, not boxed buttons) ──
   const actionRow = document.createElement('div');
-  actionRow.style.cssText = 'display:flex;gap:8px;margin-bottom:16px';
+  actionRow.style.cssText = 'padding:14px 36px 6px;display:flex;gap:22px';
 
   const copyBtn = document.createElement('button');
-  copyBtn.style.cssText = 'flex:1;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer;transition:all .15s';
-  copyBtn.textContent = 'Copy all';
+  copyBtn.style.cssText = 'background:none;border:none;padding:4px 0;font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer;border-bottom:1px dotted var(--border2);transition:color 0.15s';
+  copyBtn.textContent = 'Copy all codes';
+  copyBtn.onmouseover = () => copyBtn.style.color = 'var(--text)';
+  copyBtn.onmouseout  = () => copyBtn.style.color = 'var(--text2)';
   copyBtn.onclick = () => {
     navigator.clipboard.writeText(codes.join('\n')).then(() => {
-      copyBtn.textContent = '✓ Copied!';
+      const orig = copyBtn.textContent;
+      copyBtn.textContent = '\u2713 Copied';
       copyBtn.style.color = 'var(--green)';
-      setTimeout(() => { copyBtn.textContent = 'Copy all'; copyBtn.style.color = ''; }, 2000);
+      setTimeout(() => { copyBtn.textContent = orig; copyBtn.style.color = 'var(--text2)'; }, 2000);
     });
   };
 
   const printBtn = document.createElement('button');
-  printBtn.style.cssText = 'flex:1;padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer;transition:all .15s';
+  printBtn.style.cssText = 'background:none;border:none;padding:4px 0;font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer;border-bottom:1px dotted var(--border2);transition:color 0.15s';
   printBtn.textContent = 'Print codes';
+  printBtn.onmouseover = () => printBtn.style.color = 'var(--text)';
+  printBtn.onmouseout  = () => printBtn.style.color = 'var(--text2)';
   printBtn.onclick = () => printRecoveryCodes(codes);
 
   actionRow.appendChild(copyBtn);
@@ -1728,29 +1761,32 @@ function showRecoveryCodesModal(codes, onDone, isNewAccount = false) {
 
   // ── Confirm checkbox ──
   const confirmLabel = document.createElement('label');
-  confirmLabel.style.cssText = 'display:flex;align-items:flex-start;gap:10px;margin-bottom:16px;cursor:pointer;font-size:13px;color:var(--text2);line-height:1.5';
+  confirmLabel.style.cssText = 'display:flex;align-items:flex-start;gap:10px;margin:20px 36px 0;cursor:pointer;font-size:13px;color:var(--text2);line-height:1.5';
   const confirmCheck = document.createElement('input');
   confirmCheck.type = 'checkbox';
-  confirmCheck.style.cssText = 'margin-top:2px;flex-shrink:0;accent-color:var(--accent-bg);width:15px;height:15px;cursor:pointer';
-  const confirmText = document.createTextNode('I have saved these codes somewhere safe and understand I cannot recover them later');
+  confirmCheck.style.cssText = 'margin-top:2px;flex-shrink:0;accent-color:var(--accent-bg)';
+  const confirmText = document.createTextNode('I have saved these codes somewhere safe and understand I can\u2019t recover them later.');
   confirmLabel.appendChild(confirmCheck);
   confirmLabel.appendChild(confirmText);
   card.appendChild(confirmLabel);
 
   // ── Done button ──
+  const btnRow = document.createElement('div');
+  btnRow.style.cssText = 'padding:22px 36px 32px;display:flex;justify-content:flex-end';
   const doneBtn = document.createElement('button');
-  doneBtn.style.cssText = 'width:100%;padding:11px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:6px;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;opacity:0.45;transition:opacity .15s';
+  doneBtn.style.cssText = 'padding:10px 22px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;opacity:0.4;transition:opacity .15s';
   doneBtn.disabled = true;
-  doneBtn.textContent = "I've saved my codes — close";
+  doneBtn.textContent = 'I\u2019ve saved my codes';
   doneBtn.onclick = () => { document.body.removeChild(overlay); if (onDone) onDone(); };
+  btnRow.appendChild(doneBtn);
+  card.appendChild(btnRow);
 
   confirmCheck.onchange = () => {
     doneBtn.disabled = !confirmCheck.checked;
-    doneBtn.style.opacity = confirmCheck.checked ? '1' : '0.45';
+    doneBtn.style.opacity = confirmCheck.checked ? '1' : '0.4';
     doneBtn.style.cursor = confirmCheck.checked ? 'pointer' : 'not-allowed';
   };
 
-  card.appendChild(doneBtn);
   overlay.appendChild(card);
 
   // Click outside to close (but not if new account — must use Done)
@@ -1836,56 +1872,58 @@ async function doRegister() {
 function showEncryptionWarning(username) {
   return new Promise(resolve => {
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.8);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px';
+    overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.82);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)';
     overlay.innerHTML = `
-      <div style="background:var(--bg2);border:2px solid rgba(239,68,68,0.4);border-radius:var(--radius);width:min(520px,100%);padding:32px;max-height:90vh;overflow-y:auto">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-          <div style="width:40px;height:40px;background:rgba(239,68,68,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:20px">🔐</div>
-          <div>
-            <div style="font-size:18px;font-weight:700;color:var(--text)">Your data is end-to-end encrypted</div>
-            <div style="font-size:12px;color:var(--text3);margin-top:2px">Read this carefully before continuing</div>
+      <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:min(560px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.35)">
+        <div style="padding:32px 36px 28px;border-bottom:1px solid var(--border)">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--accent-bg);letter-spacing:0.22em;text-transform:uppercase;margin-bottom:12px">Before you create your account</div>
+          <div style="font-family:var(--font-display);font-size:26px;font-weight:500;color:var(--text);letter-spacing:-0.015em;line-height:1.2">Your data is end-to-end encrypted.</div>
+          <div style="font-size:13px;color:var(--text3);margin-top:10px;line-height:1.55">The server stores ciphertext. Only you hold the key. That's the point — and that's also the risk. Read this before continuing.</div>
+        </div>
+
+        <div style="padding:26px 36px 10px">
+          <div style="font-family:var(--font-display);font-size:15px;font-weight:500;color:var(--text);margin-bottom:8px">What you're agreeing to</div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.7">
+            Summit derives an encryption key from your password in your browser. That key is never sent to the server. We store only the encrypted blob, and neither the admins nor Anthropic nor anyone else can read your data without your password.
+          </div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-top:10px">
+            If you forget your password, you can unlock the account using one of <strong>eight recovery codes</strong> we'll show you on the next screen. Each code works once.
+          </div>
+          <div style="font-size:13px;color:var(--red);line-height:1.7;margin-top:14px;font-weight:500">
+            If you lose your password <em>and</em> every recovery code, your data is gone. There is no backdoor, no reset link, no support ticket that can recover it.
           </div>
         </div>
 
-        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:var(--radius-sm);padding:16px;margin-bottom:20px">
-          <div style="font-size:13px;font-weight:600;color:#ef4444;margin-bottom:10px">⚠ If you lose your password AND all recovery codes, your data is PERMANENTLY UNRECOVERABLE</div>
-          <div style="font-size:12px;color:var(--text2);line-height:1.8">
-            • Your job data is encrypted with a key <strong>derived from your password</strong> — only you know it<br>
-            • The server stores only encrypted ciphertext — <strong>not even the admin can read your data</strong><br>
-            • If you forget your password, you can use a recovery code to regain access<br>
-            • If you lose your password <strong>AND</strong> all 8 recovery codes, there is <strong>no way to recover your data — ever</strong><br>
-            • Your <strong>email address</strong> is stored in plaintext for account management only
+        <div style="padding:18px 36px 10px">
+          <div style="font-family:var(--font-display);font-size:15px;font-weight:500;color:var(--text);margin-bottom:8px">What to do right now</div>
+          <ol style="font-size:13px;color:var(--text2);line-height:1.8;padding-left:20px;margin:0">
+            <li>Use a strong, unique password (8+ characters).</li>
+            <li>On the next screen, save your eight recovery codes to a password manager or somewhere physically safe.</li>
+            <li>Don't share either.</li>
+          </ol>
+        </div>
+
+        <div style="padding:16px 36px 20px">
+          <div style="font-size:12px;color:var(--text3);padding:10px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+            Creating account for <strong style="color:var(--text);font-family:var(--mono)">${username}</strong>
           </div>
         </div>
 
-        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:20px">
-          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:8px">What to do right now:</div>
-          <div style="font-size:12px;color:var(--text2);line-height:1.8">
-            1. Use a <strong>strong, unique password</strong> (8+ characters, mix of letters, numbers, symbols)<br>
-            2. On the next screen, you'll receive <strong>8 recovery codes</strong> — save them in a password manager, print them, or write them somewhere physically safe<br>
-            3. Each code works once — they're your only backup if you forget your password
-          </div>
-        </div>
-
-        <div style="font-size:12px;color:var(--text3);margin-bottom:20px;padding:10px;border-left:3px solid var(--border2)">
-          Creating account for: <strong style="color:var(--text)">${username}</strong>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text2)">
-            <input type="checkbox" id="warn-cb1" style="margin-top:2px;flex-shrink:0" onchange="checkWarningBoxes()">
-            I understand that losing my password AND all recovery codes means my data is permanently gone
+        <div style="padding:4px 36px 28px">
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:10px">
+            <input type="checkbox" id="warn-cb1" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent-bg)" onchange="checkWarningBoxes()">
+            I understand that losing my password and all recovery codes means my data is permanently gone.
           </label>
-          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text2)">
-            <input type="checkbox" id="warn-cb2" style="margin-top:2px;flex-shrink:0" onchange="checkWarningBoxes()">
-            I will save my recovery codes in a safe place on the next screen
+          <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:13px;color:var(--text2);line-height:1.5">
+            <input type="checkbox" id="warn-cb2" style="margin-top:2px;flex-shrink:0;accent-color:var(--accent-bg)" onchange="checkWarningBoxes()">
+            I will save my recovery codes somewhere safe on the next screen.
           </label>
         </div>
 
-        <div style="display:flex;gap:10px;margin-top:20px">
-          <button onclick="this.closest('[style*=fixed]').remove();window.__warnResolve(false)" style="flex:1;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer">Cancel</button>
-          <button id="warn-proceed-btn" onclick="this.closest('[style*=fixed]').remove();window.__warnResolve(true)" disabled style="flex:2;padding:10px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;opacity:0.4">
-            I understand — create my encrypted account →
+        <div style="padding:0 36px 32px;display:flex;gap:10px;justify-content:flex-end;align-items:center">
+          <button onclick="this.closest('[style*=fixed]').remove();window.__warnResolve(false)" style="padding:10px 18px;background:transparent;border:none;font-family:var(--font);font-size:13px;color:var(--text3);cursor:pointer">Cancel</button>
+          <button id="warn-proceed-btn" onclick="this.closest('[style*=fixed]').remove();window.__warnResolve(true)" disabled style="padding:10px 22px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;opacity:0.4;transition:opacity 0.15s">
+            Create my account →
           </button>
         </div>
       </div>`;
@@ -1983,6 +2021,7 @@ async function doLogout() {
   // is gone, the PUT would 401 and the user's last typing would be lost.
   // We await so state is deterministic before we clear everything.
   try { await tearDownNotesEditor(); } catch {}
+  _stopInboxPolling();  // v1.19.3: halt inbox drain loop
   const bg = document.getElementById('mountain-bg'); if(bg) bg.style.display='';
   token=null; currentUser=null; jobs={}; currentJobId=null;
   dataKey=null; // Zero-knowledge: clear key from memory
@@ -2070,11 +2109,382 @@ async function loadJobs() {
         if (c && 'notes' in c) { delete c.notes; strippedAnyNotes = true; }
       });
     });
-    if (strippedAnyNotes) scheduleSave();
+
+    // v1.19.3 backfill: jobs added before reqId tracking don't have one.
+    // We can't re-scrape the page, but we can extract from the URL alone
+    // for the common ATS patterns (Workday req-codes, LinkedIn/Greenhouse
+    // numeric IDs). Best-effort — leaves reqId empty for anything that
+    // doesn't match, which is fine; dedupe falls back to URL match.
+    let backfilledAny = false;
+    Object.values(jobs).forEach(j => {
+      if (j.reqId || !j.url) return;
+      const extracted = _extractReqIdFromUrl(j.url);
+      if (extracted) {
+        j.reqId = extracted.reqId;
+        j.reqIdLabel = extracted.label || 'Job Identifier';
+        backfilledAny = true;
+      }
+    });
+    if (strippedAnyNotes || backfilledAny) scheduleSave();
   } catch(e) { console.error('loadJobs error:', e); jobs={}; }
+  // v1.19.3: drain any pending inbox entries (posted by the extension while
+  // the user was away). Fold them into jobs BEFORE rendering so new additions
+  // appear on the very first paint.
+  await _drainInbox();
   renderJobList();
+  _applyInboxHighlights();  // v1.19.3: highlight any entries that arrived while away
+  _applyDupeAdvisory();     // v1.19.3: advisory for silently-skipped duplicates
   renderStaleNudge();
 }
+
+// ── Job inbox drain (v1.19.3) ───────────────────────────────────────────────
+// The extension can't encrypt (no dataKey), so it POSTs plaintext jobs to
+// /api/jobs/inbox. We poll/drain that inbox here, merge entries into the
+// encrypted `jobs` store, and DELETE each consumed entry atomically.
+//
+// Race safety: if two Summit tabs are open, both poll and both try to DELETE
+// the same entry. The server's DELETE returns {deleted:true} only to the
+// tab that actually removed the file; the loser gets {deleted:false} and
+// skips the merge. So no duplicates.
+//
+// Called from: loadJobs (initial), visibilitychange (tab foregrounded),
+// focus (window focused), and a 3s polling interval while visible.
+
+let _inboxPollHandle = null;
+let _inboxDraining  = false;  // guard against re-entrant calls
+
+// Highlight-once set: IDs merged in the most recent drain. Consumed by
+// _applyInboxHighlights after renderJobList paints. Kept outside the drain
+// closure so the loadJobs → drain → render path can also apply highlights.
+let _inboxJustAdded = new Set();
+// Dupe-skip set: entries the drain skipped because they matched an existing
+// job. Rendered as a passive advisory on the matched existing job so the
+// user knows a duplicate add happened while they were away.
+let _inboxDupeMatched = new Map();  // existingJobId -> { candidate, reason }
+
+// ── Dedupe helpers (v1.19.3) ────────────────────────────────────────────────
+// Centralized "is this a duplicate?" decision so the paste-URL path and the
+// inbox drain path use identical rules. Returns { job, reason } on hit or
+// null on miss.
+//
+// Priority:
+//   1. Requisition ID, scoped by company. reqId alone is not unique across
+//      companies (Workday reissues R-codes per tenant), so we require both.
+//   2. Canonicalized URL. Cheap, catches most "same posting pasted twice"
+//      cases after the URL normalizer strips tracking params.
+//   3. Nothing else — we deliberately skip fuzzy (company, title) matching
+//      because "Software Engineer at Stripe" is often two genuinely
+//      different roles (different teams, different ladders).
+function _findDuplicateJob(candidate) {
+  if (!candidate) return null;
+  const list = Object.values(jobs || {});
+  const candCompany = (candidate.company || '').toLowerCase().trim();
+  const candReqId   = (candidate.reqId   || '').trim();
+
+  // Priority 1 — company-scoped req ID
+  if (candReqId && candCompany) {
+    for (const j of list) {
+      if (!j.reqId) continue;
+      const jCompany = (j.company || '').toLowerCase().trim();
+      if (j.reqId.trim() === candReqId && jCompany === candCompany) {
+        return { job: j, reason: 'reqId' };
+      }
+    }
+  }
+
+  // Priority 2 — canonicalized URL
+  const candUrl = _canonicalizeJobUrl(candidate.url);
+  if (candUrl) {
+    for (const j of list) {
+      if (!j.url) continue;
+      if (_canonicalizeJobUrl(j.url) === candUrl) {
+        return { job: j, reason: 'url' };
+      }
+    }
+  }
+
+  return null;
+}
+
+// Lightweight URL canonicalization for dedupe. Mirrors what cleanJobUrl
+// does server-side (for linkedin tracking params, trailing slashes, etc.)
+// but kept in the webapp so the paste flow can dedupe before any server
+// round-trip. Case-folded, protocol-normalized.
+function _canonicalizeJobUrl(raw) {
+  if (!raw || typeof raw !== 'string') return '';
+  let s = raw.trim();
+  if (!s) return '';
+  // Parse with URL if possible so we can normalize piece-by-piece. Bad URLs
+  // (pasted fragments) just fall through to a trimmed lowercase string.
+  try {
+    const u = new URL(s);
+    // Strip common tracking params. Non-exhaustive but covers the most
+    // frequently-added noise on LinkedIn/Indeed/Greenhouse URLs.
+    const drop = ['refid','trk','src','gh_src','utm_source','utm_medium',
+                  'utm_campaign','utm_content','utm_term','ref','mc_cid',
+                  'mc_eid','_hsenc','_hsmi'];
+    for (const k of drop) u.searchParams.delete(k);
+    // Drop fragment; it never identifies a distinct posting
+    u.hash = '';
+    // Remove trailing slash on pathname (unless path IS "/")
+    if (u.pathname.length > 1 && u.pathname.endsWith('/')) {
+      u.pathname = u.pathname.slice(0, -1);
+    }
+    // www. prefix is non-semantic for job boards
+    const host = u.hostname.replace(/^www\./, '');
+    // Always https for comparison purposes
+    return 'https://' + host + u.pathname + (u.search || '');
+  } catch {
+    return s.toLowerCase().replace(/\/$/, '');
+  }
+}
+
+// Best-effort reqId extraction from a URL alone. Used by the loadJobs
+// migration pass to backfill reqId on existing jobs where possible.
+// Returns { reqId, label } or null. Patterns chosen for high precision
+// (less likely to false-positive than scraping all numbers from a path).
+function _extractReqIdFromUrl(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  let u;
+  try { u = new URL(raw); } catch { return null; }
+  const host = u.hostname.replace(/^www\./, '').toLowerCase();
+  const path = u.pathname;
+
+  // Workday: /.../job/.../Title_R-12345 (req code after last underscore)
+  if (/\.myworkdayjobs\.com$/.test(host)) {
+    const m = path.match(/_([A-Z]-?\d+)\/?$/);
+    if (m) return { reqId: m[1], label: 'Workday Req' };
+  }
+  // Greenhouse: boards.greenhouse.io/{company}/jobs/4521234
+  // or job-boards.greenhouse.io/{company}/jobs/4521234
+  if (/greenhouse\.io$/.test(host)) {
+    const m = path.match(/\/jobs\/(\d{5,})/);
+    if (m) return { reqId: m[1], label: 'Greenhouse Job ID' };
+  }
+  // Lever: jobs.lever.co/{company}/{uuid}
+  if (host === 'jobs.lever.co') {
+    const m = path.match(/\/[^/]+\/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})/i);
+    if (m) return { reqId: m[1], label: 'Lever Posting ID' };
+  }
+  // LinkedIn: /jobs/view/3891234567
+  if (host === 'linkedin.com') {
+    const m = path.match(/\/jobs\/view\/(\d{7,})/);
+    if (m) return { reqId: m[1], label: 'LinkedIn Job ID' };
+  }
+  // Indeed: viewjob?jk=a1b2c3d4e5f6g7h8
+  if (/indeed\./.test(host)) {
+    const jk = u.searchParams.get('jk');
+    if (jk && /^[a-f0-9]{8,20}$/i.test(jk)) return { reqId: jk, label: 'Indeed Key' };
+  }
+  // Ashby: jobs.ashbyhq.com/{company}/{uuid}
+  if (host === 'jobs.ashbyhq.com') {
+    const m = path.match(/\/[^/]+\/([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})/i);
+    if (m) return { reqId: m[1], label: 'Ashby Posting ID' };
+  }
+  return null;
+}
+
+// Duplicate decision modal — matches the editorial style of the
+// encryption warning / recovery codes modals: mono eyebrow / display title /
+// hairline rules / inline-sized buttons. Shown only from the paste-URL flow
+// because the inbox drain happens without a user present.
+function _showDuplicateModal(dupe, candidate, onAddAnyway) {
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,0.82);z-index:2100;display:flex;align-items:center;justify-content:center;padding:20px;-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)';
+
+  const existing = dupe.job;
+  const reasonText = dupe.reason === 'reqId'
+    ? (existing.reqIdLabel ? existing.reqIdLabel : 'Requisition ID') + ' <strong style="font-family:var(--mono)">' + esc(existing.reqId) + '</strong>'
+    : 'the same URL after normalization';
+  const when = existing.createdAt
+    ? new Date(existing.createdAt).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' })
+    : 'earlier';
+
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);width:min(520px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.35)">
+      <div style="padding:32px 36px 22px;border-bottom:1px solid var(--border)">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--accent-bg);letter-spacing:0.22em;text-transform:uppercase;margin-bottom:12px">Looks like a duplicate</div>
+        <div style="font-family:var(--font-display);font-size:22px;font-weight:500;color:var(--text);letter-spacing:-0.015em;line-height:1.25">You&rsquo;re already tracking this role.</div>
+        <div style="font-size:13px;color:var(--text3);margin-top:10px;line-height:1.55">Matched by ${reasonText}.</div>
+      </div>
+
+      <div style="padding:22px 36px 6px">
+        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:8px">Existing entry</div>
+        <div style="font-size:15px;font-weight:500;color:var(--text);line-height:1.35">${esc(existing.title || 'Untitled')}</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:2px">${esc(existing.company || '')} &middot; added ${when}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px;text-transform:capitalize">Status: ${esc(existing.status || 'unknown')}</div>
+      </div>
+
+      <div style="padding:24px 36px 28px;display:flex;gap:12px;justify-content:flex-end;align-items:center;flex-wrap:wrap">
+        <button onclick="this.closest('[style*=fixed]').remove()" style="padding:10px 16px;background:transparent;border:none;font-family:var(--font);font-size:13px;color:var(--text3);cursor:pointer">Cancel</button>
+        <button id="dup-add-anyway" style="padding:10px 16px;background:transparent;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;color:var(--text2);cursor:pointer">Add as new anyway</button>
+        <button id="dup-open-existing" style="padding:10px 22px;background:var(--accent-bg);color:#1a1917;border:none;border-radius:var(--radius-sm);font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer">Open existing</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#dup-open-existing').onclick = () => {
+    overlay.remove();
+    closeAddModal();
+    selectJob(existing.id);
+    // Brief highlight on the existing card so the user's eye follows the
+    // transition rather than the card silently becoming active.
+    setTimeout(() => {
+      const el = document.querySelector(`.job-item[data-job-id="${existing.id}"]`);
+      if (el) {
+        el.classList.add('inbox-just-added');
+        el.addEventListener('animationend', () => el.classList.remove('inbox-just-added'), { once: true });
+      }
+    }, 50);
+  };
+  overlay.querySelector('#dup-add-anyway').onclick = () => {
+    overlay.remove();
+    if (typeof onAddAnyway === 'function') onAddAnyway();
+  };
+}
+
+async function _drainInbox() {
+  if (!token || !dataKey) return;     // not signed in yet
+  if (_inboxDraining) return;          // another drain in flight — skip
+  _inboxDraining = true;
+  try {
+    const res = await fetch(API + '/api/jobs/inbox', {
+      headers: { Authorization: 'Bearer ' + token },
+    });
+    if (!res.ok) return;
+    const { entries } = await res.json();
+    if (!Array.isArray(entries) || entries.length === 0) return;
+
+    let mergedAny = false;
+    let dupeAny = false;
+    for (const entry of entries) {
+      // Atomic consume — only merge if WE were the one that actually deleted.
+      // A racing tab may have already drained this entry.
+      try {
+        const del = await fetch(API + '/api/jobs/inbox/' + encodeURIComponent(entry.id), {
+          method: 'DELETE',
+          headers: { Authorization: 'Bearer ' + token },
+        });
+        if (!del.ok) continue;
+        const { deleted } = await del.json();
+        if (!deleted) continue;  // racing tab got it first
+      } catch { continue; }
+
+      // v1.19.3: dedupe check before merge. The user wasn't present when
+      // the extension posted this, so we can't show a decision modal —
+      // policy is: duplicates are silently skipped (not merged) but we
+      // track them so the existing card can get a passive advisory flash
+      // after render, letting the user know a duplicate add happened.
+      const dupe = _findDuplicateJob({
+        title:   entry.title   || '',
+        company: entry.company || '',
+        url:     entry.url     || '',
+        reqId:   entry.reqId   || '',
+      });
+      if (dupe) {
+        _inboxDupeMatched.set(dupe.job.id, { entry, reason: dupe.reason });
+        dupeAny = true;
+        continue;  // DELETE already happened server-side; just don't merge
+      }
+
+      // Build a full job record from the inbox entry. Match the shape
+      // expected elsewhere in the app (same fields as _commitAddJob).
+      const jobId = genId();
+      jobs[jobId] = {
+        id: jobId,
+        title:    entry.title    || 'Untitled',
+        company:  entry.company  || 'Unknown',
+        url:      entry.url      || '',
+        location: entry.location || '',
+        workType: entry.workType || '',
+        salary:   entry.salary   || '',
+        status:   'to apply',
+        createdAt: entry.receivedAt || Date.now(),
+        notes:    [],
+        contacts: [],
+        interviews: [],
+        resume:   null,
+        cover:    null,
+        source:   entry.source || 'extension',
+        // v1.19.3: carry requisition ID onto the merged job so future
+        // dedupe checks against this job work correctly.
+        reqId:      entry.reqId      || '',
+        reqIdLabel: entry.reqIdLabel || '',
+      };
+      _inboxJustAdded.add(jobId);
+      mergedAny = true;
+    }
+
+    if (mergedAny || dupeAny) {
+      if (mergedAny) scheduleSave();
+      // Re-render only if the user is past the initial loadJobs render
+      // (drain is also called from loadJobs itself, but that path calls
+      // renderJobList right after us — we don't need a duplicate paint).
+      if (typeof renderJobList === 'function' && document.getElementById('job-list')) {
+        renderJobList();
+        _applyInboxHighlights();
+        _applyDupeAdvisory();
+      }
+    }
+  } catch (e) {
+    console.error('_drainInbox error:', e);
+  } finally {
+    _inboxDraining = false;
+  }
+}
+
+// Apply the inbox-just-added animation to cards whose IDs are in the
+// just-merged set, then clear the set. Called after every renderJobList
+// that should surface new arrivals — both the inline drain-then-render
+// path in _drainInbox and the loadJobs post-drain render.
+function _applyInboxHighlights() {
+  if (_inboxJustAdded.size === 0) return;
+  for (const id of _inboxJustAdded) {
+    const el = document.querySelector(`.job-item[data-job-id="${id}"]`);
+    if (!el) continue;
+    el.classList.add('inbox-just-added');
+    el.addEventListener('animationend', () => {
+      el.classList.remove('inbox-just-added');
+    }, { once: true });
+  }
+  _inboxJustAdded.clear();
+}
+
+// v1.19.3: passive advisory for inbox entries skipped as duplicates.
+// Flashes the existing matched card in blue so the user understands a
+// duplicate add happened while they were away. No modal — they weren't
+// present at the add. One-shot, self-cleaning, same pattern as highlights.
+function _applyDupeAdvisory() {
+  if (_inboxDupeMatched.size === 0) return;
+  for (const jobId of _inboxDupeMatched.keys()) {
+    const el = document.querySelector(`.job-item[data-job-id="${jobId}"]`);
+    if (!el) continue;
+    el.classList.add('inbox-dupe-matched');
+    el.addEventListener('animationend', () => {
+      el.classList.remove('inbox-dupe-matched');
+    }, { once: true });
+  }
+  _inboxDupeMatched.clear();
+}
+
+function _startInboxPolling() {
+  if (_inboxPollHandle) return;
+  _inboxPollHandle = setInterval(() => {
+    if (document.visibilityState === 'visible') _drainInbox();
+  }, 3000);
+}
+
+function _stopInboxPolling() {
+  if (_inboxPollHandle) { clearInterval(_inboxPollHandle); _inboxPollHandle = null; }
+}
+
+// Near-instant drain on tab foreground / window focus. These catch the
+// common "user clicks extension add → switches back to Summit tab" flow
+// without waiting for the 3s poll tick.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') _drainInbox();
+});
+window.addEventListener('focus', () => { _drainInbox(); });
 
 // ── User settings (account-synced, zero-knowledge for encrypted accounts) ──
 // Current synced keys: finnhub_key. Add to SYNCED_SETTING_KEYS to sync more.
@@ -2244,6 +2654,8 @@ async function parseJobUrl() {
 
   pendingHtml = null;
   pendingText = null;
+  pendingReqId = null;
+  pendingReqIdLabel = null;
 
   try {
     // Call our backend which handles ATS-specific APIs + fallback scraping
@@ -2299,6 +2711,11 @@ async function parseJobUrl() {
 
     // Populate form fields via shared helper
     let filled = _populateFormFields(finalFields);
+    // v1.19.3: req ID is a silent field — stash for addJob to stamp on the
+    // new job record rather than rendering a form input. Overwritten below
+    // if the extension-bridge path produces a new set of fields.
+    pendingReqId      = finalFields?.reqId      || null;
+    pendingReqIdLabel = finalFields?.reqIdLabel || null;
 
     // ── Extension bridge fallback ─────────────────────────────────────────────
     // When the server's extraction pipeline produces zero fields — whether
@@ -2338,6 +2755,10 @@ async function parseJobUrl() {
                 // doesn't still fire. Also re-populate from the merged fields.
                 data._via = 'extension-bridge';
                 filled = _populateFormFields(finalFields);
+                // Re-stash in case the bridge path surfaced a reqId the
+                // primary parse missed.
+                pendingReqId      = finalFields?.reqId      || pendingReqId;
+                pendingReqIdLabel = finalFields?.reqIdLabel || pendingReqIdLabel;
               }
             }
           } catch (e) { /* AI failure → fall through to nudge */ }
@@ -2568,6 +2989,7 @@ function openAddModal() {
   document.getElementById('parse-status').style.display = 'none';
   document.getElementById('parse-btn').textContent = 'Open';
   pendingHtml = null; pendingText = null;
+  pendingReqId = null; pendingReqIdLabel = null;
   // Collapse manual fields on open
   const mf = document.getElementById('manual-fields');
   const mc = document.getElementById('manual-chevron');
@@ -2581,11 +3003,29 @@ function addJob() {
   const title   = document.getElementById('job-title').value.trim();
   const company = document.getElementById('job-company').value.trim();
   if (!title || !company) { alert('Please enter at least a job title and company.'); return; }
-  const id = genId();
   const workType = document.getElementById('job-worktype')?.value || '';
+  const url      = document.getElementById('job-url').value.trim();
+
+  // v1.19.3: dedupe candidate — the fields we'll compare against existing
+  // jobs. reqId comes from the URL parse pipeline (stashed in pendingReqId)
+  // and is the primary match signal when present. URL is the fallback signal.
+  const candidate = { title, company, url, reqId: pendingReqId || '' };
+  const dupe = _findDuplicateJob(candidate);
+  if (dupe) {
+    // Pass a continuation: if the user chooses "Add as new anyway" we finish
+    // the save; otherwise the modal handles open-existing / cancel on its own.
+    _showDuplicateModal(dupe, candidate, () => _commitAddJob(title, company, url, workType));
+    return;
+  }
+  _commitAddJob(title, company, url, workType);
+}
+
+// Commit the add — separated from addJob() so the duplicate-override path
+// can call it after the user confirms.
+function _commitAddJob(title, company, url, workType) {
+  const id = genId();
   jobs[id] = {
-    id, title, company,
-    url:      document.getElementById('job-url').value.trim(),
+    id, title, company, url,
     location: document.getElementById('job-location').value.trim(),
     workType,
     salary:     document.getElementById('job-salary').value.trim(),
@@ -2598,6 +3038,10 @@ function addJob() {
     tailoredResume: null, tailoredCover: null,
     postingHtml: pendingHtml,
     postingText: pendingText,
+    // v1.19.3: requisition ID — silent metadata, used for dedupe. Empty if
+    // the extraction pipeline didn't find one (small companies, custom pages).
+    reqId:      pendingReqId      || '',
+    reqIdLabel: pendingReqIdLabel || '',
   };
   scheduleSave();
   closeAddModal();
@@ -2668,7 +3112,7 @@ function renderJobList() {
     return;
   }
   list.innerHTML = filtered.map((j, i) => `
-    <div class="job-item${currentJobId===j.id?' active':''}" onclick="bulkMode?toggleBulkSelect('${j.id}',event):selectJob('${j.id}')">
+    <div class="job-item${currentJobId===j.id?' active':''}" data-job-id="${j.id}" onclick="bulkMode?toggleBulkSelect('${j.id}',event):selectJob('${j.id}')">
       ${bulkMode ? `<input type="checkbox" ${bulkSelected.has(j.id)?'checked':''} onclick="toggleBulkSelect('${j.id}',event)" style="flex-shrink:0;margin-top:2px;accent-color:var(--accent-bg)">` : ''}
       <div class="job-item-body">
         <div class="job-item-header-row">
@@ -3837,7 +4281,7 @@ let _extensionVersion = null;
 // since fixed (content.js returning structured fields is a v2.2.0 capability;
 // pre-2.2 extensions silently lose the Path 1 extraction that lets the
 // add-job modal's bridge fallback produce useful data on bot-gated sites).
-const MIN_EXTENSION_VERSION = '2.3.0';
+const MIN_EXTENSION_VERSION = '2.5.0';
 
 function _compareSemver(a, b) {
   // Returns -1 if a<b, 0 if equal, 1 if a>b. Tolerates "2.2", "2.2.0", "2.2.0-beta"

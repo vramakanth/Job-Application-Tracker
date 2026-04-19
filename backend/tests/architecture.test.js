@@ -147,7 +147,7 @@ t('JSON-LD baseSalary extraction', () => { has(contentSrc, 'baseSalary'); has(co
 t('bdi salary extraction',         () => has(contentSrc, "querySelectorAll('bdi')"));
 t('fallback salary from bodyText', () => has(contentSrc, 'bodyText.match('));
 t('sends bodyText + salary + url', () => { has(contentSrc, 'bodyText'); has(contentSrc, 'salary'); has(contentSrc, 'url: location.href'); });
-t('under 260 lines',               () => lt(contentSrc.split('\n').length, 260));
+t('under 340 lines (bumped in v1.19.3 for reqId DOM extraction)', () => lt(contentSrc.split('\n').length, 340));
 
 // ── extractSalaryFromText ─────────────────────────────────────────────────────
 console.log('\n── extractSalaryFromText');

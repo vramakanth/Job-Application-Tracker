@@ -52,8 +52,9 @@ const JOBS_DIR    = path.join(DATA_DIR, 'jobs');
 const NOTES_DIR   = path.join(DATA_DIR, 'notes');
 const DOCS_DIR    = path.join(DATA_DIR, 'docs');
 const SETTINGS_DIR = path.join(DATA_DIR, 'settings');
+const INBOX_DIR   = path.join(DATA_DIR, 'inbox');  // v1.19.2: extension → webapp job handoff
 const TOKENS_FILE = path.join(DATA_DIR, 'tokens.json');
-for (const d of [DATA_DIR, JOBS_DIR, DOCS_DIR, SETTINGS_DIR, USAGE_DIR, NOTES_DIR]) {
+for (const d of [DATA_DIR, JOBS_DIR, DOCS_DIR, SETTINGS_DIR, USAGE_DIR, NOTES_DIR, INBOX_DIR]) {
   if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
 }
 
@@ -1051,6 +1052,141 @@ app.put('/api/user-settings', authMiddleware, (req, res) => {
   res.json({ ok: true });
 });
 
+// ════════════════════════════════════════════════════════════════════════════
+// JOB INBOX — extension → webapp handoff (v1.19.2)
+// ════════════════════════════════════════════════════════════════════════════
+// The extension can't encrypt (no access to the user's dataKey — that's
+// derived from the password in the webapp's memory only). So instead of the
+// extension trying to PUT into the encrypted jobs blob directly (which was
+// the v1.19 bug: it corrupted the envelope), it POSTs a plaintext job entry
+// here. The webapp polls/drains the inbox, merges each entry into its
+// encrypted `jobs` object, and DELETEs the entry — at which point the data
+// re-enters the zero-knowledge side.
+//
+// Plaintext window: from POST by extension to DELETE by webapp. Typically
+// seconds-to-minutes while the user is actively switching between the
+// extension popup and an open Summit tab. A TTL sweep cleans entries that
+// go unclaimed for >7 days (inactive users).
+//
+// Storage: one JSON file per inbox entry at INBOX_DIR/{userId}/{entryId}.json.
+// Keeps each file small + lets DELETE be atomic (unlink one file).
+
+const INBOX_TTL_MS = 7 * 24 * 60 * 60 * 1000;  // 7 days
+
+function _inboxDirFor(userId) {
+  const d = path.join(INBOX_DIR, userId);
+  if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
+  return d;
+}
+
+function _loadInboxForUser(userId) {
+  const dir = path.join(INBOX_DIR, userId);
+  if (!fs.existsSync(dir)) return [];
+  const entries = [];
+  for (const f of fs.readdirSync(dir)) {
+    if (!f.endsWith('.json')) continue;
+    try {
+      const raw = fs.readFileSync(path.join(dir, f), 'utf8');
+      entries.push(JSON.parse(raw));
+    } catch {} // corrupted entries are just skipped
+  }
+  // Stable order — oldest first — so webapp drain processes FIFO
+  entries.sort((a, b) => (a.receivedAt || 0) - (b.receivedAt || 0));
+  return entries;
+}
+
+// Extension POSTs a new pending job. Body must include title + company,
+// everything else optional. We don't validate URLs etc. — the webapp
+// sanitizes on merge.
+app.post('/api/jobs/inbox', authMiddleware, (req, res) => {
+  const b = req.body || {};
+  if (!b.title || typeof b.title !== 'string') return res.status(400).json({ error: 'title required' });
+  if (!b.company || typeof b.company !== 'string') return res.status(400).json({ error: 'company required' });
+  const id = crypto.randomBytes(8).toString('hex');
+  const entry = {
+    id,
+    receivedAt: Date.now(),
+    title:    String(b.title).slice(0, 200),
+    company:  String(b.company).slice(0, 200),
+    url:      b.url ? String(b.url).slice(0, 500) : '',
+    location: b.location ? String(b.location).slice(0, 200) : '',
+    workType: b.workType ? String(b.workType).slice(0, 20) : '',
+    salary:   b.salary ? String(b.salary).slice(0, 80) : '',
+    source:   'extension',
+  };
+  // v1.19.3: requisition / job ID carried through from the content script.
+  // Shape-validate here too — the extension SHOULD have already filtered,
+  // but the POST endpoint is authenticated and user-controllable so we
+  // re-check rather than trust. URL-shaped values get dropped.
+  if (b.reqId && typeof b.reqId === 'string') {
+    const v = b.reqId.trim();
+    if (v.length <= 50 && /^[A-Za-z0-9][A-Za-z0-9._\-]{2,40}$/.test(v) && !/^https?:\/\//i.test(v)) {
+      entry.reqId = v;
+      if (b.reqIdLabel && typeof b.reqIdLabel === 'string') {
+        entry.reqIdLabel = String(b.reqIdLabel).slice(0, 80).trim();
+      }
+    }
+  }
+  const dir = _inboxDirFor(req.user.id);
+  fs.writeFileSync(path.join(dir, `${id}.json`), JSON.stringify(entry));
+  res.json({ ok: true, id, receivedAt: entry.receivedAt });
+});
+
+// Webapp polls this to learn about pending entries. Returns a list; webapp
+// merges each into its encrypted jobs and then DELETEs them individually.
+app.get('/api/jobs/inbox', authMiddleware, (req, res) => {
+  const entries = _loadInboxForUser(req.user.id);
+  res.json({ entries, count: entries.length });
+});
+
+// Atomic consume. Returns { deleted: true } if this tab was the one that
+// actually removed it (safe to merge into jobs), { deleted: false } if
+// another tab got there first (do not merge — they already handled it).
+app.delete('/api/jobs/inbox/:id', authMiddleware, (req, res) => {
+  const id = String(req.params.id || '');
+  if (!/^[a-f0-9]{8,32}$/.test(id)) return res.status(400).json({ error: 'invalid id' });
+  const filePath = path.join(INBOX_DIR, req.user.id, `${id}.json`);
+  try {
+    fs.unlinkSync(filePath);
+    res.json({ ok: true, deleted: true });
+  } catch (e) {
+    if (e.code === 'ENOENT') {
+      // Already drained (racing tab) — not an error from the caller's POV
+      return res.json({ ok: true, deleted: false });
+    }
+    res.status(500).json({ error: 'delete failed' });
+  }
+});
+
+// TTL sweep: at startup + every hour, prune inbox entries older than 7 days.
+// Handles the "user installed extension, added jobs, never opened Summit" case.
+function _sweepInboxTTL() {
+  if (!fs.existsSync(INBOX_DIR)) return;
+  const cutoff = Date.now() - INBOX_TTL_MS;
+  let removed = 0;
+  try {
+    for (const userDir of fs.readdirSync(INBOX_DIR)) {
+      const fullDir = path.join(INBOX_DIR, userDir);
+      if (!fs.statSync(fullDir).isDirectory()) continue;
+      for (const f of fs.readdirSync(fullDir)) {
+        const fp = path.join(fullDir, f);
+        try {
+          const entry = JSON.parse(fs.readFileSync(fp, 'utf8'));
+          if ((entry.receivedAt || 0) < cutoff) {
+            fs.unlinkSync(fp);
+            removed++;
+          }
+        } catch { /* remove corrupted entries too */
+          try { fs.unlinkSync(fp); removed++; } catch {}
+        }
+      }
+    }
+    if (removed > 0) console.log(`[inbox-ttl] swept ${removed} stale entries`);
+  } catch (e) { console.warn('[inbox-ttl] sweep error:', e.message); }
+}
+_sweepInboxTTL();
+setInterval(_sweepInboxTTL, 60 * 60 * 1000).unref();
+
 // ════════════════════════════════════════════════════════════════════════════════
 // FILE PARSING
 // ════════════════════════════════════════════════════════════════════════════════
@@ -1217,6 +1353,37 @@ function parseJobPostingLD(html) {
         }
       }
 
+      // Requisition / job ID — JobPosting.identifier is optional in schema.org
+      // and emitted by some ATS platforms (Workday, Greenhouse, iCIMS) as the
+      // canonical in-HRIS identifier for the posting. Shape varies wildly:
+      //   - { "@type":"PropertyValue", "name":"job-req-id", "value":"R-12345" }
+      //   - single string "R-12345"
+      //   - array of PropertyValue objects (rare, pick first)
+      //   - sometimes set to the posting URL itself (useless for dedupe — skip)
+      // We accept short alphanumeric values that don't look like URLs or UUIDs
+      // longer than what a human would use as a req number.
+      let reqId = null;
+      let reqIdLabel = null;
+      const idField = job.identifier;
+      const idCandidates = Array.isArray(idField) ? idField : (idField ? [idField] : []);
+      for (const cand of idCandidates) {
+        let v = null, label = null;
+        if (typeof cand === 'string') v = cand;
+        else if (cand && typeof cand === 'object') {
+          v = cand.value != null ? String(cand.value) : null;
+          label = cand.name ? String(cand.name) : null;
+        }
+        if (!v) continue;
+        v = decodeEntities(v).trim();
+        // Reject URL-shaped values (we already store the URL separately)
+        if (/^https?:\/\//i.test(v)) continue;
+        // Reject values that are too long/short to be a human-visible req ID
+        if (!/^[A-Za-z0-9][A-Za-z0-9._\-]{2,40}$/.test(v)) continue;
+        reqId = v;
+        reqIdLabel = label || 'Job Identifier';
+        break;
+      }
+
       // jobLocationType === 'TELECOMMUTE' is the schema.org flag for remote.
       return {
         title:    decodeEntities(job.title).trim() || null,
@@ -1224,6 +1391,8 @@ function parseJobPostingLD(html) {
         location: locStr ? decodeEntities(locStr).trim() : null,
         workType: job.jobLocationType === 'TELECOMMUTE' ? 'Remote' : null,
         salary:   salary,
+        reqId:    reqId,
+        reqIdLabel: reqIdLabel,
       };
     } catch {}
   }
@@ -1633,7 +1802,7 @@ app.post('/api/extract-fields', authMiddleware, tokenCapMiddleware, async (req, 
 
   const salaryHint = domSalary ? `The salary is already confirmed as ${domSalary} — use this exactly.` : '';
   const sys = `Extract job posting details. Return ONLY valid JSON, no markdown.
-Fields: title(string), company(string), location(city+state only, null if remote-only), workType("Remote"|"Hybrid"|"On-site"|null), remote(boolean), salary(ONLY real dollar amounts like "$120k–$150k" or null — never invent, never use "Competitive" or "DOE"). ${salaryHint}`;
+Fields: title(string), company(string), location(city+state only, null if remote-only), workType("Remote"|"Hybrid"|"On-site"|null), remote(boolean), salary(ONLY real dollar amounts like "$120k–$150k" or null — never invent, never use "Competitive" or "DOE"), reqId(string or null — the job requisition number printed on the page, typically labeled "Job ID", "Requisition Number", "Req #", "Posting ID" etc. Short alphanumeric like "R-12345" or "5012345". DO NOT invent. DO NOT return URLs. Return null if not visibly printed on the page). ${salaryHint}`;
   // If we have tail text, include it in the AI input — compensation/pay-range
   // blocks commonly appear below the main description and would otherwise be
   // truncated out of the slice.
@@ -1645,6 +1814,17 @@ Fields: title(string), company(string), location(city+state only, null if remote
     const parsed = parseJson(await callAI(['groq','openrouter','google'], sys, usr, 400, req, 'extract-fields'));
     // Always prefer DOM-extracted salary over AI-guessed salary
     if (domSalary) parsed.salary = domSalary;
+    // Validate AI-extracted reqId against the same shape regex the server
+    // uses for structured extraction — AI is the weakest signal and
+    // hallucinates readily. Drop anything that doesn't match.
+    if (parsed.reqId && typeof parsed.reqId === 'string') {
+      const v = parsed.reqId.trim();
+      if (v.length > 50 || !/^[A-Za-z0-9][A-Za-z0-9._\-]{2,40}$/.test(v) || /^https?:\/\//i.test(v)) {
+        parsed.reqId = null;
+      } else {
+        parsed.reqId = v;
+      }
+    }
     res.json(parsed);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

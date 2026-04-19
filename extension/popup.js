@@ -281,43 +281,35 @@ async function addJob() {
   hideStatus($('add-status'));
 
   try {
-    // Fetch current jobs (returns object keyed by id)
-    const jobsRes = await fetch(TRACKER_URL + '/api/jobs', {
-      headers: { Authorization: 'Bearer ' + token }
-    });
-    if (jobsRes.status === 401) { await signOut(); return; }
-    const jobs = await jobsRes.json();
-
-    const id = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-    const newJob = {
-      id, title, company,
+    // v2.4.0: POST to the webapp's inbox endpoint. The extension can't
+    // encrypt the jobs blob directly (dataKey lives only in the webapp's
+    // memory, derived from the user's password). The webapp polls/drains
+    // this inbox and merges entries into the encrypted `jobs` store.
+    //
+    // v2.5.0 adds reqId + reqIdLabel from the content script's structured
+    // field extraction. These are the primary dedupe signal on the webapp side.
+    const body = {
+      title, company,
       url:      currentTabUrl,
-      status:   'to apply',
       location: $('job-location').value.trim(),
       workType: $('job-worktype').value,
       salary:   $('job-salary').value.trim(),
-      notes:    [],
-      createdAt: Date.now(),
-      source:   'extension',
     };
-
-    // Add to object and save
-    if (Array.isArray(jobs)) {
-      // Handle array format
-      jobs.push(newJob);
-    } else {
-      jobs[id] = newJob;
+    if (pageData?.fields?.reqId)      body.reqId      = pageData.fields.reqId;
+    if (pageData?.fields?.reqIdLabel) body.reqIdLabel = pageData.fields.reqIdLabel;
+    const res = await fetch(TRACKER_URL + '/api/jobs/inbox', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify(body),
+    });
+    if (res.status === 401) { await signOut(); return; }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || ('HTTP ' + res.status));
     }
 
-    const saveRes = await fetch(TRACKER_URL + '/api/jobs', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify(jobs),
-    });
-    if (!saveRes.ok) throw new Error('Save failed');
-
-    showStatus($('add-status'), 'success', `✓ "${title}" added to Summit!`);
-    $('add-btn').textContent = '✓ Added!';
+    showStatus($('add-status'), 'success', `\u2713 "${title}" added to Summit!`);
+    $('add-btn').textContent = '\u2713 Added!';
     setTimeout(() => {
       $('add-btn').disabled = false;
       $('add-btn').textContent = '+ Add to Summit';
