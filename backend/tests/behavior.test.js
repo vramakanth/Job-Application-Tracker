@@ -4212,5 +4212,44 @@ t('No user-facing copy mentions Anthropic', () => {
 });
 
 // ════════════════════════════════════════════════════════════════════════════
+// v1.19.7 — clickable Summit logo on auth screens
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── v1.19.7 auth-logo is a link to landing');
+
+t('Login screen Summit logo links to landing', () => {
+  const loginIdx = feSrc.indexOf('id="screen-login"');
+  if (loginIdx < 0) throw new Error('login screen missing');
+  const body = feSrc.slice(loginIdx, loginIdx + 2000);
+  // Must be an anchor with the auth-logo class and onclick to showScreen('landing')
+  if (!/<a[^>]*class="auth-logo"[^>]*onclick="showScreen\(['"]landing['"]\)"/.test(body)) {
+    throw new Error('login Summit logo is not a clickable anchor to the landing page');
+  }
+});
+
+t('Register screen Summit logo links to landing', () => {
+  const regIdx = feSrc.indexOf('id="screen-register"');
+  if (regIdx < 0) throw new Error('register screen missing');
+  const body = feSrc.slice(regIdx, regIdx + 2000);
+  if (!/<a[^>]*class="auth-logo"[^>]*onclick="showScreen\(['"]landing['"]\)"/.test(body)) {
+    throw new Error('register Summit logo is not a clickable anchor to the landing page');
+  }
+});
+
+t('Anchor-styled auth-logo has cursor + hover affordance', () => {
+  // Without these styles the logo is clickable but doesn't look clickable.
+  // Tested by source inspection since CSS isn't exercised in node.
+  if (!/a\.auth-logo\s*\{[^}]*cursor:\s*pointer/.test(feSrc)) {
+    throw new Error('a.auth-logo does not set cursor:pointer');
+  }
+  if (!/a\.auth-logo:hover\s*\{[^}]*opacity/.test(feSrc)) {
+    throw new Error('a.auth-logo:hover does not set a visual hover state');
+  }
+  // Decoration reset — an <a> default-underlines which would look wrong here
+  if (!/a\.auth-logo\s*\{[^}]*text-decoration:\s*none/.test(feSrc)) {
+    throw new Error('a.auth-logo does not strip default underline');
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);
