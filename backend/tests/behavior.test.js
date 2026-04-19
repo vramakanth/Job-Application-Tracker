@@ -1484,7 +1484,7 @@ t('openSection tears down notes editor before switching to a different section',
 
 t('doLogout awaits notes flush before clearing the auth token', () => {
   const idx = feSrc.indexOf('function doLogout');
-  const body = feSrc.slice(idx, idx + 800);
+  const body = feSrc.slice(idx, idx + 1500);
   // Must be async and await the teardown — otherwise the final PUT races
   // the token clear and gets 401'd.
   if (!/async function doLogout/.test(feSrc))   throw new Error('doLogout is not async — cannot await flush');
@@ -4018,21 +4018,36 @@ t('Registration email copy does not mention password recovery', () => {
 // ════════════════════════════════════════════════════════════════════════════
 console.log('\n── v1.19.5 install-nudge guards');
 
-t('Install-nudge slots exist in empty state + add modal', () => {
-  if (!/id="ext-install-nudge-slot"/.test(feSrc)) {
-    throw new Error('empty-state nudge slot missing');
-  }
+t('Install-nudge slots exist for all surfaces (modal hint; banner is created dynamically)', () => {
+  // v1.19.11: the primary surface switched from an empty-state card to a
+  // top-row banner. The banner is created dynamically in JS, so there's
+  // no persistent markup slot for it. The add-modal inline hint still
+  // uses a markup slot because it's scoped to a specific form.
   if (!/id="ext-install-nudge-modal-slot"/.test(feSrc)) {
     throw new Error('add-modal nudge slot missing');
+  }
+  // The legacy empty-state slot should be gone (replaced by banner).
+  if (/id="ext-install-nudge-slot"/.test(feSrc)) {
+    throw new Error('legacy empty-state nudge slot still in markup — should be removed');
   }
 });
 
 t('Install-nudge render functions exist for both surfaces', () => {
-  if (!/function _renderExtInstallNudgeEmptyState/.test(feSrc)) {
-    throw new Error('_renderExtInstallNudgeEmptyState missing');
+  // v1.19.11: _renderExtInstallNudgeEmptyState renamed to
+  // _renderExtInstallNudgeBanner (now renders the top-row banner to match
+  // the stale-ext banner's visual language).
+  if (!/function _renderExtInstallNudgeBanner/.test(feSrc)) {
+    throw new Error('_renderExtInstallNudgeBanner missing');
   }
   if (!/function _renderExtInstallNudgeModal/.test(feSrc)) {
     throw new Error('_renderExtInstallNudgeModal missing');
+  }
+  // The old name should be gone so no stale callers remain
+  if (/function _renderExtInstallNudgeEmptyState/.test(feSrc)) {
+    throw new Error('legacy _renderExtInstallNudgeEmptyState still defined');
+  }
+  if (/_renderExtInstallNudgeEmptyState\(\)/.test(feSrc)) {
+    throw new Error('legacy _renderExtInstallNudgeEmptyState still called somewhere');
   }
 });
 
@@ -4040,9 +4055,9 @@ t('Install nudge: no-op when extension is already installed', () => {
   // Both render functions must short-circuit on _extensionAvailable so we
   // don't render an "install it" prompt to users who have it. This is
   // the biggest visible bug if it regresses.
-  for (const fn of ['_renderExtInstallNudgeEmptyState', '_renderExtInstallNudgeModal']) {
+  for (const fn of ['_renderExtInstallNudgeBanner', '_renderExtInstallNudgeModal']) {
     const idx = feSrc.indexOf(`function ${fn}`);
-    const body = feSrc.slice(idx, idx + 2000);
+    const body = feSrc.slice(idx, idx + 2500);
     if (!/_extensionAvailable/.test(body)) {
       throw new Error(`${fn} does not check _extensionAvailable`);
     }
@@ -4053,9 +4068,9 @@ t('Install nudge: dismissal persists and is respected on re-render', () => {
   // Both render functions must check _extInstallNudgeDismissed() so a
   // user who said "not now" doesn't keep seeing the prompt every time
   // they open the modal or hit the empty state.
-  for (const fn of ['_renderExtInstallNudgeEmptyState', '_renderExtInstallNudgeModal']) {
+  for (const fn of ['_renderExtInstallNudgeBanner', '_renderExtInstallNudgeModal']) {
     const idx = feSrc.indexOf(`function ${fn}`);
-    const body = feSrc.slice(idx, idx + 2000);
+    const body = feSrc.slice(idx, idx + 2500);
     if (!/_extInstallNudgeDismissed/.test(body)) {
       throw new Error(`${fn} does not respect the dismissal flag`);
     }
@@ -4080,11 +4095,11 @@ t('summit-ext-ready handler removes install nudges (extension belatedly announce
   }
 });
 
-t('showApp triggers empty-state nudge render; openAddModal triggers inline nudge', () => {
+t('showApp triggers install-banner render; openAddModal triggers inline nudge', () => {
   const showAppIdx = feSrc.indexOf('function showApp');
   const showAppBody = feSrc.slice(showAppIdx, showAppIdx + 3000);
-  if (!/_renderExtInstallNudgeEmptyState\(\)/.test(showAppBody)) {
-    throw new Error('showApp does not trigger empty-state nudge render');
+  if (!/_renderExtInstallNudgeBanner\(\)/.test(showAppBody)) {
+    throw new Error('showApp does not trigger install-banner render');
   }
   const openIdx = feSrc.indexOf('function openAddModal');
   const openBody = feSrc.slice(openIdx, openIdx + 2500);
@@ -4414,6 +4429,98 @@ t('Right-pane empty-state markup has ID-tagged title + body for dynamic copy', (
   }
   if (!/id="empty-state-body"/.test(feSrc)) {
     throw new Error('empty-state-body element missing from markup');
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// v1.19.11 — install nudge moved from empty-state card to top-row banner
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── v1.19.11 install-nudge banner (visual language with stale banner)');
+
+t('Install banner uses same top-row geometry as stale-ext banner', () => {
+  // The whole point of this release: consistent visual language for
+  // ambient extension-state signals. Both banners should share:
+  //   - position:fixed, top:0, z-index:9000
+  //   - amber palette (rgba(232,168,56, ...))
+  //   - backdrop-filter blur
+  //   - 40px padding-top on body
+  const idx = feSrc.indexOf('function _renderExtInstallNudgeBanner');
+  if (idx < 0) throw new Error('_renderExtInstallNudgeBanner missing');
+  const body = feSrc.slice(idx, idx + 3500);
+  const requiredCss = [
+    'position:fixed',
+    'top:0',
+    'z-index:9000',
+    'rgba(232,168,56',
+    'backdrop-filter:blur',
+  ];
+  for (const needle of requiredCss) {
+    if (!body.includes(needle)) {
+      throw new Error(`install banner missing expected style "${needle}" (visual inconsistency with stale banner)`);
+    }
+  }
+  // Must also set padding-top so content isn't occluded
+  if (!/paddingTop\s*=\s*['"]40px['"]/.test(body)) {
+    throw new Error('install banner does not push page content down with paddingTop');
+  }
+});
+
+t('Install banner yields to stale banner (mutual exclusion)', () => {
+  // If a stale-ext banner is somehow present, we don't stack our install
+  // banner on top. In practice they're mutually exclusive by state (stale
+  // requires ext present; install requires ext absent) but we encode the
+  // precedence anyway as defense.
+  const idx = feSrc.indexOf('function _renderExtInstallNudgeBanner');
+  const body = feSrc.slice(idx, idx + 3500);
+  if (!/getElementById\(['"]stale-ext-banner['"]\)/.test(body)) {
+    throw new Error('install banner does not check for stale-ext-banner presence');
+  }
+});
+
+t('Install banner is idempotent + has a stable id', () => {
+  // Second call while the banner is already shown must not stack a
+  // duplicate, and cleanup code (_removeExtInstallNudges, doLogout) reads
+  // the banner by id so it must be stable.
+  const idx = feSrc.indexOf('function _renderExtInstallNudgeBanner');
+  const body = feSrc.slice(idx, idx + 3500);
+  if (!/banner\.id\s*=\s*['"]ext-install-banner['"]/.test(body)) {
+    throw new Error('install banner missing the ext-install-banner id');
+  }
+  if (!/getElementById\(['"]ext-install-banner['"]\)/.test(body)) {
+    throw new Error('install banner does not guard against duplicate renders');
+  }
+});
+
+t('Both banner cleanup paths are defensive about padding-top', () => {
+  // Two banners share padding-top:40px. Removing one must not unpad the
+  // page if the OTHER is still holding it. In practice they're mutually
+  // exclusive by state, but the cleanup code should be symmetric and
+  // defensive so no future bug can accidentally unpad with a banner up.
+  const dismissIdx = feSrc.indexOf('function _dismissStaleBanner');
+  if (dismissIdx < 0) throw new Error('_dismissStaleBanner not found');
+  const dismissBody = feSrc.slice(dismissIdx, dismissIdx + 800);
+  if (!/ext-install-banner/.test(dismissBody)) {
+    throw new Error('_dismissStaleBanner does not check for install banner before clearing padding');
+  }
+
+  const removeIdx = feSrc.indexOf('function _removeExtInstallNudges');
+  if (removeIdx < 0) throw new Error('_removeExtInstallNudges not found');
+  const removeBody = feSrc.slice(removeIdx, removeIdx + 1200);
+  if (!/stale-ext-banner/.test(removeBody)) {
+    throw new Error('_removeExtInstallNudges does not check for stale banner before clearing padding');
+  }
+});
+
+t('doLogout removes BOTH banners (install + stale)', () => {
+  // Prior to v1.19.11 only the stale banner was removed on logout. Now
+  // there are two banners; both must be cleaned up.
+  const idx = feSrc.indexOf('async function doLogout');
+  const body = feSrc.slice(idx, idx + 3500);
+  if (!/stale-ext-banner/.test(body)) {
+    throw new Error('doLogout does not remove stale banner');
+  }
+  if (!/ext-install-banner/.test(body)) {
+    throw new Error('doLogout does not remove install banner');
   }
 });
 
