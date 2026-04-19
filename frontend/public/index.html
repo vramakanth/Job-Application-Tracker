@@ -935,7 +935,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       Don't have an account? <a onclick="showScreen('register')">Create one</a>
       <br><a onclick="showScreen('forgot')" style="font-size:12px;color:var(--text3)">Forgot password?</a>
     </div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.18.3 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.18.4 · private beta</div>
   </div>
 </div>
 
@@ -975,7 +975,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     </div>
     <button id="register-btn" class="auth-btn" onclick="doRegister()">Create account</button>
     <div class="auth-switch">Already have an account? <a onclick="showScreen('login')">Sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.18.3 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.18.4 · private beta</div>
   </div>
 </div>
 
@@ -991,7 +991,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <div class="auth-field"><label>CONFIRM PASSWORD</label><input id="recover-confirmpw" type="password" placeholder="Confirm new password"></div>
     <button id="recover-btn" class="auth-btn" onclick="recoverAccount()">Reset password</button>
     <div class="auth-switch"><a onclick="showScreen('login')">Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.18.3 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.18.4 · private beta</div>
   </div>
 </div>
 
@@ -1068,7 +1068,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       <div class="user-avatar" id="user-avatar" style="display:flex">VR</div>
       <div style="flex:1;min-width:0">
         <div class="user-name" id="user-name-display">user</div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.18.3</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.18.4</div>
       </div>
 
       <button class="user-bar-settings" onclick="doLogout()" title="Sign out" style="color:var(--text3)" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">
@@ -1277,7 +1277,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
 <script>
 const API = '';
-const APP_VERSION = '1.18.3';
+const APP_VERSION = '1.18.4';
 let token = localStorage.getItem('applied_token');
 let currentUser = localStorage.getItem('applied_user');
 let jobs = {}, currentJobId = null, currentFilter = 'all', activeDetailTab = 'notes';
@@ -2010,6 +2010,14 @@ async function doLogout() {
   const dv = document.getElementById('detail-view'); if (dv) { dv.innerHTML = ''; dv.style.display = 'none'; }
   const jl = document.getElementById('job-list');    if (jl) jl.innerHTML = '';
   const empty = document.getElementById('empty-state'); if (empty) empty.style.display = 'flex';
+  // Same defense for #section-view — if user was on Settings/Analytics/
+  // Library/Help when they logged out, that pane's content is still visible
+  // in the DOM. _stashSettingsPanel first so the settings panel structure
+  // survives the wipe for the next user.
+  _stashSettingsPanel();
+  const sv = document.getElementById('section-view'); if (sv) { sv.innerHTML = ''; sv.style.display = 'none'; }
+  _currentSection = null;
+  document.querySelectorAll('.sidebar-action-btn').forEach(btn => btn.classList.remove('active'));
   localStorage.removeItem('applied_token');
   localStorage.removeItem('applied_user');
   showScreen('login');
@@ -2710,7 +2718,11 @@ function selectJob(id) {
   _currentSection = null;
   document.querySelectorAll('.sidebar-action-btn').forEach(btn => btn.classList.remove('active'));
   const _sv = document.getElementById('section-view');
-  if (_sv) { _sv.style.display = 'none'; _sv.innerHTML = ''; }
+  if (_sv) {
+    _stashSettingsPanel();  // rescue settings panel before wiping section-view
+    _sv.style.display = 'none';
+    _sv.innerHTML = '';
+  }
 
   _setMobileActiveBtn('jobs');
   _mobileSection = 'jobs';
@@ -2779,6 +2791,7 @@ function openSection(name) {
   sv.style.flex = '1';
   sv.style.flexDirection = 'column';
   sv.style.overflow = 'hidden';
+  _stashSettingsPanel();   // rescue settings panel before wiping
   sv.innerHTML = '';
 
   renderJobList(); // deselect any job highlight
@@ -2790,11 +2803,29 @@ function openSection(name) {
   }
 }
 
+// Move #settings-panel-inner back to #settings-overlay if it's currently
+// parked somewhere else (typically #section-view). Any code that wipes
+// section-view's innerHTML — selectJob, openSection switching between
+// sections, closeSection — MUST call this first, or the live settings
+// panel gets deleted and subsequent openSettings() calls render blank.
+// Idempotent and safe to call when panel is already in overlay or missing.
+function _stashSettingsPanel() {
+  const inner = document.getElementById('settings-panel-inner');
+  const overlay = document.getElementById('settings-overlay');
+  if (!inner || !overlay) return;
+  if (inner.parentElement === overlay) return; // already home
+  overlay.appendChild(inner);
+}
+
 function closeSection() {
   _currentSection = null;
   document.querySelectorAll('.sidebar-action-btn').forEach(btn => btn.classList.remove('active'));
   const sv = document.getElementById('section-view');
-  if (sv) { sv.style.display = 'none'; sv.innerHTML = ''; }
+  if (sv) {
+    _stashSettingsPanel();  // rescue settings panel before wiping section-view
+    sv.style.display = 'none';
+    sv.innerHTML = '';
+  }
 
   const ev = document.getElementById('empty-state');
   const dv = document.getElementById('detail-view');
@@ -5852,6 +5883,7 @@ function renderDocsPage() {
         </div>`}
     </div>`;
 
+  _stashSettingsPanel();  // rescue settings panel before wiping section-view
   _sv.innerHTML = '';
   _sv.appendChild(overlay);
   // Focus search input
@@ -6013,6 +6045,11 @@ function renderAnalytics(overlay) {
   const total = all.length;
   if (!overlay) overlay = document.getElementById('analytics-overlay');
   if (!overlay) return;
+  // If overlay IS #section-view (first-call entry from showAnalytics), we're
+  // about to wipe it. Rescue the settings panel if it's parked there —
+  // otherwise subsequent openSettings() calls find the panel gone. Cheap
+  // idempotent no-op when overlay is the analytics-overlay child.
+  if (overlay.id === 'section-view') _stashSettingsPanel();
 
   // Counts per status (new 5-status vocabulary)
   const bySt = {};
@@ -7491,6 +7528,7 @@ function showReferralPipeline() {
   const withContacts = Object.entries(companiesWithContacts).filter(([, v]) => v.contacts.length > 0);
   const opportunities = Object.entries(companiesWithContacts).filter(([, v]) => v.contacts.length === 0);
 
+  _stashSettingsPanel();  // rescue settings panel before wiping section-view
   sv.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.7" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
@@ -7630,6 +7668,7 @@ function showStaleJobs() {
   openSection('stale');
   const sv = document.getElementById('section-view');
   const stale = getStaleJobs();
+  _stashSettingsPanel();  // rescue settings panel before wiping section-view
   sv.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;padding:18px 24px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -7750,6 +7789,7 @@ function showHelp() {
   // so showing it inside the app covers the sidebar. We keep the editorial
   // typography but use app theme colors.
 
+  _stashSettingsPanel();  // rescue settings panel before wiping section-view
   sv.innerHTML = `
     <div style="display:flex;flex-direction:column;flex:1;overflow:hidden">
 
@@ -7814,6 +7854,7 @@ function showWatchlist() {
   openSection('watchlist');
   const sv = document.getElementById('section-view');
   const watchlist = Object.values(jobs).filter(j => j.watchlist);
+  _stashSettingsPanel();  // rescue settings panel before wiping section-view
   sv.innerHTML = `
     <div style="display:flex;align-items:center;gap:14px;padding:18px 24px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg2)">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent-bg)" stroke-width="1.7" stroke-linecap="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
@@ -8766,7 +8807,7 @@ setInterval(() => {
     </div>
     <button class="auth-btn" id="forgot-btn" onclick="doForgot()">Send recovery email</button>
     <div class="auth-switch" style="margin-top:12px"><a onclick="showScreen('login')">← Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.18.3 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.18.4 · private beta</div>
   </div>
 </div>
 

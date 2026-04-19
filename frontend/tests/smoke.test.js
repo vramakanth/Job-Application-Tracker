@@ -1021,3 +1021,58 @@ t('_maybeAutoLoadTabContent triggers insights research when none exists', () => 
     throw new Error('runInsights not triggered for empty insights');
   }
 });
+
+// ── v1.18.4: Settings panel survival across section-view wipes ──
+console.log('\n── v1.18.4 Settings panel stash guards');
+t('_stashSettingsPanel helper defined and idempotent', () => {
+  if (!/function\s+_stashSettingsPanel\s*\(/.test(src)) {
+    throw new Error('_stashSettingsPanel helper not defined');
+  }
+  const m = src.match(/function\s+_stashSettingsPanel[\s\S]*?\n\}/);
+  if (!m) throw new Error('_stashSettingsPanel body not parseable');
+  const body = m[0];
+  // Idempotent: bail if panel already in overlay
+  if (!/parentElement\s*===\s*overlay/.test(body) && !/parentElement\s*!==\s*overlay/.test(body)) {
+    throw new Error('_stashSettingsPanel does not short-circuit when already home');
+  }
+});
+t('every section-view innerHTML wipe is preceded by _stashSettingsPanel', () => {
+  // Regression guard: Settings UI lives as #settings-panel-inner in #settings-overlay
+  // at page load. openSettings() re-parents it into #section-view. Any code that
+  // wipes #section-view.innerHTML without first stashing the panel back to its
+  // overlay home destroys the settings UI — next openSettings() call renders
+  // blank because the element no longer exists.
+  //
+  // Scan every `sv.innerHTML`/`_sv.innerHTML` write and verify a
+  // `_stashSettingsPanel()` call appears within the 300 chars immediately
+  // preceding it.
+  const writeRe = /(?:^|\n)[ \t]*(?:_)?sv\.innerHTML\s*=/g;
+  let m;
+  const missing = [];
+  while ((m = writeRe.exec(src)) !== null) {
+    const writeIdx = m.index;
+    const lineStart = src.lastIndexOf('\n', writeIdx) + 1;
+    const lineEnd = src.indexOf('\n', writeIdx);
+    const lineNo = src.slice(0, writeIdx).split('\n').length;
+    const preceding = src.slice(Math.max(0, writeIdx - 300), writeIdx);
+    if (!/_stashSettingsPanel\s*\(/.test(preceding)) {
+      missing.push(`line ~${lineNo}: ${src.slice(lineStart, lineEnd).trim().slice(0, 80)}`);
+    }
+  }
+  if (missing.length) {
+    throw new Error(`section-view wipes without stash:\n  ${missing.join('\n  ')}`);
+  }
+});
+t('renderAnalytics stashes when called with #section-view as target', () => {
+  // renderAnalytics accepts an overlay arg. When called from showAnalytics,
+  // overlay === #section-view and the function wipes its innerHTML. This
+  // code path must stash first — same protection as the other wipes but
+  // via an id-check because the function is polymorphic (also called with
+  // #analytics-overlay as a child).
+  const idx = src.indexOf('function renderAnalytics(overlay)');
+  if (idx < 0) throw new Error('renderAnalytics not found');
+  const body = src.slice(idx, idx + 600);
+  if (!/section-view/.test(body) || !/_stashSettingsPanel/.test(body)) {
+    throw new Error('renderAnalytics does not stash when target is section-view');
+  }
+});
