@@ -4094,5 +4094,123 @@ t('showApp triggers empty-state nudge render; openAddModal triggers inline nudge
 });
 
 // ════════════════════════════════════════════════════════════════════════════
+// v1.19.6 — security contract inline on register screen
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── v1.19.6 register-screen security contract');
+
+t('showEncryptionWarning post-hoc modal is removed', () => {
+  // v1.19.6 moved the security contract from a post-click modal to the
+  // register screen itself. The old modal function, its checker, the
+  // resolver global, and the warn-cb* ids must all be gone — otherwise
+  // someone could accidentally re-wire the old flow.
+  for (const dead of ['showEncryptionWarning', 'checkWarningBoxes',
+                      '__warnResolve', 'warn-cb1', 'warn-cb2',
+                      'warn-proceed-btn']) {
+    if (feSrc.includes(dead)) throw new Error(`dead symbol "${dead}" still present`);
+  }
+});
+
+t('Register screen has security contract with two gating checkboxes', () => {
+  const regIdx = feSrc.indexOf('id="screen-register"');
+  if (regIdx < 0) throw new Error('register screen missing');
+  const body = feSrc.slice(regIdx, regIdx + 6000);
+  // Must mention the encryption guarantee
+  if (!/end.to.end encrypted/i.test(body)) {
+    throw new Error('register screen does not state end-to-end encryption guarantee');
+  }
+  // Must state the "lose both = gone forever" warning
+  if (!/no backdoor|data is gone|data.*permanently gone|permanently gone/i.test(body)) {
+    throw new Error('register screen does not warn about permanent data loss');
+  }
+  // Must have two checkboxes with the expected ids
+  if (!/id="reg-cb1"/.test(body)) throw new Error('reg-cb1 checkbox missing');
+  if (!/id="reg-cb2"/.test(body)) throw new Error('reg-cb2 checkbox missing');
+  // Both checkboxes must wire onchange to the button-state controller
+  const cb1Idx = body.indexOf('id="reg-cb1"');
+  const cb2Idx = body.indexOf('id="reg-cb2"');
+  const cb1Block = body.slice(cb1Idx, cb1Idx + 300);
+  const cb2Block = body.slice(cb2Idx, cb2Idx + 300);
+  if (!/_updateRegisterButtonState/.test(cb1Block)) {
+    throw new Error('reg-cb1 does not call _updateRegisterButtonState on change');
+  }
+  if (!/_updateRegisterButtonState/.test(cb2Block)) {
+    throw new Error('reg-cb2 does not call _updateRegisterButtonState on change');
+  }
+});
+
+t('Register button starts disabled (checkboxes gate it)', () => {
+  // The inline contract + checkboxes design only works if the button is
+  // actually disabled on load. Otherwise users can click through without
+  // reading.
+  const regIdx = feSrc.indexOf('id="screen-register"');
+  const body = feSrc.slice(regIdx, regIdx + 6000);
+  // Find the register-btn element markup
+  const btnMatch = body.match(/<button[^>]*id="register-btn"[^>]*>/);
+  if (!btnMatch) throw new Error('register-btn not found');
+  if (!/\sdisabled(\s|>)/.test(btnMatch[0])) {
+    throw new Error('register-btn does not start disabled');
+  }
+});
+
+t('_updateRegisterButtonState enables button only when BOTH checkboxes ticked', () => {
+  const idx = feSrc.indexOf('function _updateRegisterButtonState');
+  if (idx < 0) throw new Error('_updateRegisterButtonState missing');
+  const body = feSrc.slice(idx, idx + 800);
+  if (!/reg-cb1/.test(body) || !/reg-cb2/.test(body)) {
+    throw new Error('_updateRegisterButtonState does not read both checkboxes');
+  }
+  // AND condition (both must be true) — not OR
+  if (!/cb1\s*&&\s*cb2/.test(body)) {
+    throw new Error('_updateRegisterButtonState does not require BOTH checkboxes');
+  }
+});
+
+t('doRegister re-checks checkboxes server-side of UI (defense in depth)', () => {
+  // Even though the button is disabled without both checkboxes, a
+  // programmatic call to doRegister() via the console or a stray event
+  // handler must still enforce the contract. Re-check inside doRegister.
+  const idx = feSrc.indexOf('async function doRegister');
+  const body = feSrc.slice(idx, idx + 3000);
+  if (!/reg-cb1/.test(body) || !/reg-cb2/.test(body)) {
+    throw new Error('doRegister does not re-check the security-contract checkboxes');
+  }
+});
+
+t('showScreen resets register checkboxes on arrival', () => {
+  // If a user ticks both, navigates away, comes back, the checkboxes
+  // shouldn't still be ticked — they should have to re-affirm the
+  // contract. Otherwise re-entry bypasses the attention.
+  const idx = feSrc.indexOf('function showScreen');
+  const body = feSrc.slice(idx, idx + 2000);
+  // Must find a reg-cb reset keyed on n==='register'
+  if (!/n\s*===?\s*['"]register['"][\s\S]{0,400}reg-cb/.test(body)) {
+    throw new Error('showScreen does not reset register checkboxes on arrival');
+  }
+});
+
+t('Register-screen security contract mentions recovery codes as the recovery path', () => {
+  const regIdx = feSrc.indexOf('id="screen-register"');
+  const body = feSrc.slice(regIdx, regIdx + 6000);
+  if (!/recovery code/i.test(body)) {
+    throw new Error('register contract does not mention recovery codes');
+  }
+  // Must not promise email-based recovery anywhere in the register screen
+  if (/[Ff]or password recovery/.test(body)) {
+    throw new Error('register screen still promises email-for-password-recovery');
+  }
+});
+
+t('No user-facing copy mentions Anthropic', () => {
+  // Product should stand on its own; we don't want Anthropic referenced
+  // in the auth/warning copy or example placeholders.
+  if (/Anthropic/.test(feSrc)) {
+    // Print where for easier fix
+    const idx = feSrc.indexOf('Anthropic');
+    const snippet = feSrc.slice(Math.max(0, idx - 80), idx + 120);
+    throw new Error(`"Anthropic" still appears in frontend source: …${snippet}…`);
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);
