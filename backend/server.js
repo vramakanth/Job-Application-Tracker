@@ -727,6 +727,27 @@ app.post('/api/login', _loginLimiter, async (req, res) => {
   });
 });
 
+// v1.19.15: /api/me — return the user's encryptedDataKey so a client with
+// a valid session token can re-derive dataKey without re-logging-in.
+//
+// Context: dataKey is in-memory only (zero-knowledge — we never store the
+// unwrapped key). The auth token persists in localStorage and survives
+// page reload; the dataKey doesn't. Previously, opening a stored session
+// landed in a broken state: authenticated but unable to decrypt/save.
+// This endpoint lets the client fetch the wrapped key and prompt only
+// for the password (not full credentials) to unlock.
+app.get('/api/me', authMiddleware, (req, res) => {
+  const user = users[req.user.id];
+  if (!user) return res.status(404).json({ error: 'user not found' });
+  if (!user.encrypted || !user.encryptedDataKey) {
+    return res.status(409).json({ error: 'Account predates encryption migration — contact support' });
+  }
+  res.json({
+    username: user.username,
+    encryptedDataKey: user.encryptedDataKey,
+  });
+});
+
 app.post('/api/change-password', authMiddleware, async (req, res) => {
   const { currentPassword, newPassword, newEncryptedDataKey } = req.body;
   if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Both passwords required' });

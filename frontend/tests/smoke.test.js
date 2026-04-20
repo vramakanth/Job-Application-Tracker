@@ -951,9 +951,19 @@ t('clearFinnhubKey calls saveUserSettings', () => {
   if (!body.includes('saveUserSettings()')) throw new Error('no sync call on clear');
 });
 t('loadUserSettings wired into session restore', () => {
-  // The page-load branch: if (token && currentUser) { ... loadUserSettings(); }
-  const m = src.match(/if \(token && currentUser\) \{[^}]*loadUserSettings\(\)[^}]*\}/);
-  if (!m) throw new Error('loadUserSettings not called on session restore');
+  // The page-load branch: token+currentUser present → after the unlock
+  // check (v1.19.15), we showApp + loadJobs + loadUserSettings. Rather
+  // than matching the exact structure (which includes a nested if), just
+  // confirm loadUserSettings is called somewhere in the DOMContentLoaded
+  // handler when token+currentUser are set.
+  const dcl = src.match(/addEventListener\s*\(\s*['"]DOMContentLoaded['"][\s\S]{0,1200}?\n\}\s*\)/);
+  if (!dcl) throw new Error('DOMContentLoaded handler not found');
+  if (!/token\s*&&\s*currentUser/.test(dcl[0])) {
+    throw new Error('bootstrap does not gate on token && currentUser');
+  }
+  if (!/loadUserSettings\(\)/.test(dcl[0])) {
+    throw new Error('loadUserSettings not called on session restore');
+  }
 });
 t('loadUserSettings wired into login success', () => {
   const idx = src.indexOf('async function doLogin');

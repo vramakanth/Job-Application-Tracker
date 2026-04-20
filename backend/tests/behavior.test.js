@@ -1483,7 +1483,10 @@ t('openSection tears down notes editor before switching to a different section',
 });
 
 t('doLogout awaits notes flush before clearing the auth token', () => {
-  const idx = feSrc.indexOf('function doLogout');
+  // v1.19.15: there are now TWO logout functions — doLogout (full, async,
+  // flushes notes) and doLogoutFromUnlock (lightweight, for the unlock
+  // screen where nothing is mounted yet). Pin to the async one.
+  const idx = feSrc.indexOf('async function doLogout');
   const body = feSrc.slice(idx, idx + 1500);
   // Must be async and await the teardown — otherwise the final PUT races
   // the token clear and gets 401'd.
@@ -4619,6 +4622,152 @@ t('Settings has an unsupported-browser notice slot + renderer', () => {
   const body = feSrc.slice(idx, idx + 3000);
   if (!/_renderExtUnsupportedNotice\(\)/.test(body)) {
     throw new Error('openSettings does not call _renderExtUnsupportedNotice');
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// v1.19.15 — token-without-dataKey recovery (unlock flow)
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── v1.19.15 dataKey re-unlock after page reload');
+
+t('Bootstrap routes to unlock screen when token exists but dataKey is missing', () => {
+  // The bug: after page reload, localStorage has the token but dataKey
+  // (in-memory only under zero-knowledge) is gone. Previously: showApp()
+  // + loadJobs() ran anyway, landed in broken state where decrypt returned
+  // {} silently, drain skipped the inbox, user's jobs silently vanished.
+  // Now: route to unlock screen first.
+  const dcl = feSrc.match(/addEventListener\s*\(\s*['"]DOMContentLoaded['"][\s\S]{0,800}/);
+  if (!dcl) throw new Error('DOMContentLoaded handler not found');
+  const body = dcl[0];
+  if (!/!dataKey[\s\S]{0,200}showUnlockPrompt/.test(body)) {
+    throw new Error('bootstrap does not route to showUnlockPrompt when dataKey is missing');
+  }
+  // Must NOT unconditionally showApp + loadJobs when dataKey is absent
+  if (/token\s*&&\s*currentUser\s*\)\s*\{\s*showApp\(\)\s*;\s*loadJobs/.test(body)) {
+    throw new Error('bootstrap still calls showApp+loadJobs without checking dataKey');
+  }
+});
+
+t('showUnlockPrompt / doUnlock / doLogoutFromUnlock functions defined', () => {
+  for (const fn of ['showUnlockPrompt', 'doUnlock', 'doLogoutFromUnlock']) {
+    if (!new RegExp(`function ${fn}\\s*\\(`).test(feSrc)) {
+      throw new Error(`${fn} not defined`);
+    }
+  }
+});
+
+t('screen-unlock markup is present with password + unlock button', () => {
+  if (!/id="screen-unlock"/.test(feSrc)) {
+    throw new Error('screen-unlock element missing');
+  }
+  if (!/id="unlock-password"/.test(feSrc)) {
+    throw new Error('unlock-password input missing');
+  }
+  if (!/id="unlock-btn"/.test(feSrc)) {
+    throw new Error('unlock-btn button missing');
+  }
+  if (!/id="unlock-error"/.test(feSrc)) {
+    throw new Error('unlock-error container missing');
+  }
+});
+
+t('showScreen list includes "unlock"', () => {
+  // showScreen iterates a hard-coded list of screens and hides all others.
+  // Missing "unlock" from the list would mean the unlock screen stays
+  // visible when the app tries to route away from it.
+  const idx = feSrc.indexOf('function showScreen');
+  const body = feSrc.slice(idx, idx + 800);
+  if (!/\[\s*['"]login['"][\s\S]{0,200}['"]unlock['"]/.test(body)) {
+    throw new Error('showScreen does not include "unlock" in its iteration list');
+  }
+  if (!/unlock\s*:\s*['"]flex['"]/.test(body)) {
+    throw new Error('showScreen displayMap does not set unlock to flex');
+  }
+});
+
+t('doUnlock fetches /api/me to retrieve encryptedDataKey', () => {
+  const idx = feSrc.indexOf('async function doUnlock');
+  if (idx < 0) throw new Error('doUnlock not defined or not async');
+  const body = feSrc.slice(idx, idx + 3000);
+  if (!/\/api\/me/.test(body)) {
+    throw new Error('doUnlock does not fetch /api/me');
+  }
+  if (!/CryptoEngine\.deriveKey/.test(body)) {
+    throw new Error('doUnlock does not derive pwKey');
+  }
+  if (!/CryptoEngine\.unwrapKey/.test(body)) {
+    throw new Error('doUnlock does not unwrap the dataKey');
+  }
+  // Must ERROR on wrong password, not fall through. If unwrap throws,
+  // we show "Incorrect password" and do NOT modify dataKey.
+  if (!/Incorrect password/i.test(body)) {
+    throw new Error('doUnlock does not show "Incorrect password" on unwrap failure');
+  }
+});
+
+t('doUnlock does not clobber dataKey on wrong password', () => {
+  // Critical: if unwrapKey throws, we must not leave dataKey in a mutated
+  // state. A wrong-password path should leave the existing dataKey alone
+  // (probably null, but could be anything) rather than setting it to an
+  // undefined/garbage value.
+  const idx = feSrc.indexOf('async function doUnlock');
+  const body = feSrc.slice(idx, idx + 3000);
+  // Find the try/catch around unwrap
+  const tryMatch = body.match(/try\s*\{[\s\S]{0,400}unwrapKey[\s\S]{0,200}?\}\s*catch[\s\S]{0,400}?\}/);
+  if (!tryMatch) throw new Error('doUnlock missing try/catch around unwrapKey');
+  // The catch must return (not fall through to "unlocked — enter the app")
+  if (!/catch[\s\S]{0,400}return;?\s*\}/.test(tryMatch[0])) {
+    throw new Error('doUnlock catch does not early-return — could enter app with broken key');
+  }
+});
+
+t('doLogoutFromUnlock clears localStorage session but does not touch app DOM', () => {
+  const idx = feSrc.indexOf('function doLogoutFromUnlock');
+  if (idx < 0) throw new Error('doLogoutFromUnlock not defined');
+  const body = feSrc.slice(idx, idx + 800);
+  if (!/removeItem\(['"]applied_token['"]\)/.test(body)) {
+    throw new Error('doLogoutFromUnlock does not clear stored token');
+  }
+  if (!/removeItem\(['"]applied_user['"]\)/.test(body)) {
+    throw new Error('doLogoutFromUnlock does not clear stored username');
+  }
+  // It must NOT touch detail-view, job-list, notes-editor, banners etc.
+  // (those DOM elements aren't present when showing the unlock screen,
+  // and calling the full doLogout would throw).
+  if (/tearDownNotesEditor|_stopInboxPolling|detail-view/.test(body)) {
+    throw new Error('doLogoutFromUnlock touches app-only DOM — would throw when called from unlock screen');
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// v1.19.15 — stale-ext banner clears when ping times out + cached version stale
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── v1.19.15 stale banner clears on ping timeout with stale cache');
+
+t('_refreshExtensionVersion clears stale banner when ping fails + cached version is stale', () => {
+  // The v1.19.9 fix only handled the case where the NEW content.js
+  // announced itself on the Summit tab. But Chrome doesn't retro-inject
+  // content scripts into already-open tabs when an extension is updated.
+  // So pings time out while _extensionVersion still holds the old stale
+  // number — banner keeps showing "update to X+" forever.
+  //
+  // Fix: when ping fails AND _extensionVersion is stale, clear the banner.
+  // Either the extension was updated (correct to clear) or uninstalled
+  // (also correct to clear — a "stale version" banner is misleading when
+  // there's no extension at all).
+  const idx = feSrc.indexOf('async function _refreshExtensionVersion');
+  if (idx < 0) throw new Error('_refreshExtensionVersion not found');
+  const body = feSrc.slice(idx, idx + 3000);
+  // Find the !resp.ok branch (ping failure)
+  const failMatch = body.match(/if\s*\(\s*!resp[\s\S]{0,2000}?(?=\/\/ We got a version back|_extensionAvailable\s*=\s*true)/);
+  if (!failMatch) throw new Error('cannot isolate ping-failure branch in _refreshExtensionVersion');
+  const failBranch = failMatch[0];
+  // The failure branch must now check _extIsStale and remove the banner
+  if (!/_extIsStale\(\)/.test(failBranch)) {
+    throw new Error('ping-failure branch does not check _extIsStale — stale banner will persist');
+  }
+  if (!/stale-ext-banner[\s\S]{0,200}\.remove\(\)/.test(failBranch)) {
+    throw new Error('ping-failure branch does not remove stale banner');
   }
 });
 
