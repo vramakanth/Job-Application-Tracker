@@ -1,16 +1,20 @@
-// Summit Chrome Extension — popup.js v2.3
+// Summit Chrome Extension — popup.js v2.6.0
+//
+// Two-stage flow:
+//   Stage A (initial)    — show URL, "Add to Summit" button
+//   Stage B (extracting) — spinner, 15s hard timeout
+//   Stage C (review)     — editable form with extracted fields + Save/Cancel
+//   Stage D (saved)      — success message, auto-close
+//
+// POSTs:
+//   /api/extract-job-fields — reader payload (url + gzipped html + text + jsonLd + meta)
+//   /api/jobs/inbox         — finalized fields (title + company + ...) after user review
+
 const $ = id => document.getElementById(id);
 const TRACKER_URL = 'https://jobsummit.app';
+const EXTRACT_TIMEOUT_MS = 15000;
 
 let token = '', currentTabUrl = '', currentTab = null;
-
-// v1.19.14: pageData holds the structured extraction from content.js
-// (fields, bodyText, salary, url). Previously declared as a `let` inside
-// startParsing, which meant addJob's reference to pageData.fields.reqId
-// threw a ReferenceError — breaking the Add button on ALL sites, not
-// just ones where reqId was present. Must stay module-scoped so the
-// submit path can read it.
-let pageData = null;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function showStatus(el, type, msg) {
@@ -19,42 +23,43 @@ function showStatus(el, type, msg) {
 }
 function hideStatus(el) { el.className = 'status'; }
 
-function setProgress(pct, label) {
-  $('parse-bar').classList.add('active');
-  $('parse-bar-fill').style.width = pct + '%';
-  if (label) $('parse-inline').textContent = label;
-}
-function clearProgress() {
-  $('parse-bar').classList.remove('active');
-  $('parse-bar-fill').style.width = '0%';
-  $('parse-inline').textContent = '';
-}
-
-function setBadge(fieldId, label) {
-  const b = $(fieldId + '-badge');
-  if (b && label) { b.textContent = label; b.style.display = 'inline-block'; }
-}
-
-function fillField(id, val, badge) {
-  if (val && typeof val === 'string' && val.trim()) {
-    $(id).value = val.trim();
-    if (badge) setBadge(id.replace('job-',''), badge);
-    return true;
+function showStage(name) {
+  for (const s of ['initial', 'extracting', 'review']) {
+    const el = $('stage-' + s);
+    if (el) el.style.display = s === name ? 'block' : 'none';
   }
-  return false;
+}
+
+// Gzip a string and return it as base64. Uses CompressionStream, which has
+// been available in Chrome since 80 (2020). If for some reason the API is
+// missing or throws, returns null and caller falls back to sending raw.
+async function gzipBase64(str) {
+  if (typeof CompressionStream === 'undefined') return null;
+  try {
+    const blob = new Blob([str], { type: 'text/plain' });
+    const stream = blob.stream().pipeThrough(new CompressionStream('gzip'));
+    const buf = await new Response(stream).arrayBuffer();
+    // arrayBuffer → base64 — done in chunks to avoid call-stack overflow
+    // for large buffers (btoa(String.fromCharCode(...arr)) blows up ~100KB).
+    const bytes = new Uint8Array(buf);
+    let binary = '';
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+    }
+    return btoa(binary);
+  } catch { return null; }
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 async function init() {
-  // ── MV3 event wiring ────────────────────────────────────────────────────
-  // MV3's default extension CSP blocks inline event handlers in popup HTML
-  // (onclick=, onkeydown=). If the popup relies on them, nothing happens when
-  // the user clicks — including, critically, the Sign in button. We wire
-  // every handler here with addEventListener so it works under strict CSP.
+  // Wire all handlers (MV3 CSP blocks inline handlers in popup HTML)
   $('login-btn').addEventListener('click', doLogin);
   $('password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   $('username').addEventListener('keydown', e => { if (e.key === 'Enter') $('password').focus(); });
-  $('add-btn').addEventListener('click', addJob);
+  $('extract-btn').addEventListener('click', startExtract);
+  $('cancel-btn').addEventListener('click', cancelReview);
+  $('confirm-btn').addEventListener('click', saveJob);
   $('open-tracker-btn').addEventListener('click', openTracker);
   $('sign-out-btn').addEventListener('click', signOut);
 
@@ -62,22 +67,24 @@ async function init() {
   currentTab = tabs[0];
   currentTabUrl = currentTab?.url || '';
 
-  // Show URL chip
   const urlDisplay = currentTabUrl.replace(/^https?:\/\/(www\.)?/, '').slice(0, 55);
   $('detected-url').textContent = urlDisplay || 'No URL';
 
-  // Show favicon
   if (currentTab?.favIconUrl) {
     $('favicon').src = currentTab.favIconUrl;
     $('favicon').style.display = 'block';
   }
 
-  // Check auth
+  // Block obviously-invalid pages
+  if (!currentTabUrl || currentTabUrl.startsWith('chrome://') || currentTabUrl.startsWith('chrome-extension://')) {
+    $('extract-btn').disabled = true;
+    $('extract-btn').textContent = 'Not a webpage';
+  }
+
   const stored = await chrome.storage.local.get(['token', 'username']);
   if (stored.token) {
     token = stored.token;
     showMainView(stored.username);
-    startParsing();
   } else {
     $('login-view').style.display = 'block';
     $('header-sub').textContent = 'Sign in to your account';
@@ -93,10 +100,6 @@ async function doLogin() {
 
   btn.disabled = true;
   btn.textContent = 'Signing in...';
-  // try/finally so the button is ALWAYS re-enabled. Previously an early
-  // return inside the try on a 401 skipped the reset lines — leaving the
-  // button stuck on "Signing in..." forever, making the 11px error message
-  // below easy to miss and giving the impression "nothing happened".
   try {
     const res = await fetch(TRACKER_URL + '/api/login', {
       method: 'POST',
@@ -105,10 +108,6 @@ async function doLogin() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-      // 401 is the overwhelming common case. Show plain English rather than
-      // the server's raw "Invalid username or password" which is equivalent
-      // but slightly less friendly. Fall through to data.error for other
-      // codes (429 rate-limit → "rate_limited detail: ...", etc).
       const msg = res.status === 401
         ? 'Incorrect username or password'
         : (data.error || data.detail || `Login failed (${res.status})`);
@@ -118,7 +117,6 @@ async function doLogin() {
     token = data.token;
     await chrome.storage.local.set({ token: data.token, username: user });
     showMainView(user);
-    startParsing();
   } catch(e) {
     showStatus($('login-status'), 'error', 'Cannot connect to Summit');
   } finally {
@@ -131,181 +129,143 @@ function showMainView(username) {
   $('login-view').style.display = 'none';
   $('main-view').style.display = 'block';
   $('header-sub').textContent = username ? `Signed in as ${username}` : 'Job Tracker';
+  showStage('initial');
 }
 
-// ── SMART PARSING — content-script-first, server as fallback ────────────────
-// v2.2: flipped from server-first to page-first. Rationale:
-//
-// On bot-gated sites (Workable, Apple, LinkedIn) the server's /api/parse-job
-// gets a bot-block shell with no useful data. The user's browser — which
-// IS logged in, DID solve the bot challenge, IS seeing the real content —
-// has the real JSON-LD in the page. Asking that first is the right default.
-//
-// Three possible paths:
-//  (A) Page has JSON-LD fields → use them, skip server entirely. Zero
-//      network to our backend, instant fill. Covers ~70% of postings.
-//  (B) Page has text but no structured fields → send text to /api/extract-fields
-//      for AI extraction. Skip /api/parse-job — we already have the rendered
-//      content, no need for server to re-render.
-//  (C) Page gave us essentially nothing (content script blocked, short body)
-//      → fall back to /api/parse-job server-side. This catches the case
-//      where the browser navigated to a redirect / interstitial that the
-//      server can fetch directly.
-async function startParsing() {
+// ── STAGE B: extract ─────────────────────────────────────────────────────────
+async function startExtract() {
   if (!currentTabUrl || currentTabUrl.startsWith('chrome://') || currentTabUrl.startsWith('chrome-extension://')) {
-    $('parse-inline').textContent = '⚠ Browser page';
+    showStatus($('initial-status'), 'error', 'Not a job posting URL');
     return;
   }
+  hideStatus($('initial-status'));
+  showStage('extracting');
+  $('extracting-msg').textContent = 'Reading page...';
 
-  setProgress(15, 'Reading page...');
+  // Progressive status hints while the server works. Not tied to actual
+  // pipeline stages — just lets the user know we're still alive.
+  const hintTimer1 = setTimeout(() => { $('extracting-msg').textContent = 'Extracting details...'; }, 1500);
+  const hintTimer2 = setTimeout(() => { $('extracting-msg').textContent = 'Almost done...'; }, 6000);
 
-  // Ask content script for everything it can see. Writes to the
-  // module-scoped `pageData` so addJob can read reqId on submit.
-  pageData = null;
   try {
-    pageData = await new Promise((resolve) => {
-      chrome.tabs.sendMessage(currentTab.id, { action: 'extractJob' }, resp => {
-        resolve(chrome.runtime.lastError ? null : resp);
+    // Ask content.js for the reader payload
+    const reader = await new Promise((resolve) => {
+      chrome.tabs.sendMessage(currentTab.id, { action: 'extractJob' }, r => {
+        resolve(chrome.runtime.lastError ? null : r);
       });
     });
-  } catch {}
 
-  const hasPageFields = pageData?.fields && pageData.fields.title && pageData.fields.company;
-
-  // ── Path A: structured fields from page JSON-LD ────────────────────────────
-  if (hasPageFields) {
-    setProgress(60, 'Found structured data...');
-    applyFields(pageData.fields, 'page');
-    // If the page's JSON-LD was missing salary but content.js recovered one
-    // from DOM regex, apply that too.
-    if (!pageData.fields.salary && pageData.salary) {
-      applyFields({ salary: pageData.salary }, 'page');
+    // Build the server payload. If content script is blocked (some browser
+    // pages, some CSP-strict sites), we still post with url only and let
+    // the server fall back to its own fetch.
+    const body = { url: currentTabUrl };
+    if (reader) {
+      body.text   = reader.text   || '';
+      body.jsonLd = reader.jsonLd || [];
+      body.meta   = reader.meta   || {};
+      body.title  = reader.title  || '';
+      // Gzip the html — it's by far the biggest field. If gzip fails
+      // (old browser, edge case), skip html entirely; text+jsonLd often
+      // have enough signal for extraction on their own.
+      if (reader.html) {
+        const compressed = await gzipBase64(reader.html);
+        if (compressed) {
+          body.html = compressed;
+          body.compressed = 'gzip';
+        }
+        // If compression failed, we omit html rather than ship 1MB raw.
+      }
     }
-    setProgress(100, '✓');
-    setTimeout(clearProgress, 1200);
-    return;
-  }
 
-  // ── Path B: text from page → AI extract ────────────────────────────────────
-  if (pageData?.bodyText && pageData.bodyText.length > 300) {
-    setProgress(50, 'Extracting with AI...');
+    // 15s hard timeout via AbortController
+    const ctrl = new AbortController();
+    const timeoutId = setTimeout(() => ctrl.abort(), EXTRACT_TIMEOUT_MS);
+    let res;
     try {
-      const aiRes = await fetch(TRACKER_URL + '/api/extract-fields', {
+      res = await fetch(TRACKER_URL + '/api/extract-job-fields', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify({ url: currentTabUrl, text: pageData.bodyText.slice(0, 5000) }),
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
       });
-      if (aiRes.ok) {
-        const aiFields = await aiRes.json();
-        if (aiFields && (aiFields.title || aiFields.company)) {
-          applyFields(aiFields, 'ai');
-          // Apply any salary the content script recovered but AI missed
-          if (!aiFields.salary && pageData.salary) applyFields({ salary: pageData.salary }, 'page');
-          setProgress(100, '✓');
-          setTimeout(clearProgress, 1200);
-          return;
-        }
-      }
-    } catch {}
-  }
-
-  // ── Path C: fall back to server-side parse ─────────────────────────────────
-  // Content script came up empty (blocked origin, interstitial, very short
-  // body). Let the server try — sometimes direct-fetch works where the
-  // browser ran into a client-side redirect or auth wall.
-  setProgress(40, 'Parsing server-side...');
-  try {
-    const parseRes = await fetch(TRACKER_URL + '/api/parse-job', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ url: currentTabUrl }),
-    });
-    if (parseRes.ok) {
-      const parsed = await parseRes.json();
-      if (parsed.fields) {
-        applyFields(parsed.fields, parsed._ats || 'api');
-        setProgress(100, '✓');
-        setTimeout(clearProgress, 1200);
-        return;
-      }
-      // Server returned text — last chance via AI
-      if (parsed.text && parsed.text.length > 100) {
-        setProgress(70, 'Extracting with AI...');
-        try {
-          const aiRes = await fetch(TRACKER_URL + '/api/extract-fields', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-            body: JSON.stringify({ url: currentTabUrl, text: parsed.text.slice(0, 5000) }),
-          });
-          if (aiRes.ok) {
-            const aiFields = await aiRes.json();
-            if (aiFields) applyFields(aiFields, 'ai');
-          }
-        } catch {}
-      }
+    } finally {
+      clearTimeout(timeoutId);
     }
-  } catch {}
 
-  // Whatever we got, show a checkmark — empty fields prompt the user to fill
-  // in manually, no scary error. Add button will refuse if title/company
-  // still blank.
-  setProgress(100, '✓');
-  setTimeout(clearProgress, 1000);
-}
-
-function applyFields(fields, source) {
-  if (!fields) return;
-  const badge = source === 'ai' ? 'ai' : source === 'page' ? 'page' : source;
-  // Only overwrite if field is currently empty OR new value is better
-  const overwrite = (id, val) => {
-    if (val && typeof val === 'string' && val.trim()) {
-      if (!$(id).value || source === 'ai') {
-        fillField(id, val, badge);
-      }
+    if (res.status === 401) { await signOut(); return; }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || ('HTTP ' + res.status));
     }
-  };
-  overwrite('job-title',   fields.title);
-  overwrite('job-company', fields.company);
-  overwrite('job-location', fields.location);
-  overwrite('job-salary',  fields.salary);
-  if (fields.workType && !$('job-worktype').value) {
-    $('job-worktype').value = fields.workType;
-  }
-  if (fields.remote && !$('job-worktype').value) {
-    $('job-worktype').value = 'Remote';
+    const data = await res.json();
+    const f = data.fields || {};
+
+    // Populate the review form
+    $('rev-title').value    = f.title    || '';
+    $('rev-company').value  = f.company  || '';
+    $('rev-location').value = f.location || '';
+    $('rev-worktype').value = f.workType || '';
+    $('rev-salary').value   = f.salary   || '';
+    // Store reqId/label on the form for the subsequent inbox POST
+    $('rev-title').dataset.reqId      = f.reqId      || '';
+    $('rev-title').dataset.reqIdLabel = f.reqIdLabel || '';
+
+    showStage('review');
+    setTimeout(() => $('rev-title').focus(), 60);
+  } catch(e) {
+    // Extraction failed — show initial stage with error, let user try again
+    showStage('initial');
+    const msg = e.name === 'AbortError'
+      ? 'Extraction took too long. Try again or open Summit to add manually.'
+      : 'Could not extract: ' + e.message;
+    showStatus($('initial-status'), 'error', msg);
+  } finally {
+    clearTimeout(hintTimer1);
+    clearTimeout(hintTimer2);
   }
 }
 
-// ── ADD JOB ───────────────────────────────────────────────────────────────────
-async function addJob() {
-  const title   = $('job-title').value.trim();
-  const company = $('job-company').value.trim();
+// ── STAGE C cancel ───────────────────────────────────────────────────────────
+function cancelReview() {
+  // Back to initial. Nothing was saved — extract is stateless on the server.
+  hideStatus($('review-status'));
+  // Clear form so a subsequent extract shows clean state
+  $('rev-title').value = '';
+  $('rev-company').value = '';
+  $('rev-location').value = '';
+  $('rev-worktype').value = '';
+  $('rev-salary').value = '';
+  $('rev-title').dataset.reqId = '';
+  $('rev-title').dataset.reqIdLabel = '';
+  showStage('initial');
+}
+
+// ── STAGE C save → inbox POST ────────────────────────────────────────────────
+async function saveJob() {
+  const title   = $('rev-title').value.trim();
+  const company = $('rev-company').value.trim();
   if (!title || !company) {
-    showStatus($('add-status'), 'error', 'Title and company are required');
+    showStatus($('review-status'), 'error', 'Title and company are required');
     return;
   }
-
-  $('add-btn').disabled = true;
-  $('add-btn').textContent = 'Adding...';
-  hideStatus($('add-status'));
+  $('confirm-btn').disabled = true;
+  $('cancel-btn').disabled  = true;
+  $('confirm-btn').textContent = 'Saving...';
+  hideStatus($('review-status'));
 
   try {
-    // v2.4.0: POST to the webapp's inbox endpoint. The extension can't
-    // encrypt the jobs blob directly (dataKey lives only in the webapp's
-    // memory, derived from the user's password). The webapp polls/drains
-    // this inbox and merges entries into the encrypted `jobs` store.
-    //
-    // v2.5.0 adds reqId + reqIdLabel from the content script's structured
-    // field extraction. These are the primary dedupe signal on the webapp side.
     const body = {
       title, company,
       url:      currentTabUrl,
-      location: $('job-location').value.trim(),
-      workType: $('job-worktype').value,
-      salary:   $('job-salary').value.trim(),
+      location: $('rev-location').value.trim(),
+      workType: $('rev-worktype').value,
+      salary:   $('rev-salary').value.trim(),
     };
-    if (pageData?.fields?.reqId)      body.reqId      = pageData.fields.reqId;
-    if (pageData?.fields?.reqIdLabel) body.reqIdLabel = pageData.fields.reqIdLabel;
+    const reqId      = $('rev-title').dataset.reqId;
+    const reqIdLabel = $('rev-title').dataset.reqIdLabel;
+    if (reqId) body.reqId = reqId;
+    if (reqIdLabel) body.reqIdLabel = reqIdLabel;
+
     const res = await fetch(TRACKER_URL + '/api/jobs/inbox', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
@@ -317,17 +277,16 @@ async function addJob() {
       throw new Error(err.error || ('HTTP ' + res.status));
     }
 
-    showStatus($('add-status'), 'success', `\u2713 "${title}" added to Summit!`);
-    $('add-btn').textContent = '\u2713 Added!';
-    setTimeout(() => {
-      $('add-btn').disabled = false;
-      $('add-btn').textContent = '+ Add to Summit';
-    }, 3000);
+    showStatus($('review-status'), 'success', `\u2713 "${title}" added to Summit!`);
+    $('confirm-btn').textContent = '\u2713 Saved';
+    // Auto-close the popup shortly after success
+    setTimeout(() => { window.close(); }, 1400);
 
   } catch(e) {
-    showStatus($('add-status'), 'error', 'Error: ' + e.message);
-    $('add-btn').disabled = false;
-    $('add-btn').textContent = '+ Add to Summit';
+    showStatus($('review-status'), 'error', 'Error: ' + e.message);
+    $('confirm-btn').disabled = false;
+    $('cancel-btn').disabled  = false;
+    $('confirm-btn').textContent = 'Save to Summit';
   }
 }
 

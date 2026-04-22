@@ -137,17 +137,25 @@ t('fetchATS under 150 lines',    () => {
 });
 
 // ── content.js ────────────────────────────────────────────────────────────────
-console.log('\n── content.js');
+console.log('\n── content.js (v1.20.0 reader)');
 t('no site-specific hostname branches', () => {
   not(contentSrc, "hostname.includes(\'linkedin"); not(contentSrc, "hostname.includes(\'indeed");
   not(contentSrc, "hostname.includes(\'greenhouse"); not(contentSrc, "hostname.includes(\'ziprecruiter");
 });
-t('reads document.body.innerText', () => has(contentSrc, 'document.body).innerText'));
-t('JSON-LD baseSalary extraction', () => { has(contentSrc, 'baseSalary'); has(contentSrc, 'minValue'); has(contentSrc, 'maxValue'); });
-t('bdi salary extraction',         () => has(contentSrc, "querySelectorAll('bdi')"));
-t('fallback salary from bodyText (via shared helper)', () => has(contentSrc, '_extractSalaryFromText('));
-t('sends bodyText + salary + url', () => { has(contentSrc, 'bodyText'); has(contentSrc, 'salary'); has(contentSrc, 'url: location.href'); });
-t('under 420 lines (bumped in v1.19.13 for shared salary helper)', () => lt(contentSrc.split('\n').length, 420));
+// v1.20.0: content.js is now a pure reader. No field extraction, no salary
+// scanning, no JSON-LD parsing. The specific content of the reader payload
+// is regression-tested in extension/tests/extension.test.js — here we just
+// make sure the file hasn't grown new extraction logic.
+t('reads document.body.innerText for the text field', () => has(contentSrc, 'document.body.innerText'));
+t('harvests JSON-LD script contents (not parses them)', () => has(contentSrc, 'application/ld+json'));
+t('no _extractSalaryFromText helper in content.js (extraction moved server-side in v1.20)',
+  () => not(contentSrc, 'function _extractSalaryFromText'));
+t('no baseSalary / bdi / reqId extraction in content.js (all server-side in v1.20)', () => {
+  not(contentSrc, 'baseSalary');
+  not(contentSrc, "querySelectorAll('bdi')");
+  not(contentSrc, '_extractReqIdFromDom');
+});
+t('under 250 lines (v1.20 reader is minimal)', () => lt(contentSrc.split('\n').length, 250));
 
 // ── extractSalaryFromText ─────────────────────────────────────────────────────
 console.log('\n── extractSalaryFromText');
@@ -352,6 +360,77 @@ t('No stray editor/backup artifacts in the repo', () => {
   walk(root);
   if (stray.length) {
     throw new Error('stray files in repo:\n  ' + stray.join('\n  '));
+  }
+});
+
+// ── v1.20.0: unified extraction pipeline ─────────────────────────────────────
+// The extension and webapp-paste flows both converge on one function.
+// Guards against divergence creeping back in.
+t('extractJobFields function is defined on the server', () => {
+  if (!/async function extractJobFields\(/.test(serverSrc)) {
+    throw new Error('extractJobFields not defined — unification lost');
+  }
+});
+
+t('extractJobFields accepts url + html + text + jsonLd', () => {
+  const idx = serverSrc.indexOf('async function extractJobFields');
+  const sig = serverSrc.slice(idx, idx + 200);
+  // Destructured parameter shape — if any field is missing callers will pass undefined
+  if (!/\{\s*url\s*,\s*html\s*,\s*text\s*,\s*jsonLd/.test(sig)) {
+    throw new Error('extractJobFields signature is missing expected fields');
+  }
+});
+
+t('/api/extract-job-fields endpoint exists for extension reader payloads', () => {
+  if (!/app\.post\(['"]\/api\/extract-job-fields['"]/.test(serverSrc)) {
+    throw new Error('/api/extract-job-fields endpoint missing — extension can\'t extract');
+  }
+  // Must be auth-required + token-capped (AI path)
+  const idx = serverSrc.indexOf("app.post('/api/extract-job-fields'");
+  const sig = serverSrc.slice(idx, idx + 200);
+  if (!/authMiddleware/.test(sig)) throw new Error('/api/extract-job-fields missing authMiddleware');
+  if (!/tokenCapMiddleware/.test(sig)) throw new Error('/api/extract-job-fields missing tokenCapMiddleware');
+});
+
+t('/api/extract-job-fields does NOT store anything (extraction-only)', () => {
+  // The endpoint must not touch the inbox — storage happens via a separate
+  // POST to /api/jobs/inbox after the user reviews in the popup. Cancelling
+  // extraction should leave no trace on the server.
+  const idx = serverSrc.indexOf("app.post('/api/extract-job-fields'");
+  const end = serverSrc.indexOf("\n});", idx);
+  const handlerBody = serverSrc.slice(idx, end);
+  if (/writeFileSync|_inboxDirFor/.test(handlerBody)) {
+    throw new Error('/api/extract-job-fields writes to disk — should be extraction-only');
+  }
+});
+
+t('decodeGzippedBase64 helper exists for compressed html payloads', () => {
+  if (!/function decodeGzippedBase64\(/.test(serverSrc)) {
+    throw new Error('decodeGzippedBase64 missing — gzipped html from extension can\'t be decoded');
+  }
+  // Must use zlib.gunzipSync
+  if (!/zlib\.gunzipSync/.test(serverSrc)) {
+    throw new Error('decodeGzippedBase64 does not use zlib.gunzipSync');
+  }
+  // Must be resilient to bad input (never throw — caller falls back)
+  const idx = serverSrc.indexOf('function decodeGzippedBase64');
+  const body = serverSrc.slice(idx, idx + 400);
+  if (!/try\s*\{[\s\S]*?\}\s*catch/.test(body)) {
+    throw new Error('decodeGzippedBase64 has no try/catch — bad input would crash the handler');
+  }
+});
+
+t('extractJobFields reuses parseJobPostingLD and extractSalaryFromText', () => {
+  // The whole point of unification: one extraction pipeline. If extractJobFields
+  // reimplements the LD parse or the salary regex, we've reintroduced drift.
+  const idx = serverSrc.indexOf('async function extractJobFields');
+  const end = serverSrc.indexOf('\nfunction ', idx + 10);  // next top-level fn
+  const body = serverSrc.slice(idx, end);
+  if (!/parseJobPostingLD/.test(body)) {
+    throw new Error('extractJobFields does not call parseJobPostingLD — re-implementing LD?');
+  }
+  if (!/extractSalaryFromText/.test(body)) {
+    throw new Error('extractJobFields does not call extractSalaryFromText — re-implementing salary regex?');
   }
 });
 

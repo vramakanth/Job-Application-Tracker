@@ -135,22 +135,73 @@ console.log('\n── Hero tagline');
 t('New tagline: Study the mountain',   () => has('Study the mountain'));
 t('New tagline: Prepare the climb',    () => has('Prepare the climb'));
 t('New tagline: Reach the summit',     () => has('Reach the summit'));
-t('Old SaaS tagline removed: "Track every application"', () => not('Track every application'));
-t('Old SaaS tagline removed: "Tailor every resume"',     () => not('Tailor every resume'));
-t('Old SaaS tagline removed: "Land the role"',           () => not('Land the role'));
+// v1.19.18: removed "Old SaaS tagline" guards — the landing was reworked
+// to a functional hero + scrolling feature panels. "Track every application"
+// is now a panel headline (editorial, not a generic SaaS tagline) and
+// conveys the thing first-time visitors need to understand.
 
-// ── Footer colophon (no CTA — sticky nav handles conversion) ───────────────
+// ── Landing: functional one-liner above the poetic tagline (v1.19.18) ──────
+console.log('\n── Landing hero structure (v1.19.18)');
+t('Hero has functional one-liner describing the product', () => {
+  // Rationale: first-time visitors ask "what is this?" The poetic tagline
+  // alone doesn't answer — the hero must state what Summit actually is in
+  // one sentence. This test encodes that requirement so future copy
+  // iterations don't revert to metaphor-only.
+  const landing = src.slice(src.indexOf('id="screen-landing"'), src.indexOf('<div id="screen-login"'));
+  // The one-liner must mention the concrete activities Summit supports
+  if (!/applications.*research.*resume|resume.*interview|one private workspace|entire job search/i.test(landing)) {
+    throw new Error('hero is missing a functional one-liner describing what Summit does');
+  }
+});
+t('Hero functional line precedes poetic tagline in source', () => {
+  const landing = src.slice(src.indexOf('id="screen-landing"'), src.indexOf('<div id="screen-login"'));
+  const funcIdx = landing.search(/entire job search|one private workspace/i);
+  const poetIdx = landing.indexOf('Study the mountain');
+  if (funcIdx < 0 || poetIdx < 0) throw new Error('cannot locate both hero lines');
+  if (funcIdx > poetIdx) {
+    throw new Error('functional one-liner appears AFTER the poetic tagline — should be first');
+  }
+});
+t('Landing has 3 scrolling feature panels with mockups', () => {
+  const landing = src.slice(src.indexOf('id="screen-landing"'), src.indexOf('<div id="screen-login"'));
+  // Each panel uses .landing-panel class (2 plain + 1 reversed = 3 total)
+  const panels = landing.match(/class="landing-panel[^"]*"/g) || [];
+  if (panels.length < 3) {
+    throw new Error(`expected 3 landing-panel elements, found ${panels.length}`);
+  }
+  // At least one should be reversed (alternating layout)
+  if (!panels.some(p => /reverse/.test(p))) {
+    throw new Error('no reversed panel — alternating layout missing');
+  }
+  // Each panel should have a mockup container
+  const mockups = landing.match(/class="landing-mockup"/g) || [];
+  if (mockups.length < 3) {
+    throw new Error(`expected 3 landing-mockup containers, found ${mockups.length}`);
+  }
+});
+t('Landing panels have functional eyebrow labels (Pipeline, Research, Tailoring)', () => {
+  const landing = src.slice(src.indexOf('id="screen-landing"'), src.indexOf('<div id="screen-login"'));
+  for (const label of ['PIPELINE', 'RESEARCH', 'TAILORING']) {
+    if (!landing.includes(label)) {
+      throw new Error(`landing missing "${label}" eyebrow label`);
+    }
+  }
+});
+t('Landing panels are responsive (stack on narrow viewports)', () => {
+  const landing = src.slice(src.indexOf('id="screen-landing"'), src.indexOf('<div id="screen-login"'));
+  if (!/@media\s*\([^)]*max-width:\s*8\d{2}px[^)]*\)[\s\S]{0,800}grid-template-columns:\s*1fr/.test(landing)) {
+    throw new Error('landing panels do not collapse to 1fr on narrow viewports');
+  }
+});
+
+// ── Footer colophon ────────────────────────────────────────────────────────
 console.log('\n── Footer colophon');
 t('No "Begin the climb" CTA button',   () => not('Begin the climb'));
 t('No "Get started for free" CTA',     () => not('Get started for free'));
 t('No "No credit card" pitch text',    () => not('NO CREDIT CARD'));
 t('JOBSUMMIT.APP colophon present',    () => has('JOBSUMMIT.APP'));
-t('No section rule framing the old CTA', () => {
-  // That framing rule was the only 0.08-opacity border on the page
-  if (src.includes('border-top:1px solid rgba(242,234,216,0.08)')) {
-    throw new Error('old CTA-framing rule still present');
-  }
-});
+// v1.19.18: removed "No section rule framing the old CTA" guard — the
+// landing now HAS a bottom CTA ("Ready to climb?") by design.
 
 // ── People & Diversity section ──────────────────────────────────────────────
 console.log('\n── People & Diversity section');

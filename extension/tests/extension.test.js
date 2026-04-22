@@ -8,6 +8,7 @@ const path = require('path');
 const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../../extension/manifest.json'), 'utf8'));
 const background = fs.readFileSync(path.join(__dirname, '../../extension/background.js'), 'utf8');
 const content    = fs.readFileSync(path.join(__dirname, '../../extension/content.js'), 'utf8');
+const popup      = fs.readFileSync(path.join(__dirname, '../../extension/popup.js'), 'utf8');
 
 let passed = 0, failed = 0;
 const t = (name, fn) => {
@@ -76,73 +77,6 @@ t('content.js relays fetchPosting to background via chrome.runtime.sendMessage',
 });
 t('content.js sends bridge responses with nonce (so webapp can match them)', () => {
   if (!/nonce/.test(content)) throw new Error('no nonce in bridge responses');
-});
-
-// ── v2.2: content.js returns structured fields from JSON-LD ───────────────
-console.log('\n── extension v2.2 — content.js extracts full fields');
-t('extractJob handler returns fields object (not just bodyText+salary)', () => {
-  // Regression guard for the v2.1 bug: popup checked pageData.title but
-  // content.js only returned {bodyText, salary, url}. Path 1 was silently
-  // broken. v2.2 returns {fields, bodyText, salary, url}.
-  const idx = content.indexOf("msg.action !== 'extractJob'");
-  if (idx < 0) throw new Error('extractJob handler not found');
-  // Find the sendResponse call in this handler
-  const body = content.slice(idx, idx + 8000);
-  const m = body.match(/sendResponse\(\s*\{[^}]*\}\s*\)/);
-  if (!m) throw new Error('sendResponse call not found');
-  if (!/fields/.test(m[0])) {
-    throw new Error('sendResponse does not include fields — Path 1 will silently fail');
-  }
-});
-t('extractJob parses JSON-LD JobPosting blocks', () => {
-  const body = content.slice(content.indexOf("msg.action !== 'extractJob'"));
-  if (!/application\/ld\+json/.test(body)) throw new Error('no ld+json script lookup');
-  if (!/'JobPosting'|"JobPosting"/.test(body)) throw new Error('no JobPosting type check');
-  if (!/hiringOrganization/.test(body)) throw new Error('no hiringOrganization lookup');
-});
-t('extractJob strips Workday-style numeric prefix from company name', () => {
-  // "001 Manufacturers and Traders Trust Co" → "Manufacturers and ..."
-  const body = content.slice(content.indexOf("msg.action !== 'extractJob'"));
-  if (!/\/\^\\d\+\\s\+\//.test(body)) throw new Error('no numeric-prefix strip regex');
-});
-t('extractJob decodes HTML entities in titles', () => {
-  const body = content.slice(content.indexOf("msg.action !== 'extractJob'"));
-  if (!/decodeEntities|&amp;/.test(body)) throw new Error('no entity decoding');
-});
-
-// ── v2.2: popup startParsing flipped to page-first ────────────────────────
-console.log('\n── extension v2.2 — popup priority');
-const popup = fs.readFileSync(path.join(__dirname, '../../extension/popup.js'), 'utf8');
-t('popup tries page content BEFORE server-side parse', () => {
-  const idx = popup.indexOf('async function startParsing');
-  if (idx < 0) throw new Error('startParsing not found');
-  const body = popup.slice(idx, idx + 4000);
-  const sendMsgIdx = body.indexOf("action: 'extractJob'");
-  const parseJobIdx = body.indexOf("/api/parse-job");
-  if (sendMsgIdx < 0) throw new Error('no content script call in startParsing');
-  if (parseJobIdx < 0) throw new Error('no /api/parse-job call in startParsing');
-  if (sendMsgIdx > parseJobIdx) {
-    throw new Error('popup calls /api/parse-job BEFORE content script — should be page-first');
-  }
-});
-t('popup skips /api/parse-job when page gives structured fields (zero round trip)', () => {
-  const idx = popup.indexOf('async function startParsing');
-  const body = popup.slice(idx, idx + 4000);
-  // Find applyFields(pageData.fields,...) and verify there's a return before
-  // any /api/parse-job call. Using a char-distance check is brittle due to
-  // comments; instead locate the two indices directly.
-  const pageApplyIdx = body.indexOf('applyFields(pageData.fields');
-  if (pageApplyIdx < 0) throw new Error('no applyFields(pageData.fields) call');
-  const sliceAfter = body.slice(pageApplyIdx);
-  const returnIdx = sliceAfter.indexOf('return;');
-  const serverIdx = sliceAfter.indexOf('/api/parse-job');
-  if (returnIdx < 0) throw new Error('no return after applying page fields');
-  if (serverIdx >= 0 && returnIdx > serverIdx) {
-    throw new Error('/api/parse-job called BEFORE early return — wasteful round trip');
-  }
-});
-t('popup version comment bumped to v2.3', () => {
-  if (!/popup\.js v2\.3/.test(popup)) throw new Error('popup header not updated');
 });
 
 // ── v2.2: webapp bridge fallback in parseJobUrl ───────────────────────────
@@ -298,10 +232,9 @@ t('popup.html has zero inline handlers (MV3 CSP fix)', () => {
 });
 
 t('popup.html has required IDs for JS event wiring', () => {
-  // Sanity: every previously-inline button still needs an ID so popup.js
-  // can find it and attach a listener. If someone removes an ID without
-  // removing the listener wiring, the popup silently breaks again.
-  for (const id of ['login-btn', 'add-btn', 'open-tracker-btn', 'sign-out-btn', 'username', 'password']) {
+  // v1.20.0: three-stage popup. Stage A button is extract-btn; stage C
+  // has confirm-btn + cancel-btn. Previous single add-btn is gone.
+  for (const id of ['login-btn', 'extract-btn', 'confirm-btn', 'cancel-btn', 'open-tracker-btn', 'sign-out-btn', 'username', 'password']) {
     if (!new RegExp(`id="${id}"`).test(popupHtml)) {
       throw new Error(`popup.html missing required id="${id}"`);
     }
@@ -318,8 +251,9 @@ t('popup.js init() wires login-btn + password Enter via addEventListener', () =>
   if (!/\$\(['"]password['"]\)\.addEventListener\(['"]keydown['"]/.test(body)) {
     throw new Error('init does not wire password Enter via addEventListener');
   }
-  if (!/\$\(['"]add-btn['"]\)\.addEventListener/.test(body)) {
-    throw new Error('init does not wire add-btn click');
+  // v1.20.0: stage A trigger is extract-btn (was add-btn pre-v1.20)
+  if (!/\$\(['"]extract-btn['"]\)\.addEventListener/.test(body)) {
+    throw new Error('init does not wire extract-btn click');
   }
   if (!/\$\(['"]sign-out-btn['"]\)\.addEventListener/.test(body)) {
     throw new Error('init does not wire sign-out-btn click');
@@ -441,202 +375,156 @@ t('doLogin/doLogout/doRegister/doRecover all call _notifyExtensionSessionChanged
   }
 });
 
-t('manifest version bumped to 2.5.2', () => {
-  if (manifest.version !== '2.5.2') throw new Error('manifest still at ' + manifest.version);
+t('manifest version bumped to 2.6.0', () => {
+  if (manifest.version !== '2.6.0') throw new Error('manifest still at ' + manifest.version);
 });
 
-// ── v2.4.0: inbox-based addJob (no more GET-modify-PUT of encrypted blob) ──
-t('addJob POSTs to /api/jobs/inbox (v2.4.0 — inbox handoff)', () => {
-  const idx = popup.indexOf('async function addJob');
-  if (idx < 0) throw new Error('addJob function missing');
+// ── v1.20.0: two-stage extract → review flow ─────────────────────────────────
+t('saveJob POSTs finalized fields to /api/jobs/inbox', () => {
+  // v1.20.0 renamed addJob → saveJob. It's called from stage C (review)
+  // after the user has confirmed the extracted fields. Takes title/company
+  // from the review form inputs (rev-*), not from content.js directly.
+  const idx = popup.indexOf('async function saveJob');
+  if (idx < 0) throw new Error('saveJob function missing');
   const body = popup.slice(idx, idx + 3500);
-  if (!/\/api\/jobs\/inbox/.test(body))            throw new Error('addJob does not POST to /api/jobs/inbox');
-  if (!/method:\s*['"]POST['"]/.test(body))        throw new Error('addJob not using POST method');
+  if (!/\/api\/jobs\/inbox/.test(body))     throw new Error('saveJob does not POST to /api/jobs/inbox');
+  if (!/method:\s*['"]POST['"]/.test(body)) throw new Error('saveJob not using POST');
+  // Must read from review-form inputs, not stale content.js payload
+  if (!/rev-title/.test(body)) throw new Error('saveJob does not read rev-title from review form');
 });
 
-t('addJob does NOT do GET+modify+PUT on /api/jobs (would corrupt encrypted blob)', () => {
-  // This was the v1.19 bug: extension GET'd {__enc:true,data:ct}, tried to
-  // splice a new job in, and PUT the corrupted envelope back. v2.4.0 moves
-  // the write path to the plaintext inbox instead.
-  const idx = popup.indexOf('async function addJob');
+t('startExtract POSTs reader payload to /api/extract-job-fields', () => {
+  const idx = popup.indexOf('async function startExtract');
+  if (idx < 0) throw new Error('startExtract function missing (stage B trigger)');
+  const body = popup.slice(idx, idx + 4000);
+  if (!/\/api\/extract-job-fields/.test(body)) {
+    throw new Error('startExtract does not POST to /api/extract-job-fields');
+  }
+  // Must gzip html before sending — raw HTML is 500KB-1.5MB per page
+  if (!/gzipBase64|compressed:\s*['"]gzip['"]/.test(body)) {
+    throw new Error('startExtract does not gzip-compress the html field');
+  }
+  // Must use a hard timeout so popup doesn't hang forever on AI outages
+  if (!/AbortController|EXTRACT_TIMEOUT_MS/.test(body)) {
+    throw new Error('startExtract has no timeout — popup could hang indefinitely');
+  }
+});
+
+t('saveJob does NOT do GET+modify+PUT on /api/jobs (would corrupt encrypted blob)', () => {
+  // Same bug as before v2.4.0 — extension must never touch the encrypted
+  // jobs blob directly. Inbox-only.
+  const idx = popup.indexOf('async function saveJob');
   const body = popup.slice(idx, idx + 3500);
   if (/method:\s*['"]PUT['"][\s\S]{0,200}\/api\/jobs['"]/.test(body)) {
-    throw new Error('addJob still PUTs to /api/jobs — this corrupts encrypted accounts');
+    throw new Error('saveJob still PUTs to /api/jobs — this corrupts encrypted accounts');
   }
-  // The GET is also gone — no reason to read the jobs blob anymore
   if (/fetch\([^)]*\/api\/jobs['"]\s*,\s*\{[\s\S]{0,100}Authorization/.test(body)) {
     const matches = body.match(/fetch\([^)]*\/api\/jobs[^)]*\)/g) || [];
     for (const m of matches) {
       if (!/inbox/.test(m)) {
-        throw new Error('addJob still reads /api/jobs directly — should only POST to /inbox');
+        throw new Error('saveJob still reads /api/jobs directly — should only POST to /inbox');
       }
     }
   }
 });
 
-// ════════════════════════════════════════════════════════════════════════════
-// v1.19.13 — salary extraction parity with server
-// ════════════════════════════════════════════════════════════════════════════
-console.log('\n── extension — salary extraction (v1.19.13)');
+// ── v1.20.0: content.js reader payload, server extractor, edit modal ───────
+console.log('\n── v1.20.0 architecture');
 
-// Extract the _extractSalaryFromText function body from content.js and
-// eval it in isolation. The function is pure — no DOM, no globals.
-function _loadSalaryExtractor() {
-  const idx = content.indexOf('function _extractSalaryFromText');
-  if (idx < 0) throw new Error('_extractSalaryFromText not defined in content.js');
-  // Balanced-brace scan for the function body
-  let i = idx;
-  while (i < content.length && content[i] !== '{') i++;
-  let depth = 1; i++;
-  const bodyStart = idx;
-  while (i < content.length && depth > 0) {
-    const c = content[i], c2 = content[i+1];
-    if (c === '/' && c2 === '/') { while (i < content.length && content[i] !== '\n') i++; continue; }
-    if (c === '{') depth++; else if (c === '}') depth--;
-    i++;
+t('content.js returns reader payload (url + html + text + jsonLd + title + meta)', () => {
+  // The extension is now a "reader" — zero extraction, just capture. The
+  // sendResponse must include every field the server's unified extractor
+  // can use. Missing any of them silently degrades extraction quality.
+  const idx = content.indexOf("msg.action !== 'extractJob'");
+  if (idx < 0) throw new Error('extractJob handler not found');
+  const body = content.slice(idx, idx + 4000);
+  // Must return html (gzipped on the wire, but the field still named html here)
+  if (!/sendResponse\([\s\S]*?html[\s\S]*?\)/.test(body)) {
+    throw new Error('content.js sendResponse does not include html');
   }
-  const fnSrc = content.slice(bodyStart, i);
-  // eslint-disable-next-line no-new-func
-  return new Function(`${fnSrc}\nreturn _extractSalaryFromText;`)();
-}
-
-t('_extractSalaryFromText function is defined in content.js', () => {
-  _loadSalaryExtractor();  // throws if missing
-});
-
-t('BEHAVIOR: extracts common salary formats from real-world text', () => {
-  const extract = _loadSalaryExtractor();
-  const cases = [
-    // [input, expected, description]
-
-    // Common range formats
-    ['Pay range: $180,000 - 250,000 USD annually', '$180k–$250k', 'Dexcom-style single-$ range'],
-    ['Salary: $180,000 – $250,000', '$180k–$250k', 'full en-dash with both $'],
-    ['$120,000 to $160,000 per year', '$120k–$160k', '"to" separator with both $'],
-    ['Expected range is $150k-$200k', '$150k–$200k', 'k-suffix range'],
-    ['$150k to 200k', '$150k–$200k', '"to" separator single $ with k'],
-    ['Compensation: $95,000 — $125,000', '$95k–$125k', 'em-dash separator'],
-
-    // Single-value
-    ['$150,000 per year', '$150k', 'single per-year'],
-    ['Pay: $180,000 annually', '$180k', 'single annually'],
-    ['$50/hour', '$50', 'hourly'],
-
-    // Non-$ currencies
-    ['Salary range: £60,000 - £80,000', '£60k–£80k', 'GBP range'],
-    ['€90,000 – €120,000', '€90k–€120k', 'EUR range'],
-
-    // Sanity filter rejections
-    ['Experience: 5-10 years', null, '"5-10 years" is not a salary'],
-    ['$1 - $10 gift card', null, 'lo < 15 filter'],
-    ['We have 100+ customers and $1M - $10M ARR', null, 'hi/lo > 5 filter'],
-
-    // Hourly-looking small range without hour keyword → reject
-    ['Team of $5 - $20 contributors', null, 'small range without hour keyword'],
-    // Same but WITH hourly context → accept
-    ['$18 - $22 per hour', '$18–$22', 'small range with hour context'],
-
-    // Noise: must not grab price in job description
-    ['Our product costs $99 per month. Salary: $120,000 - $160,000 annually', '$120k–$160k', 'salary range after price mention'],
-
-    // Empty / junk
-    ['', null, 'empty string'],
-    ['no salary info here', null, 'no currency symbol'],
-  ];
-  const errors = [];
-  for (const [input, expected, desc] of cases) {
-    const got = extract(input);
-    if (got !== expected) {
-      errors.push(`${desc}\n    input:    ${JSON.stringify(input)}\n    expected: ${JSON.stringify(expected)}\n    got:      ${JSON.stringify(got)}`);
-    }
+  if (!/sendResponse\([\s\S]*?text[\s\S]*?\)/.test(body)) {
+    throw new Error('content.js sendResponse does not include text');
   }
-  if (errors.length) throw new Error(`${errors.length} case(s) failed:\n  ` + errors.join('\n  '));
-});
-
-t('BUGFIX: Phenom PCSX "Pay range: $X - Y" format is caught (Dexcom bug)', () => {
-  // The specific bug report: Dexcom Phenom PCSX page renders salary as
-  // "Pay range: $180,000 - 250,000" (single $ prefix). The old extension
-  // regex required $ on BOTH numbers and missed this. Regression-guard
-  // the exact pattern so future refactors don't resurrect the bug.
-  const extract = _loadSalaryExtractor();
-  const realistic = 'Job description ... Pay range: $180,000 - 250,000 USD. Dexcom offers comprehensive benefits.';
-  const result = extract(realistic);
-  if (!result) {
-    throw new Error('Dexcom-style "Pay range: $X - Y" not matched');
+  if (!/sendResponse\([\s\S]*?jsonLd[\s\S]*?\)/.test(body)) {
+    throw new Error('content.js sendResponse does not include jsonLd');
   }
-  if (!/\$180/.test(result) || !/\$250/.test(result)) {
-    throw new Error(`Dexcom-style extraction returned unexpected value: ${result}`);
+  if (!/sendResponse\([\s\S]*?meta[\s\S]*?\)/.test(body)) {
+    throw new Error('content.js sendResponse does not include meta');
   }
 });
 
-t('content.js calls _extractSalaryFromText in the fallback chain', () => {
-  // The helper must actually be wired into the extractJob flow — having
-  // it defined doesn't help if the old inline regex is still the one
-  // called. Check the listener body references it.
-  const listenerIdx = content.indexOf('onMessage.addListener');
-  const listenerEnd = content.indexOf('});', listenerIdx);
-  const listenerBody = content.slice(listenerIdx, listenerEnd);
-  if (!/_extractSalaryFromText\(/.test(listenerBody)) {
-    throw new Error('extractJob handler does not call _extractSalaryFromText');
+t('content.js strips <script>/<style>/<svg> from html before sending', () => {
+  // Pre-wire content cleaning: scripts/styles/svg can be 60-80% of a
+  // typical page, carry zero job-posting signal, and bloat the POST.
+  // This is NOT semantic extraction — the stripping rules are fixed
+  // (no field inference).
+  const idx = content.indexOf("msg.action !== 'extractJob'");
+  const body = content.slice(idx, idx + 4000);
+  // Check source literal presence of the strip regexes
+  if (!body.includes('<script\\b') && !body.includes('<script\\\\b')) {
+    throw new Error('content.js does not strip <script> tags');
   }
-  // And the old ad-hoc regex should be gone
-  if (/\\\$\(\[\\d,\]\+.*?\)\\s\*\[kK\]\?\\s\*\[-/.test(content)) {
-    throw new Error('old ad-hoc salary regex is still in content.js');
+  if (!body.includes('<style\\b') && !body.includes('<style\\\\b')) {
+    throw new Error('content.js does not strip <style> tags');
   }
 });
 
-// ════════════════════════════════════════════════════════════════════════════
-// v1.19.14 — popup.js: pageData is module-scoped (ReferenceError in addJob)
-// ════════════════════════════════════════════════════════════════════════════
-console.log('\n── extension — popup.js pageData scoping (v1.19.14)');
+t('content.js preserves JSON-LD script contents before stripping', () => {
+  // Subtle: the strip-scripts regex would also nuke <script type="application/
+  // ld+json"> blocks. We harvest those FIRST into a separate jsonLd array.
+  const idx = content.indexOf("msg.action !== 'extractJob'");
+  const body = content.slice(idx, idx + 4000);
+  if (!/application\/ld\+json/.test(body)) {
+    throw new Error('content.js does not harvest JSON-LD before stripping scripts');
+  }
+  // The harvesting must happen before the html strip runs, or the
+  // structured data is lost. Check that jsonLd is derived from a
+  // querySelectorAll call that precedes the .replace for <script>.
+  const jsonLdIdx = body.indexOf('application/ld+json');
+  const scriptStripIdx = body.indexOf('<script');
+  // jsonLdIdx should appear in source BEFORE the replace(/<script.../) code.
+  // The replace is inside the html-cleaning block which is at the top.
+  // Actually the simpler invariant: jsonLd variable is assigned from
+  // document.querySelectorAll somewhere in the handler.
+  if (!/jsonLd\s*=\s*\[\.\.\.document\.querySelectorAll/.test(body)) {
+    throw new Error('jsonLd not harvested via querySelectorAll — may have been stripped');
+  }
+});
 
-t('pageData declared at module scope (not only inside startParsing)', () => {
-  // The bug: pageData was declared as `let` inside startParsing. addJob
-  // referenced it to pass reqId on submit, but that reference lives in a
-  // different scope — ReferenceError at runtime, breaking Add flow on
-  // EVERY site, not just ones with reqId. Must be module-scoped.
-  //
-  // Heuristic: look for a `let pageData` (or `var pageData`) at indent 0.
-  // Indented declarations (inside functions) wouldn't match, which is
-  // exactly what we're guarding against.
-  if (!/^\s*let\s+pageData\s*=/m.test(popup)) {
-    // Maybe it's `var` or on shared line — try broader
-    if (!/^(?:let|var|const)\s+pageData/m.test(popup)) {
-      throw new Error('pageData is not declared at module scope in popup.js');
+t('popup has gzipBase64 helper using CompressionStream', () => {
+  if (!/function\s+gzipBase64|const\s+gzipBase64\s*=/.test(popup)) {
+    throw new Error('gzipBase64 helper not defined');
+  }
+  if (!/CompressionStream\(['"]gzip['"]\)/.test(popup)) {
+    throw new Error('gzipBase64 does not use CompressionStream("gzip")');
+  }
+  // Must handle missing CompressionStream without crashing (old browsers)
+  if (!/typeof\s+CompressionStream/.test(popup)) {
+    throw new Error('gzipBase64 does not guard against missing CompressionStream');
+  }
+});
+
+t('popup has three stages: initial, extracting, review', () => {
+  // Enumerated in the showStage function — if any stage is missing, the
+  // UX flow breaks silently (clicking a button leaves nothing visible).
+  if (!/showStage\s*\(\s*['"]initial['"]/.test(popup))    throw new Error('no showStage("initial") call');
+  if (!/showStage\s*\(\s*['"]extracting['"]/.test(popup)) throw new Error('no showStage("extracting") call');
+  if (!/showStage\s*\(\s*['"]review['"]/.test(popup))     throw new Error('no showStage("review") call');
+  // And the HTML must have the corresponding DOM elements
+  for (const id of ['stage-initial', 'stage-extracting', 'stage-review']) {
+    if (!new RegExp(`id="${id}"`).test(popupHtml)) {
+      throw new Error(`popup.html missing stage element id="${id}"`);
     }
   }
 });
 
-t('No shadowing declaration of pageData inside startParsing', () => {
-  // Even with a module-scoped pageData, `let pageData = null` inside
-  // startParsing would create a local that shadows it — addJob would
-  // still read the module-scoped (stale-null) one. Assert we don't
-  // re-declare inside the function.
-  const idx = popup.indexOf('async function startParsing');
-  if (idx < 0) throw new Error('startParsing function not found');
-  // Find the end of the function by a balanced-brace scan.
-  let i = popup.indexOf('{', idx);
-  let depth = 1; i++;
-  while (i < popup.length && depth > 0) {
-    const c = popup[i], c2 = popup[i+1];
-    if (c === '/' && c2 === '/') { while (i < popup.length && popup[i] !== '\n') i++; continue; }
-    if (c === '{') depth++; else if (c === '}') depth--;
-    i++;
+t('popup 15s hard timeout is wired via AbortController', () => {
+  // Without a timeout, AI outages would hang the popup forever.
+  if (!/EXTRACT_TIMEOUT_MS\s*=\s*\d+/.test(popup)) {
+    throw new Error('EXTRACT_TIMEOUT_MS constant missing');
   }
-  const body = popup.slice(idx, i);
-  if (/(?:^|\s)(?:let|var|const)\s+pageData\b/.test(body)) {
-    throw new Error('startParsing re-declares pageData — would shadow the module-scoped one');
-  }
-});
-
-t('addJob references pageData (reqId passthrough should still work)', () => {
-  // Defensive — if someone deletes the reqId lookup while fixing the
-  // scoping, we want to notice. Guard the positive behavior too.
-  const idx = popup.indexOf('async function addJob');
-  if (idx < 0) throw new Error('addJob function not found');
-  const body = popup.slice(idx, idx + 2000);
-  if (!/pageData\?\.fields\?\.reqId/.test(body)) {
-    throw new Error('addJob no longer passes reqId from pageData — dedupe would regress');
+  if (!/new AbortController\(\)/.test(popup)) {
+    throw new Error('AbortController not used to enforce the timeout');
   }
 });
 

@@ -94,44 +94,69 @@
 <div id="main-view">
   <div class="body">
 
-    <!-- URL chip -->
+    <!-- URL chip (always visible in main view) -->
     <div class="url-chip">
       <img class="favicon" id="favicon" src="" alt="" style="display:none">
       <span class="url-text" id="detected-url">Reading page...</span>
-      <span class="parse-status-inline" id="parse-inline"></span>
     </div>
 
-    <!-- Fields pre-filled by parse -->
-    <div class="section">
-      <label>Job Title <span class="source-badge" id="title-badge" style="display:none"></span></label>
-      <input id="job-title" placeholder="e.g. Senior Software Engineer">
-    </div>
-    <div class="section">
-      <label>Company <span class="source-badge" id="company-badge" style="display:none"></span></label>
-      <input id="job-company" placeholder="e.g. Acme Corp">
-    </div>
-    <div class="field-row">
-      <div>
-        <label>Work Type</label>
-        <select id="job-worktype">
-          <option value="">—</option>
-          <option value="Remote">Remote</option>
-          <option value="Hybrid">Hybrid</option>
-          <option value="On-site">On-site</option>
-        </select>
+    <!-- Stage A: initial — click to extract -->
+    <div id="stage-initial">
+      <div class="add-pitch" style="padding:14px 12px;background:rgba(232,168,56,0.05);border:1px solid rgba(232,168,56,0.15);border-radius:7px;margin-bottom:12px;text-align:center">
+        <div style="font-size:13px;color:rgba(242,234,216,0.85);line-height:1.45;margin-bottom:2px">Add this job to Summit</div>
+        <div style="font-size:10px;color:rgba(242,234,216,0.4);line-height:1.4">We'll pull out the details so you can review them.</div>
       </div>
-      <div>
-        <label>Location</label>
-        <input id="job-location" placeholder="City, State">
-      </div>
-    </div>
-    <div class="section">
-      <label>Salary (optional)</label>
-      <input id="job-salary" placeholder="e.g. $120k–$150k">
+      <button class="btn btn-primary" id="extract-btn">+ Add to Summit</button>
+      <div class="status" id="initial-status"></div>
     </div>
 
-    <button class="btn btn-primary" id="add-btn">+ Add to Summit</button>
-    <div class="status" id="add-status"></div>
+    <!-- Stage B: extracting — spinner + status message -->
+    <div id="stage-extracting" style="display:none">
+      <div style="padding:20px 12px;text-align:center">
+        <div style="display:inline-block;width:20px;height:20px;border:2px solid rgba(232,168,56,0.2);border-top-color:#e8a838;border-radius:50%;animation:summit-spin 0.7s linear infinite"></div>
+        <div id="extracting-msg" style="margin-top:14px;font-size:12px;color:rgba(242,234,216,0.7)">Reading posting...</div>
+        <div style="margin-top:4px;font-size:10px;color:rgba(242,234,216,0.35)">This usually takes a few seconds.</div>
+      </div>
+    </div>
+    <style>@keyframes summit-spin { to { transform: rotate(360deg); } }</style>
+
+    <!-- Stage C: review — editable form, extracted values pre-filled -->
+    <div id="stage-review" style="display:none">
+      <div style="font-size:11px;color:rgba(232,168,56,0.8);font-family:monospace;letter-spacing:0.8px;margin-bottom:10px">REVIEW &amp; CONFIRM</div>
+      <div class="section">
+        <label>Job Title</label>
+        <input id="rev-title" placeholder="Title">
+      </div>
+      <div class="section">
+        <label>Company</label>
+        <input id="rev-company" placeholder="Company">
+      </div>
+      <div class="field-row">
+        <div>
+          <label>Work Type</label>
+          <select id="rev-worktype">
+            <option value="">—</option>
+            <option value="Remote">Remote</option>
+            <option value="Hybrid">Hybrid</option>
+            <option value="On-site">On-site</option>
+          </select>
+        </div>
+        <div>
+          <label>Location</label>
+          <input id="rev-location" placeholder="City, State">
+        </div>
+      </div>
+      <div class="section">
+        <label>Salary (optional)</label>
+        <input id="rev-salary" placeholder="e.g. $120k–$150k">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn btn-secondary" id="cancel-btn" style="flex:1">Cancel</button>
+        <button class="btn btn-primary" id="confirm-btn" style="flex:2">Save to Summit</button>
+      </div>
+      <div class="status" id="review-status"></div>
+    </div>
+
   </div>
 
   <div class="footer">

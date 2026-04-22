@@ -3558,32 +3558,13 @@ t('Server AI extract schema requests reqId + validates response', () => {
   if (!/parsed\.reqId/.test(body))         throw new Error('AI response reqId is not re-validated');
 });
 
-t('Extension content.js extracts reqId from JSON-LD identifier', () => {
-  const contentSrc = fs.readFileSync(path.join(__dirname, '../../extension/content.js'), 'utf8');
-  if (!/job\.identifier/.test(contentSrc))    throw new Error('content.js does not read JobPosting.identifier');
-  if (!/reqId/.test(contentSrc))              throw new Error('content.js does not produce reqId field');
-  if (!/\[A-Za-z0-9\]\[A-Za-z0-9/.test(contentSrc)) throw new Error('content.js does not validate reqId shape');
-});
-
-t('Extension content.js has label-anchored DOM fallback for reqId', () => {
-  const contentSrc = fs.readFileSync(path.join(__dirname, '../../extension/content.js'), 'utf8');
-  if (!/_extractReqIdFromDom/.test(contentSrc)) throw new Error('DOM fallback helper missing');
-  // Must check dt/dd and th/td pairs first (most reliable)
-  if (!/querySelectorAll\('dt, th'\)/.test(contentSrc) && !/querySelectorAll\(["']dt, th/.test(contentSrc)) {
-    throw new Error('DOM fallback does not check dt/th pairs');
-  }
-  // Label regex must exist and cover the common wording
-  if (!/req.{0,20}uisition/i.test(contentSrc)) throw new Error('label regex does not cover "requisition"');
-});
-
-t('Extension popup.js forwards reqId in /api/jobs/inbox POST body', () => {
-  const popupSrc = fs.readFileSync(path.join(__dirname, '../../extension/popup.js'), 'utf8');
-  const idx = popupSrc.indexOf('async function addJob');
-  const body = popupSrc.slice(idx, idx + 3500);
-  if (!/body\.reqId/.test(body) && !/reqId:\s*pageData/.test(body) && !/reqId\s*=/.test(body)) {
-    throw new Error('popup does not forward reqId in POST body');
-  }
-});
+// v1.20.0: reqId extraction moved entirely server-side. Extension is a pure
+// reader, so three tests that asserted reqId logic inside content.js and
+// popup.js were deleted: "Extension content.js extracts reqId from JSON-LD",
+// "Extension content.js has label-anchored DOM fallback for reqId", and
+// "Extension popup.js forwards reqId in /api/jobs/inbox POST body". The
+// server-side reqId extraction (in parseJobPostingLD + AI validation) is
+// still covered by other tests in this file and architecture.test.js.
 
 t('Webapp _findDuplicateJob helper exists + priority correct', () => {
   if (!/function _findDuplicateJob/.test(feSrc)) throw new Error('_findDuplicateJob missing');
@@ -4768,6 +4749,69 @@ t('_refreshExtensionVersion clears stale banner when ping fails + cached version
   }
   if (!/stale-ext-banner[\s\S]{0,200}\.remove\(\)/.test(failBranch)) {
     throw new Error('ping-failure branch does not remove stale banner');
+  }
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// v1.20.0 — edit-job modal (failsafe for wrong parser output)
+// ════════════════════════════════════════════════════════════════════════════
+console.log('\n── v1.20.0 edit-job modal');
+
+t('Edit-job modal markup is present with all required inputs', () => {
+  if (!/id="edit-job-modal-overlay"/.test(feSrc)) {
+    throw new Error('edit-job-modal-overlay element missing');
+  }
+  // Each editable field needs a matching id in the modal
+  for (const id of ['ejm-title', 'ejm-company', 'ejm-location', 'ejm-worktype', 'ejm-salary', 'ejm-url']) {
+    if (!new RegExp(`id="${id}"`).test(feSrc)) {
+      throw new Error(`edit-job modal missing input id="${id}"`);
+    }
+  }
+});
+
+t('openEditJobModal / saveEditJob / closeEditJobModal functions defined', () => {
+  for (const fn of ['openEditJobModal', 'saveEditJob', 'closeEditJobModal']) {
+    if (!new RegExp(`function ${fn}\\s*\\(`).test(feSrc)) {
+      throw new Error(`${fn} not defined`);
+    }
+  }
+});
+
+t('Edit button is wired on job detail header', () => {
+  // Must call openEditJobModal with the job id
+  if (!/onclick="openEditJobModal\('\$\{j\.id\}'\)"/.test(feSrc)) {
+    throw new Error('edit button does not call openEditJobModal with job id');
+  }
+});
+
+t('saveEditJob persists via scheduleSave (no separate server POST)', () => {
+  // Jobs are stored inside the encrypted blob. Editing must go through the
+  // same scheduleSave path the rest of the app uses — otherwise edits
+  // bypass encryption or race with pending writes.
+  const idx = feSrc.indexOf('function saveEditJob');
+  if (idx < 0) throw new Error('saveEditJob not defined');
+  const body = feSrc.slice(idx, idx + 1500);
+  if (!/scheduleSave\(\)/.test(body)) {
+    throw new Error('saveEditJob does not call scheduleSave — edits would not persist');
+  }
+  // Must validate title + company before committing — avoid saving blank
+  if (!/title\s*\|\||!title|!company/.test(body)) {
+    throw new Error('saveEditJob does not validate title/company');
+  }
+  // Must re-render after save so the user sees the corrected values
+  if (!/renderDetail|renderJobList/.test(body)) {
+    throw new Error('saveEditJob does not re-render after save');
+  }
+});
+
+t('openEditJobModal pre-fills inputs from current job values', () => {
+  const idx = feSrc.indexOf('function openEditJobModal');
+  const body = feSrc.slice(idx, idx + 1500);
+  // Must read j.title, j.company, etc. into the ejm-* inputs
+  for (const field of ['title', 'company', 'location', 'workType', 'salary']) {
+    if (!new RegExp(`j\\.${field}`).test(body)) {
+      throw new Error(`openEditJobModal does not pre-fill from j.${field}`);
+    }
   }
 });
 

@@ -110,7 +110,7 @@ body.in-app { overflow: hidden; height: 100vh; height: 100dvh; }
 .auth-logo-mark { width: 36px; height: 36px; background: var(--accent-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .auth-logo-mark svg { width: 20px; height: 20px; }
 .auth-logo-text { font-size: 22px; font-weight: 500; letter-spacing: -0.02em; color: #ffffff; font-family: var(--font-display); }
-/* v1.19.17: when the auth-logo is wrapped in an anchor (linking to the
+/* v1.20.0: when the auth-logo is wrapped in an anchor (linking to the
    landing page), the anchor gets these styles so the whole block reads
    as clickable without looking like an underlined link. */
 a.auth-logo { text-decoration: none; cursor: pointer; transition: opacity 0.15s; }
@@ -697,7 +697,7 @@ input[type=\"file\"] { display: none; }
   12%  { background-color: rgba(232,168,56,0.08); }
   100% { background-color: rgba(232,168,56,0.0); }
 }
-/* v1.19.17: highlight new-from-inbox job cards. Tells the user "this just
+/* v1.20.0: highlight new-from-inbox job cards. Tells the user "this just
    arrived from the extension" without a toast or extra chrome. Animation
    self-removes via animationend listener; class is one-shot. */
 .job-item.inbox-just-added { animation: inboxArrive 2s ease-out; }
@@ -706,7 +706,7 @@ input[type=\"file\"] { display: none; }
   70%  { background-color: rgba(232,168,56,0.06); border-color: rgba(232,168,56,0.15); }
   100% { background-color: transparent; border-color: transparent; }
 }
-/* v1.19.17: passive advisory when an extension-add was silently skipped
+/* v1.20.0: passive advisory when an extension-add was silently skipped
    because it matched an existing job. Different tint from inbox-just-added
    so the user can tell at a glance: amber = new arrival, blue = duplicate
    caught. Same one-shot lifecycle. */
@@ -716,7 +716,7 @@ input[type=\"file\"] { display: none; }
   70%  { background-color: rgba(96,165,250,0.05); border-color: rgba(96,165,250,0.12); }
   100% { background-color: transparent; border-color: transparent; }
 }
-/* v1.19.17: extension-install nudge presentations. Primary surface is a
+/* v1.20.0: extension-install nudge presentations. Primary surface is a
    top-row banner (see _renderExtInstallNudgeBanner — styled inline to
    match the stale-ext banner). Secondary surface is an inline hint in
    the add-job modal, styled below. Both respect a shared dismiss flag. */
@@ -882,21 +882,311 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
   <div style="position:relative;z-index:1">
 
     <!-- Hero -->
-    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 24px 80px;min-height:80vh">
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 24px 96px;min-height:78vh">
       <div style="font-family:var(--mono);font-size:11px;color:#e8a838;letter-spacing:0.35em;margin-bottom:28px;opacity:0.85">A JOB SEARCH WORKSPACE</div>
       <h1 style="font-family:var(--font-display);font-size:clamp(64px,10vw,112px);font-weight:500;color:#f2ead8;letter-spacing:-0.03em;line-height:0.95;margin:0 0 22px">Summit</h1>
-      <p style="font-family:var(--font-display);font-size:clamp(18px,2.2vw,22px);font-weight:300;font-style:italic;color:rgba(242,234,216,0.72);max-width:520px;line-height:1.5;margin:0 0 44px;letter-spacing:-0.005em">Study the mountain. Prepare the climb.<br>Reach the summit.</p>
+      <!-- v1.20.0: functional one-liner introduced above the poetic tagline.
+           First-time visitors need to know what the product IS before the
+           metaphor can land. The poetry is kept below as atmosphere. -->
+      <p style="font-family:var(--font-display);font-size:clamp(20px,2.5vw,26px);font-weight:400;color:rgba(242,234,216,0.92);max-width:620px;line-height:1.4;margin:0 0 18px;letter-spacing:-0.01em">Your entire job search &mdash; applications, research, resumes, interviews &mdash; in one private workspace.</p>
+      <p style="font-family:var(--font-display);font-size:clamp(14px,1.6vw,16px);font-weight:300;font-style:italic;color:rgba(242,234,216,0.5);max-width:520px;line-height:1.5;margin:0 0 40px;letter-spacing:-0.005em">Study the mountain. Prepare the climb. Reach the summit.</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
         <button onclick="showScreen('register')" style="padding:14px 30px;background:#e8a838;border:none;border-radius:10px;font-family:var(--font);font-size:15px;font-weight:700;color:#1a0d00;cursor:pointer;box-shadow:0 0 48px rgba(232,168,56,0.28)" onmouseover="this.style.background='#f0b84a'" onmouseout="this.style.background='#e8a838'">Get started</button>
         <button onclick="showScreen('login')" style="padding:14px 30px;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.18);border-radius:10px;font-family:var(--font);font-size:15px;color:rgba(255,255,255,0.82);cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.16)'" onmouseout="this.style.background='rgba(255,255,255,0.09)'">Sign in</button>
       </div>
     </div>
 
-    <!-- Feature list (editorial) -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+    <!-- Scrolling feature panels with mockups (v1.20.0)                    -->
+    <!-- Each panel is ~560px on desktop, stacks on mobile. Alternating      -->
+    <!-- left/right so the eye follows a Z-pattern. Mockups are stylized     -->
+    <!-- SVG — not pretending to be pixel-accurate screenshots. When actual  -->
+    <!-- screenshots are available, swap the <svg> blocks for <img> tags     -->
+    <!-- and the layout around them doesn't need to change.                  -->
+    <!-- ═══════════════════════════════════════════════════════════════════ -->
+
+    <style>
+      /* Local to the landing page — scoped enough that it doesn't collide
+         with the app shell. We keep everything in one style block inside
+         the landing so the file remains single-deployable. */
+      .landing-panel {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 72px;
+        align-items: center;
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 80px 40px;
+      }
+      .landing-panel.reverse > :first-child { order: 2; }
+      .landing-panel.reverse > :last-child  { order: 1; }
+      .landing-panel-text h2 {
+        font-family: var(--font-display);
+        font-size: clamp(32px, 4vw, 44px);
+        font-weight: 500;
+        color: #f2ead8;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        margin: 0 0 18px;
+      }
+      .landing-panel-text .eyebrow {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: #e8a838;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        margin-bottom: 16px;
+        opacity: 0.85;
+      }
+      .landing-panel-text p {
+        font-family: var(--font);
+        font-size: clamp(15px, 1.6vw, 17px);
+        color: rgba(242,234,216,0.72);
+        line-height: 1.7;
+        margin: 0;
+        max-width: 440px;
+      }
+      .landing-mockup {
+        width: 100%;
+        aspect-ratio: 4 / 3;
+        border-radius: 12px;
+        background: linear-gradient(180deg, rgba(24,14,4,0.75) 0%, rgba(18,10,2,0.85) 100%);
+        border: 1px solid rgba(242,234,216,0.1);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.45), 0 0 0 1px rgba(232,168,56,0.05) inset;
+        overflow: hidden;
+        position: relative;
+      }
+      .landing-mockup svg { width: 100%; height: 100%; display: block; }
+      @media (max-width: 820px) {
+        .landing-panel {
+          grid-template-columns: 1fr;
+          gap: 32px;
+          padding: 56px 24px;
+        }
+        .landing-panel.reverse > :first-child { order: 1; }
+        .landing-panel.reverse > :last-child  { order: 2; }
+      }
+    </style>
+
+    <!-- Panel 1 — Pipeline / track applications -->
+    <div class="landing-panel">
+      <div class="landing-panel-text">
+        <div class="eyebrow">PIPELINE</div>
+        <h2>Track every application.</h2>
+        <p>From wishlist to offer, in one place. Paste a URL or capture it with the browser extension &mdash; Summit parses the posting, adds it to your pipeline, and keeps the whole process visible.</p>
+      </div>
+      <div class="landing-mockup" aria-label="Pipeline mockup">
+        <svg viewBox="0 0 480 360" xmlns="http://www.w3.org/2000/svg">
+          <!-- Window chrome -->
+          <rect x="0" y="0" width="480" height="32" fill="rgba(0,0,0,0.25)"/>
+          <circle cx="16" cy="16" r="4" fill="rgba(242,234,216,0.2)"/>
+          <circle cx="30" cy="16" r="4" fill="rgba(242,234,216,0.2)"/>
+          <circle cx="44" cy="16" r="4" fill="rgba(242,234,216,0.2)"/>
+          <!-- Sidebar -->
+          <rect x="0" y="32" width="120" height="328" fill="rgba(0,0,0,0.18)"/>
+          <!-- Sidebar logo mark -->
+          <rect x="14" y="48" width="22" height="22" rx="4" fill="#e8a838"/>
+          <polygon points="19,63 23,56 27,62 32,50 35,63" fill="#1a0d00"/>
+          <text x="44" y="65" font-family="Georgia,serif" font-size="12" fill="#f2ead8" font-weight="500">Summit</text>
+          <!-- Sidebar filters -->
+          <text x="14" y="102" font-family="monospace" font-size="8" fill="rgba(232,168,56,0.7)" letter-spacing="1.5">STATUS</text>
+          <rect x="10" y="112" width="100" height="22" rx="4" fill="rgba(232,168,56,0.14)"/>
+          <circle cx="20" cy="123" r="3" fill="#e8a838"/>
+          <text x="30" y="127" font-family="system-ui" font-size="10" fill="#f2ead8">All</text>
+          <text x="96" y="127" font-family="monospace" font-size="9" fill="rgba(242,234,216,0.5)" text-anchor="end">24</text>
+          <rect x="10" y="138" width="100" height="20" rx="4" fill="transparent"/>
+          <circle cx="20" cy="149" r="3" fill="#4a9c4a"/>
+          <text x="30" y="152" font-family="system-ui" font-size="10" fill="rgba(242,234,216,0.7)">Interview</text>
+          <text x="96" y="152" font-family="monospace" font-size="9" fill="rgba(242,234,216,0.4)" text-anchor="end">5</text>
+          <circle cx="20" cy="172" r="3" fill="#7b7beb"/>
+          <text x="30" y="175" font-family="system-ui" font-size="10" fill="rgba(242,234,216,0.7)">Offer</text>
+          <text x="96" y="175" font-family="monospace" font-size="9" fill="rgba(242,234,216,0.4)" text-anchor="end">2</text>
+          <circle cx="20" cy="195" r="3" fill="rgba(242,234,216,0.4)"/>
+          <text x="30" y="198" font-family="system-ui" font-size="10" fill="rgba(242,234,216,0.7)">To apply</text>
+          <text x="96" y="198" font-family="monospace" font-size="9" fill="rgba(242,234,216,0.4)" text-anchor="end">9</text>
+          <!-- Main area header -->
+          <rect x="120" y="32" width="360" height="40" fill="transparent"/>
+          <text x="140" y="58" font-family="Georgia,serif" font-size="14" fill="#f2ead8" font-weight="500">Applications</text>
+          <rect x="420" y="44" width="44" height="20" rx="4" fill="#e8a838"/>
+          <text x="442" y="58" font-family="system-ui" font-size="9" fill="#1a0d00" font-weight="700" text-anchor="middle">+ ADD</text>
+          <!-- Job rows -->
+          <g font-family="system-ui">
+            <!-- Row 1: highlighted/selected -->
+            <rect x="130" y="84" width="340" height="40" rx="5" fill="rgba(232,168,56,0.08)" stroke="rgba(232,168,56,0.3)"/>
+            <text x="144" y="100" font-size="8" font-family="monospace" fill="rgba(232,168,56,0.7)" letter-spacing="1">STRIPE</text>
+            <text x="144" y="114" font-size="11" fill="#f2ead8">Senior Software Engineer</text>
+            <rect x="400" y="96" width="56" height="17" rx="3" fill="rgba(74,156,74,0.22)"/>
+            <text x="428" y="108" font-size="9" fill="#4a9c4a" text-anchor="middle">Interview</text>
+            <!-- Row 2 -->
+            <rect x="130" y="128" width="340" height="40" rx="5" fill="transparent"/>
+            <text x="144" y="144" font-size="8" font-family="monospace" fill="rgba(242,234,216,0.45)" letter-spacing="1">FIGMA</text>
+            <text x="144" y="158" font-size="11" fill="rgba(242,234,216,0.78)">Product Designer, Platform</text>
+            <rect x="400" y="140" width="56" height="17" rx="3" fill="rgba(242,234,216,0.06)"/>
+            <text x="428" y="152" font-size="9" fill="rgba(242,234,216,0.55)" text-anchor="middle">Applied</text>
+            <!-- Row 3 -->
+            <rect x="130" y="172" width="340" height="40" rx="5" fill="transparent"/>
+            <text x="144" y="188" font-size="8" font-family="monospace" fill="rgba(242,234,216,0.45)" letter-spacing="1">HUDSON RIVER</text>
+            <text x="144" y="202" font-size="11" fill="rgba(242,234,216,0.78)">Research Engineer</text>
+            <rect x="400" y="184" width="56" height="17" rx="3" fill="rgba(123,123,235,0.22)"/>
+            <text x="428" y="196" font-size="9" fill="#9b9be8" text-anchor="middle">Offer</text>
+            <!-- Row 4 -->
+            <rect x="130" y="216" width="340" height="40" rx="5" fill="transparent"/>
+            <text x="144" y="232" font-size="8" font-family="monospace" fill="rgba(242,234,216,0.45)" letter-spacing="1">NOTION</text>
+            <text x="144" y="246" font-size="11" fill="rgba(242,234,216,0.78)">Staff Engineer, Infra</text>
+            <rect x="400" y="228" width="56" height="17" rx="3" fill="rgba(242,234,216,0.06)"/>
+            <text x="428" y="240" font-size="9" fill="rgba(242,234,216,0.55)" text-anchor="middle">To apply</text>
+            <!-- Row 5 -->
+            <rect x="130" y="260" width="340" height="40" rx="5" fill="transparent"/>
+            <text x="144" y="276" font-size="8" font-family="monospace" fill="rgba(242,234,216,0.45)" letter-spacing="1">LINEAR</text>
+            <text x="144" y="290" font-size="11" fill="rgba(242,234,216,0.78)">Product Engineer</text>
+            <rect x="400" y="272" width="56" height="17" rx="3" fill="rgba(74,156,74,0.22)"/>
+            <text x="428" y="284" font-size="9" fill="#4a9c4a" text-anchor="middle">Interview</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Panel 2 — Research / insights (reversed layout) -->
+    <div class="landing-panel reverse">
+      <div class="landing-panel-text">
+        <div class="eyebrow">RESEARCH</div>
+        <h2>Research, built in.</h2>
+        <p>Salary benchmarks, company news, and culture signals &mdash; gathered the moment you add a job. Know what the role pays and what you&rsquo;re walking into before you apply.</p>
+      </div>
+      <div class="landing-mockup" aria-label="Insights mockup">
+        <svg viewBox="0 0 480 360" xmlns="http://www.w3.org/2000/svg">
+          <!-- Window chrome -->
+          <rect x="0" y="0" width="480" height="32" fill="rgba(0,0,0,0.25)"/>
+          <circle cx="16" cy="16" r="4" fill="rgba(242,234,216,0.2)"/>
+          <circle cx="30" cy="16" r="4" fill="rgba(242,234,216,0.2)"/>
+          <circle cx="44" cy="16" r="4" fill="rgba(242,234,216,0.2)"/>
+          <!-- Job header -->
+          <text x="32" y="62" font-family="monospace" font-size="9" fill="rgba(232,168,56,0.8)" letter-spacing="2">STRIPE · REMOTE · USA</text>
+          <text x="32" y="88" font-family="Georgia,serif" font-size="18" fill="#f2ead8" font-weight="500">Senior Software Engineer</text>
+          <!-- Tabs -->
+          <line x1="32" y1="112" x2="448" y2="112" stroke="rgba(242,234,216,0.1)"/>
+          <text x="32" y="128" font-family="system-ui" font-size="10" fill="rgba(242,234,216,0.5)">Posting</text>
+          <text x="90" y="128" font-family="system-ui" font-size="10" fill="#f2ead8" font-weight="600">Insights</text>
+          <line x1="82" y1="136" x2="124" y2="136" stroke="#e8a838" stroke-width="2"/>
+          <text x="160" y="128" font-family="system-ui" font-size="10" fill="rgba(242,234,216,0.5)">Journal</text>
+          <text x="214" y="128" font-family="system-ui" font-size="10" fill="rgba(242,234,216,0.5)">Tailor</text>
+          <!-- Salary card -->
+          <rect x="32" y="152" width="200" height="88" rx="8" fill="rgba(232,168,56,0.06)" stroke="rgba(232,168,56,0.2)"/>
+          <text x="44" y="172" font-family="monospace" font-size="8" fill="rgba(232,168,56,0.7)" letter-spacing="1.5">TOTAL COMP</text>
+          <text x="44" y="196" font-family="Georgia,serif" font-size="22" fill="#f2ead8" font-weight="500">$280k–$340k</text>
+          <!-- Salary band bar -->
+          <rect x="44" y="210" width="176" height="4" rx="2" fill="rgba(242,234,216,0.1)"/>
+          <rect x="70" y="210" width="110" height="4" rx="2" fill="rgba(232,168,56,0.45)"/>
+          <circle cx="142" cy="212" r="5" fill="#e8a838" stroke="#1a0d00" stroke-width="1.5"/>
+          <text x="44" y="228" font-family="monospace" font-size="7" fill="rgba(242,234,216,0.4)">P25</text>
+          <text x="216" y="228" font-family="monospace" font-size="7" fill="rgba(242,234,216,0.4)" text-anchor="end">P75</text>
+          <!-- Company card -->
+          <rect x="248" y="152" width="200" height="88" rx="8" fill="rgba(242,234,216,0.03)" stroke="rgba(242,234,216,0.08)"/>
+          <text x="260" y="172" font-family="monospace" font-size="8" fill="rgba(232,168,56,0.7)" letter-spacing="1.5">COMPANY</text>
+          <text x="260" y="194" font-family="Georgia,serif" font-size="14" fill="#f2ead8">Stripe · 8,000 emp</text>
+          <text x="260" y="212" font-family="system-ui" font-size="10" fill="rgba(242,234,216,0.65)">Payments infrastructure</text>
+          <g font-family="system-ui" font-size="9">
+            <rect x="260" y="220" width="38" height="14" rx="3" fill="rgba(74,156,74,0.18)"/>
+            <text x="279" y="230" fill="#5fb35f" text-anchor="middle">4.3★</text>
+            <rect x="302" y="220" width="48" height="14" rx="3" fill="rgba(123,123,235,0.18)"/>
+            <text x="326" y="230" fill="#9b9be8" text-anchor="middle">Series I</text>
+          </g>
+          <!-- News feed -->
+          <text x="32" y="266" font-family="monospace" font-size="8" fill="rgba(232,168,56,0.7)" letter-spacing="1.5">RECENT NEWS</text>
+          <g font-family="system-ui" font-size="10" fill="rgba(242,234,216,0.72)">
+            <circle cx="36" cy="286" r="2" fill="#e8a838"/>
+            <text x="46" y="289">Stripe announces expansion into India (3d ago)</text>
+            <circle cx="36" cy="306" r="2" fill="rgba(232,168,56,0.4)"/>
+            <text x="46" y="309" fill="rgba(242,234,216,0.55)">Q3 payment volume up 27% YoY (1w ago)</text>
+            <circle cx="36" cy="326" r="2" fill="rgba(232,168,56,0.25)"/>
+            <text x="46" y="329" fill="rgba(242,234,216,0.45)">New engineering office in Zurich (2w ago)</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Panel 3 — Tailor resumes -->
+    <div class="landing-panel">
+      <div class="landing-panel-text">
+        <div class="eyebrow">TAILORING</div>
+        <h2>Tailor without rewriting.</h2>
+        <p>Reshape your resume and cover letter for each role in minutes, not hours. Summit uses the job posting to guide the edits &mdash; you stay in control of every word.</p>
+      </div>
+      <div class="landing-mockup" aria-label="Tailor mockup">
+        <svg viewBox="0 0 480 360" xmlns="http://www.w3.org/2000/svg">
+          <!-- Window chrome -->
+          <rect x="0" y="0" width="480" height="32" fill="rgba(0,0,0,0.25)"/>
+          <circle cx="16" cy="16" r="4" fill="rgba(242,234,216,0.2)"/>
+          <circle cx="30" cy="16" r="4" fill="rgba(242,234,216,0.2)"/>
+          <circle cx="44" cy="16" r="4" fill="rgba(242,234,216,0.2)"/>
+          <!-- Header -->
+          <text x="32" y="58" font-family="monospace" font-size="9" fill="rgba(232,168,56,0.8)" letter-spacing="2">TAILOR</text>
+          <text x="32" y="80" font-family="Georgia,serif" font-size="15" fill="#f2ead8" font-weight="500">Resume · Stripe · Senior SWE</text>
+          <!-- Two-column split -->
+          <!-- LEFT: Resume -->
+          <rect x="32" y="104" width="192" height="228" rx="6" fill="rgba(242,234,216,0.025)" stroke="rgba(242,234,216,0.08)"/>
+          <text x="44" y="124" font-family="monospace" font-size="8" fill="rgba(242,234,216,0.55)" letter-spacing="1.5">YOUR RESUME</text>
+          <text x="44" y="146" font-family="Georgia,serif" font-size="11" fill="#f2ead8" font-weight="500">Experience</text>
+          <!-- Resume bullets (varying opacity for rhythm) -->
+          <g font-family="system-ui" font-size="9">
+            <circle cx="48" cy="164" r="1.5" fill="rgba(242,234,216,0.5)"/>
+            <text x="56" y="167" fill="rgba(242,234,216,0.78)">Built distributed payment</text>
+            <text x="56" y="178" fill="rgba(242,234,216,0.78)">pipeline handling 10M+ txn/day</text>
+            <!-- Highlighted / tailored bullet -->
+            <rect x="44" y="186" width="168" height="36" rx="4" fill="rgba(232,168,56,0.1)" stroke="rgba(232,168,56,0.3)"/>
+            <circle cx="48" cy="196" r="1.5" fill="#e8a838"/>
+            <text x="56" y="200" fill="#f2ead8">Led API infrastructure team</text>
+            <text x="56" y="211" fill="#f2ead8">scaling to $2B in volume</text>
+            <circle cx="48" cy="236" r="1.5" fill="rgba(242,234,216,0.5)"/>
+            <text x="56" y="239" fill="rgba(242,234,216,0.78)">Reduced p99 latency 40%</text>
+            <text x="56" y="250" fill="rgba(242,234,216,0.78)">through query optimization</text>
+            <circle cx="48" cy="270" r="1.5" fill="rgba(242,234,216,0.5)"/>
+            <text x="56" y="273" fill="rgba(242,234,216,0.78)">Mentored 4 junior engineers</text>
+            <text x="56" y="284" fill="rgba(242,234,216,0.78)">to senior level</text>
+            <circle cx="48" cy="304" r="1.5" fill="rgba(242,234,216,0.5)"/>
+            <text x="56" y="307" fill="rgba(242,234,216,0.78)">Led migration to Kubernetes</text>
+            <text x="56" y="318" fill="rgba(242,234,216,0.78)">reducing infra costs 30%</text>
+          </g>
+
+          <!-- Connecting arc between the highlighted bullet and the posting phrase -->
+          <path d="M 218 202 Q 240 202 244 200" stroke="rgba(232,168,56,0.5)" stroke-width="1" fill="none" stroke-dasharray="2 3"/>
+
+          <!-- RIGHT: Job posting -->
+          <rect x="256" y="104" width="192" height="228" rx="6" fill="rgba(242,234,216,0.025)" stroke="rgba(242,234,216,0.08)"/>
+          <text x="268" y="124" font-family="monospace" font-size="8" fill="rgba(242,234,216,0.55)" letter-spacing="1.5">JOB POSTING</text>
+          <text x="268" y="146" font-family="Georgia,serif" font-size="11" fill="#f2ead8" font-weight="500">What you’ll do</text>
+          <g font-family="system-ui" font-size="9" fill="rgba(242,234,216,0.72)">
+            <text x="268" y="168">Lead our payments</text>
+            <rect x="268" y="174" width="156" height="12" rx="2" fill="rgba(232,168,56,0.18)"/>
+            <text x="270" y="184" fill="#f2ead8">infrastructure team scaling</text>
+            <rect x="268" y="188" width="64" height="12" rx="2" fill="rgba(232,168,56,0.18)"/>
+            <text x="270" y="198" fill="#f2ead8">to billions</text>
+            <text x="335" y="198" fill="rgba(242,234,216,0.72)">in volume.</text>
+            <text x="268" y="220">Own the reliability of</text>
+            <text x="268" y="232">critical systems.</text>
+            <text x="268" y="256">You have:</text>
+            <text x="268" y="272">· 7+ yrs backend eng</text>
+            <text x="268" y="286">· Distributed systems</text>
+            <text x="268" y="300">· Team leadership</text>
+            <text x="268" y="314">· High-scale ops</text>
+          </g>
+
+          <!-- Action chip -->
+          <rect x="336" y="330" width="100" height="22" rx="11" fill="#e8a838"/>
+          <text x="386" y="345" font-family="system-ui" font-size="10" fill="#1a0d00" font-weight="700" text-anchor="middle">Tailor resume →</text>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Dense feature grid below (the original six, retained as reference) -->
     <div style="padding:0 32px 40px;max-width:1040px;margin:0 auto">
 
-      <!-- Hairline rule that opens the section -->
-      <div style="border-top:1px solid rgba(242,234,216,0.12);padding-top:64px">
+      <div style="border-top:1px solid rgba(242,234,216,0.12);padding-top:80px">
+
+        <div style="text-align:center;margin-bottom:56px">
+          <div style="font-family:var(--mono);font-size:10px;color:rgba(232,168,56,0.7);letter-spacing:0.3em;margin-bottom:12px">MORE</div>
+          <h2 style="font-family:var(--font-display);font-size:clamp(24px,3vw,32px);font-weight:500;color:#f2ead8;letter-spacing:-0.015em;margin:0">Everything you need in one place.</h2>
+        </div>
 
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:52px 56px">
 
@@ -940,8 +1230,17 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
       </div>
 
+      <!-- Bottom CTA -->
+      <div style="text-align:center;margin-top:96px;padding-top:64px;border-top:1px solid rgba(242,234,216,0.08)">
+        <div style="font-family:var(--font-display);font-size:clamp(22px,2.8vw,28px);font-weight:500;color:#f2ead8;letter-spacing:-0.015em;margin-bottom:24px">Ready to climb?</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center">
+          <button onclick="showScreen('register')" style="padding:14px 30px;background:#e8a838;border:none;border-radius:10px;font-family:var(--font);font-size:15px;font-weight:700;color:#1a0d00;cursor:pointer;box-shadow:0 0 48px rgba(232,168,56,0.28)" onmouseover="this.style.background='#f0b84a'" onmouseout="this.style.background='#e8a838'">Get started</button>
+          <button onclick="showScreen('login')" style="padding:14px 30px;background:rgba(255,255,255,0.09);border:1px solid rgba(255,255,255,0.18);border-radius:10px;font-family:var(--font);font-size:15px;color:rgba(255,255,255,0.82);cursor:pointer" onmouseover="this.style.background='rgba(255,255,255,0.16)'" onmouseout="this.style.background='rgba(255,255,255,0.09)'">Sign in</button>
+        </div>
+      </div>
+
       <!-- Footer colophon -->
-      <div style="text-align:center;margin-top:104px;padding-bottom:72px">
+      <div style="text-align:center;margin-top:72px;padding-bottom:72px">
         <div style="font-family:var(--mono);font-size:10px;color:rgba(242,234,216,0.28);letter-spacing:0.35em">JOBSUMMIT.APP</div>
       </div>
     </div>
@@ -980,7 +1279,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       Don't have an account? <a onclick="showScreen('register')">Create one</a>
       <br><a onclick="showScreen('recover')" style="font-size:12px;color:var(--text3)">Forgot password? Use a recovery code</a>
     </div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.17 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.20.0 · private beta</div>
   </div>
 </div>
 
@@ -1020,7 +1319,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       <input id="reg-confirm" type="password" placeholder="Confirm password" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()">
     </div>
 
-    <!-- v1.19.17: security contract moved inline from post-hoc modal. User
+    <!-- v1.20.0: security contract moved inline from post-hoc modal. User
          sees what they're agreeing to BEFORE the act of creation, and the
          checkboxes gate the Create button rather than appearing after. -->
     <div style="margin-top:24px;padding:18px 20px;background:rgba(232,168,56,0.04);border:1px solid rgba(232,168,56,0.22);border-radius:var(--radius)">
@@ -1050,7 +1349,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
     <button id="register-btn" class="auth-btn" onclick="doRegister()" disabled style="margin-top:20px;opacity:0.4;cursor:not-allowed">Create account</button>
     <div class="auth-switch">Already have an account? <a onclick="showScreen('login')">Sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.17 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.20.0 · private beta</div>
   </div>
 </div>
 
@@ -1066,11 +1365,11 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <div class="auth-field"><label>CONFIRM PASSWORD</label><input id="recover-confirmpw" type="password" placeholder="Confirm new password"></div>
     <button id="recover-btn" class="auth-btn" onclick="recoverAccount()">Reset password</button>
     <div class="auth-switch"><a onclick="showScreen('login')">Back to sign in</a></div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.19.17 · private beta</div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#7a6a50;font-family:monospace">v1.20.0 · private beta</div>
   </div>
 </div>
 
-<!-- UNLOCK — v1.19.17: reached when token is present but dataKey isn't.
+<!-- UNLOCK — v1.20.0: reached when token is present but dataKey isn't.
      Zero-knowledge architecture: the token survives page reload (it's in
      localStorage), but the derived encryption key does not (in-memory
      only). So an authenticated user coming back to Summit has to prove
@@ -1173,7 +1472,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
       <div class="user-avatar" id="user-avatar" style="display:flex">VR</div>
       <div style="flex:1;min-width:0">
         <div class="user-name" id="user-name-display">user</div>
-        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.19.17</div>
+        <div style="font-size:10px;color:var(--text3);font-family:var(--mono)" id="version-label">v1.20.0</div>
       </div>
 
       <button class="user-bar-settings" onclick="doLogout()" title="Sign out" style="color:var(--text3)" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">
@@ -1224,7 +1523,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
         <label for="upload-input" style="cursor:pointer;color:var(--accent-bg);text-decoration:underline">upload a saved page (HTML or PDF)</label>
         <input id="upload-input" type="file" accept=".html,.htm,.mhtml,.mht,.pdf" style="display:none" onchange="parseUploadedFile(event)">
       </div>
-      <!-- v1.19.17: extension-install inline nudge. Populated + shown by
+      <!-- v1.20.0: extension-install inline nudge. Populated + shown by
            _renderExtInstallNudge() when modal opens if extension is absent.
            Hidden by default — never appears for users who already have it. -->
       <div id="ext-install-nudge-modal-slot"></div>
@@ -1266,6 +1565,40 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
     <div class="modal-actions">
       <button class="cancel-btn" onclick="closeQuestionModal()">Cancel</button>
       <button class="create-btn" onclick="saveQuestion()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- v1.20.0: edit-job-details modal. Failsafe for when the extension or
+     paste parser gets a field wrong. Title/company/location/workType/salary
+     all editable — everything else (status, notes, contacts, interviews)
+     already has its own UI elsewhere. -->
+<div id="edit-job-modal-overlay" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeEditJobModal()">
+  <div class="modal">
+    <div class="modal-title">Edit job details</div>
+    <div class="modal-sub">Correct anything the parser got wrong. Saved immediately.</div>
+    <div class="field"><label>JOB TITLE</label><input id="ejm-title" type="text" placeholder="e.g. Senior Software Engineer"></div>
+    <div class="field"><label>COMPANY</label><input id="ejm-company" type="text" placeholder="e.g. Acme Corp"></div>
+    <div class="field" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div>
+        <label>WORK TYPE</label>
+        <select id="ejm-worktype">
+          <option value="">—</option>
+          <option value="Remote">Remote</option>
+          <option value="Hybrid">Hybrid</option>
+          <option value="On-site">On-site</option>
+        </select>
+      </div>
+      <div>
+        <label>LOCATION</label>
+        <input id="ejm-location" type="text" placeholder="City, State">
+      </div>
+    </div>
+    <div class="field"><label>SALARY (OPTIONAL)</label><input id="ejm-salary" type="text" placeholder="e.g. $120k–$150k"></div>
+    <div class="field"><label>POSTING URL (OPTIONAL)</label><input id="ejm-url" type="text" placeholder="https://..."></div>
+    <div class="modal-actions">
+      <button class="cancel-btn" onclick="closeEditJobModal()">Cancel</button>
+      <button class="create-btn" onclick="saveEditJob()">Save changes</button>
     </div>
   </div>
 </div>
@@ -1389,7 +1722,7 @@ kbd { background:var(--bg3); border:1px solid var(--border2); border-radius:5px;
 
 <script>
 const API = '';
-const APP_VERSION = '1.19.17';
+const APP_VERSION = '1.20.0';
 let token = localStorage.getItem('applied_token');
 let currentUser = localStorage.getItem('applied_user');
 let jobs = {}, currentJobId = null, currentFilter = 'all', activeDetailTab = 'notes';
@@ -1398,7 +1731,7 @@ let sessionTailoredResume = null, sessionTailoredCover = null;
 let sessionTailoredResumeHtml = null, sessionTailoredCoverHtml = null;
 let activeTailorDoc = 'resume'; // which doc type is selected in tailoring UI
 let pendingHtml = null, pendingText = null;
-// v1.19.17: carry req ID + label from the URL parse (JSON-LD / HTML scrape /
+// v1.20.0: carry req ID + label from the URL parse (JSON-LD / HTML scrape /
 // AI extract) so addJob can stamp it on the new job record. Kept as module
 // state rather than a form input — it's a silent metadata field, not
 // something the user should have to see or edit.
@@ -1556,7 +1889,7 @@ window.addEventListener('resize', () => {
 
 window.addEventListener('DOMContentLoaded', () => {
   if (token && currentUser) {
-    // v1.19.17: zero-knowledge means dataKey lives in memory only. On a
+    // v1.20.0: zero-knowledge means dataKey lives in memory only. On a
     // fresh page load, token has been restored from localStorage but
     // dataKey has not. We need the user's password to re-derive it —
     // show an unlock prompt rather than entering the app broken.
@@ -1601,7 +1934,7 @@ function showScreen(n, pushHistory=true) {
     }
   }
   if (n === 'recover') setTimeout(()=>document.getElementById('recover-username')?.focus(), 80);
-  // v1.19.17: landing on the register screen — reset security-contract
+  // v1.20.0: landing on the register screen — reset security-contract
   // checkboxes. Otherwise a user who ticked them, navigated away, and came
   // back would return to a pre-confirmed state without reading the notice.
   if (n === 'register') {
@@ -1641,16 +1974,16 @@ function showApp() {
 
   // Notes editor is now inline (no CDN / no module imports) — nothing to prefetch.
 
-  // v1.19.17: start polling inbox for near-instant extension-added job pickup
+  // v1.20.0: start polling inbox for near-instant extension-added job pickup
   _startInboxPolling();
 
-  // v1.19.17: if an extension announced itself while the user was on a
+  // v1.20.0: if an extension announced itself while the user was on a
   // pre-login screen, the banner handler returned early. Re-check here so
   // a stale extension still surfaces a banner — just on the app chrome,
   // not the landing page.
   if (_extIsStale()) _renderStaleExtensionBanner();
 
-  // v1.19.17: render the install-extension banner for users who don't
+  // v1.20.0: render the install-extension banner for users who don't
   // have it installed. Same top-row presentation as the stale-ext banner
   // for visual language consistency. Internally delayed so we don't flash
   // it on users whose extension is just slow to announce.
@@ -1701,7 +2034,7 @@ async function doLogin() {
   finally { btn.disabled=false; btn.textContent='Sign in'; }
 }
 
-// ── UNLOCK (v1.19.17) ────────────────────────────────────────────────────────
+// ── UNLOCK (v1.20.0) ────────────────────────────────────────────────────────
 // Reached when a session survives page reload but the in-memory dataKey
 // doesn't. We have token+username from localStorage, but need the password
 // to re-derive the key. Fetch the server-stored wrapped key, try to unwrap.
@@ -1747,7 +2080,7 @@ async function doUnlock() {
     }
     if (res.status === 404) {
       // Endpoint doesn't exist. Almost always means the deployed server
-      // is older than the client — backend hasn't received v1.19.17 yet.
+      // is older than the client — backend hasn't received v1.20.0 yet.
       showErr(err, 'Unlock endpoint unavailable on server (404). The server may be mid-deploy — try again in a minute.');
       return;
     }
@@ -1801,7 +2134,7 @@ function doLogoutFromUnlock() {
     localStorage.removeItem('applied_token');
     localStorage.removeItem('applied_user');
   } catch {}
-  // v1.19.17: also tell the extension its cached session is gone — same
+  // v1.20.0: also tell the extension its cached session is gone — same
   // reason doLogout does this. Otherwise the extension keeps posting to
   // the cleared user's inbox.
   try { _notifyExtensionSessionChanged(); } catch {}
@@ -2051,7 +2384,7 @@ async function doRegister() {
   const err = document.getElementById('register-error');
   const btn = document.getElementById('register-btn');
   err.classList.remove('show');
-  // v1.19.17: email is truly optional now. Summit is end-to-end encrypted and
+  // v1.20.0: email is truly optional now. Summit is end-to-end encrypted and
   // can't recover accounts via email, so there's no functional requirement
   // for it. Only username + password are required; email is reserved for
   // future notification features.
@@ -2060,7 +2393,7 @@ async function doRegister() {
   if (p.length < 8) { showErr(err,'Password must be at least 8 characters.'); return; }
   if (p!==c) { showErr(err,'Passwords do not match.'); return; }
 
-  // v1.19.17: security contract is now shown inline on the register screen,
+  // v1.20.0: security contract is now shown inline on the register screen,
   // with two checkboxes that gate the Create account button. By the time
   // the user clicks submit, they've already confirmed both. No modal.
   const cb1 = document.getElementById('reg-cb1')?.checked;
@@ -2110,7 +2443,7 @@ async function doRegister() {
 }
 
 // Strong security warning shown before account creation
-// v1.19.17: register button state controller. Enables the Create account
+// v1.20.0: register button state controller. Enables the Create account
 // button only when both security-contract checkboxes are ticked. The
 // security contract lives inline on the register screen now (was a post-hoc
 // modal in earlier versions), so checkbox state is the gating condition
@@ -2209,8 +2542,8 @@ async function doLogout() {
   // is gone, the PUT would 401 and the user's last typing would be lost.
   // We await so state is deterministic before we clear everything.
   try { await tearDownNotesEditor(); } catch {}
-  _stopInboxPolling();  // v1.19.17: halt inbox drain loop
-  // v1.19.17: extension banners are only shown post-login, so remove both
+  _stopInboxPolling();  // v1.20.0: halt inbox drain loop
+  // v1.20.0: extension banners are only shown post-login, so remove both
   // on logout. Don't write dismiss flags — if the user re-logs-in and the
   // state still warrants a banner, we want it back.
   const sb = document.getElementById('stale-ext-banner');
@@ -2306,7 +2639,7 @@ async function loadJobs() {
       });
     });
 
-    // v1.19.17 backfill: jobs added before reqId tracking don't have one.
+    // v1.20.0 backfill: jobs added before reqId tracking don't have one.
     // We can't re-scrape the page, but we can extract from the URL alone
     // for the common ATS patterns (Workday req-codes, LinkedIn/Greenhouse
     // numeric IDs). Best-effort — leaves reqId empty for anything that
@@ -2323,17 +2656,17 @@ async function loadJobs() {
     });
     if (strippedAnyNotes || backfilledAny) scheduleSave();
   } catch(e) { console.error('loadJobs error:', e); jobs={}; }
-  // v1.19.17: drain any pending inbox entries (posted by the extension while
+  // v1.20.0: drain any pending inbox entries (posted by the extension while
   // the user was away). Fold them into jobs BEFORE rendering so new additions
   // appear on the very first paint.
   await _drainInbox();
   renderJobList();
-  _applyInboxHighlights();  // v1.19.17: highlight any entries that arrived while away
-  _applyDupeAdvisory();     // v1.19.17: advisory for silently-skipped duplicates
+  _applyInboxHighlights();  // v1.20.0: highlight any entries that arrived while away
+  _applyDupeAdvisory();     // v1.20.0: advisory for silently-skipped duplicates
   renderStaleNudge();
 }
 
-// ── Job inbox drain (v1.19.17) ───────────────────────────────────────────────
+// ── Job inbox drain (v1.20.0) ───────────────────────────────────────────────
 // The extension can't encrypt (no dataKey), so it POSTs plaintext jobs to
 // /api/jobs/inbox. We poll/drain that inbox here, merge entries into the
 // encrypted `jobs` store, and DELETE each consumed entry atomically.
@@ -2358,7 +2691,7 @@ let _inboxJustAdded = new Set();
 // user knows a duplicate add happened while they were away.
 let _inboxDupeMatched = new Map();  // existingJobId -> { candidate, reason }
 
-// ── Dedupe helpers (v1.19.17) ────────────────────────────────────────────────
+// ── Dedupe helpers (v1.20.0) ────────────────────────────────────────────────
 // Centralized "is this a duplicate?" decision so the paste-URL path and the
 // inbox drain path use identical rules. Returns { job, reason } on hit or
 // null on miss.
@@ -2573,7 +2906,7 @@ async function _drainInbox() {
         if (!deleted) continue;  // racing tab got it first
       } catch { continue; }
 
-      // v1.19.17: dedupe check before merge. The user wasn't present when
+      // v1.20.0: dedupe check before merge. The user wasn't present when
       // the extension posted this, so we can't show a decision modal —
       // policy is: duplicates are silently skipped (not merged) but we
       // track them so the existing card can get a passive advisory flash
@@ -2609,7 +2942,7 @@ async function _drainInbox() {
         resume:   null,
         cover:    null,
         source:   entry.source || 'extension',
-        // v1.19.17: carry requisition ID onto the merged job so future
+        // v1.20.0: carry requisition ID onto the merged job so future
         // dedupe checks against this job work correctly.
         reqId:      entry.reqId      || '',
         reqIdLabel: entry.reqIdLabel || '',
@@ -2653,7 +2986,7 @@ function _applyInboxHighlights() {
   _inboxJustAdded.clear();
 }
 
-// v1.19.17: passive advisory for inbox entries skipped as duplicates.
+// v1.20.0: passive advisory for inbox entries skipped as duplicates.
 // Flashes the existing matched card in blue so the user understands a
 // duplicate add happened while they were away. No modal — they weren't
 // present at the add. One-shot, self-cleaning, same pattern as highlights.
@@ -2914,7 +3247,7 @@ async function parseJobUrl() {
 
     // Populate form fields via shared helper
     let filled = _populateFormFields(finalFields);
-    // v1.19.17: req ID is a silent field — stash for addJob to stamp on the
+    // v1.20.0: req ID is a silent field — stash for addJob to stamp on the
     // new job record rather than rendering a form input. Overwritten below
     // if the extension-bridge path produces a new set of fields.
     pendingReqId      = finalFields?.reqId      || null;
@@ -3199,7 +3532,7 @@ function openAddModal() {
   if (mf) mf.style.display = 'none';
   if (mc) mc.style.transform = '';
   setTimeout(() => document.getElementById('job-url').focus(), 60);
-  // v1.19.17: render install-nudge inline if extension isn't detected.
+  // v1.20.0: render install-nudge inline if extension isn't detected.
   // No-op for users who have it, have dismissed it, or for whom ext
   // announces itself between now and when they click Parse.
   _renderExtInstallNudgeModal();
@@ -3213,7 +3546,7 @@ function addJob() {
   const workType = document.getElementById('job-worktype')?.value || '';
   const url      = document.getElementById('job-url').value.trim();
 
-  // v1.19.17: dedupe candidate — the fields we'll compare against existing
+  // v1.20.0: dedupe candidate — the fields we'll compare against existing
   // jobs. reqId comes from the URL parse pipeline (stashed in pendingReqId)
   // and is the primary match signal when present. URL is the fallback signal.
   const candidate = { title, company, url, reqId: pendingReqId || '' };
@@ -3245,7 +3578,7 @@ function _commitAddJob(title, company, url, workType) {
     tailoredResume: null, tailoredCover: null,
     postingHtml: pendingHtml,
     postingText: pendingText,
-    // v1.19.17: requisition ID — silent metadata, used for dedupe. Empty if
+    // v1.20.0: requisition ID — silent metadata, used for dedupe. Empty if
     // the extraction pipeline didn't find one (small companies, custom pages).
     reqId:      pendingReqId      || '',
     reqIdLabel: pendingReqIdLabel || '',
@@ -3266,6 +3599,54 @@ function deleteJob(id) {
     document.getElementById('detail-view').style.display = 'none';
   }
   renderJobList();
+}
+
+// ── v1.20.0: edit job details (failsafe for wrong parser output) ─────────────
+// Tracks which job the modal is currently editing so save() can write back
+// to the right record. Kept at module scope because the modal is opened
+// from one call site and its save button is wired via inline onclick — no
+// closure available to thread the ID through.
+let _editJobTargetId = null;
+
+function openEditJobModal(id) {
+  const j = jobs[id];
+  if (!j) return;
+  _editJobTargetId = id;
+  document.getElementById('ejm-title').value    = j.title    || '';
+  document.getElementById('ejm-company').value  = j.company  || '';
+  document.getElementById('ejm-location').value = j.location || '';
+  document.getElementById('ejm-worktype').value = j.workType || '';
+  document.getElementById('ejm-salary').value   = j.salary   || '';
+  document.getElementById('ejm-url').value      = j.url      || '';
+  document.getElementById('edit-job-modal-overlay').style.display = 'flex';
+  setTimeout(() => document.getElementById('ejm-title').focus(), 50);
+}
+
+function closeEditJobModal() {
+  document.getElementById('edit-job-modal-overlay').style.display = 'none';
+  _editJobTargetId = null;
+}
+
+function saveEditJob() {
+  const id = _editJobTargetId;
+  if (!id || !jobs[id]) { closeEditJobModal(); return; }
+  const title = document.getElementById('ejm-title').value.trim();
+  const company = document.getElementById('ejm-company').value.trim();
+  if (!title || !company) {
+    alert('Title and company are required.');
+    return;
+  }
+  jobs[id].title    = title;
+  jobs[id].company  = company;
+  jobs[id].location = document.getElementById('ejm-location').value.trim();
+  jobs[id].workType = document.getElementById('ejm-worktype').value;
+  jobs[id].salary   = document.getElementById('ejm-salary').value.trim();
+  jobs[id].url      = document.getElementById('ejm-url').value.trim();
+  scheduleSave();
+  closeEditJobModal();
+  // Re-render so the corrected values appear immediately
+  if (typeof renderDetail === 'function') renderDetail();
+  if (typeof renderJobList === 'function') renderJobList();
 }
 
 // ── FILTERS / LIST ──
@@ -3298,7 +3679,7 @@ function getFilteredJobs() {
 let bulkSelected = new Set();
 let bulkMode = false;
 
-// v1.19.17: right-pane empty-state copy depends on whether the user has
+// v1.20.0: right-pane empty-state copy depends on whether the user has
 // any jobs at all. Called from renderJobList (which fires whenever the
 // jobs collection changes). When zero jobs exist, the list-side empty
 // state is already explaining "No applications yet. Click Add job" —
@@ -3322,7 +3703,7 @@ function _renderRightPaneEmptyState() {
 function renderJobList() {
   const list = document.getElementById('job-list');
   const filtered = getFilteredJobs();
-  // v1.19.17: the right-pane empty-state copy depends on whether any jobs
+  // v1.20.0: the right-pane empty-state copy depends on whether any jobs
   // exist. Zero jobs → show a warmer "get started" variant (no mention of
   // "select from the list" which would be nonsensical when the list is
   // also empty). Any jobs → "select one from the list" makes sense.
@@ -3611,6 +3992,9 @@ function renderDetail() {
         </div>
       </div>
       <div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex-shrink:0;padding-top:2px">
+        <button class="icon-btn" onclick="openEditJobModal('${j.id}')" title="Edit job details" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:var(--bg3);border:1px solid var(--border);color:var(--text2);border-radius:5px;cursor:pointer">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M10.5 2.5l1 1-7 7H3.5v-1l7-7zM9.5 3.5l1 1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
         <button class="icon-btn danger" onclick="deleteJob('${j.id}')" title="Delete application" style="width:30px;height:30px;display:flex;align-items:center;justify-content:center">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3.5h10M5.5 3.5V2h3v1.5M5 11V5M9 11V5M3 3.5l.5 8a1 1 0 001 .5h5a1 1 0 001-.5l.5-8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
@@ -4514,7 +4898,7 @@ let _extensionVersion = null;
 // since fixed (content.js returning structured fields is a v2.2.0 capability;
 // pre-2.2 extensions silently lose the Path 1 extraction that lets the
 // add-job modal's bridge fallback produce useful data on bot-gated sites).
-const MIN_EXTENSION_VERSION = '2.5.2';
+const MIN_EXTENSION_VERSION = '2.6.0';
 
 function _compareSemver(a, b) {
   // Returns -1 if a<b, 0 if equal, 1 if a>b. Tolerates "2.2", "2.2.0", "2.2.0-beta"
@@ -4581,7 +4965,7 @@ function _renderStaleExtensionBanner() {
 function _dismissStaleBanner() {
   const banner = document.getElementById('stale-ext-banner');
   if (banner) banner.remove();
-  // v1.19.17: only reset padding if no other top-row banner is holding
+  // v1.20.0: only reset padding if no other top-row banner is holding
   // it. Mutually exclusive in practice (stale requires ext present;
   // install requires ext absent) but defensive programming.
   if (!document.getElementById('ext-install-banner')) {
@@ -4604,7 +4988,7 @@ window.addEventListener('message', (ev) => {
     if (_extIsStale()) {
       _renderStaleExtensionBanner();
     } else {
-      // v1.19.17: symmetric cleanup — if the announcing extension is
+      // v1.20.0: symmetric cleanup — if the announcing extension is
       // up-to-date, any banner left over from a previous stale version
       // (e.g. user just updated the extension without reloading the page,
       // so the new content.js fires summit-ext-ready with the new version
@@ -4617,7 +5001,7 @@ window.addEventListener('message', (ev) => {
     // was present, the extension announced itself — remove the nudge so the
     // user isn't being told to install something they already have.
     _removeExtInstallNudges();
-    // v1.19.17: also clear the install-nudge dismiss flag. The user's
+    // v1.20.0: also clear the install-nudge dismiss flag. The user's
     // "I don't want to install it" intent was relative to "I don't have
     // it." Once they have it, the dismissal is moot; if they later
     // uninstall again, that's a fresh state and they deserve a fresh
@@ -4628,7 +5012,7 @@ window.addEventListener('message', (ev) => {
   }
 });
 
-// ── v1.19.17: extension-install nudges ──────────────────────────────────────
+// ── v1.20.0: extension-install nudges ──────────────────────────────────────
 // Two unobtrusive prompts to install the extension, shown only to users
 // whose extension hasn't announced itself:
 //
@@ -4647,7 +5031,7 @@ window.addEventListener('message', (ev) => {
 
 const _EXT_NUDGE_DISMISS_KEY = 'applied_ext_install_nudge_dismissed';
 
-// v1.19.17: does this browser support our extension at all? We ship a
+// v1.20.0: does this browser support our extension at all? We ship a
 // Chromium build (Chrome, Edge, Brave, Arc, Opera, Vivaldi) and a
 // Safari desktop build (via Xcode). Firefox has a different extension
 // format we don't build for; mobile browsers don't support web
@@ -4677,7 +5061,7 @@ function _browserSupportsExtension() {
   return false;
 }
 
-// v1.19.17: Settings → Browser Extension shows an advisory at the top of
+// v1.20.0: Settings → Browser Extension shows an advisory at the top of
 // the section when the current browser can't install our extension.
 // Honest and informational — we don't pretend we're coming to Firefox
 // when we aren't, and we don't silently hide Settings info.
@@ -4709,7 +5093,7 @@ function _dismissExtInstallNudge() {
 }
 
 function _removeExtInstallNudges() {
-  // v1.19.17: top-row banner (primary) + add-modal inline hint
+  // v1.20.0: top-row banner (primary) + add-modal inline hint
   const banner = document.getElementById('ext-install-banner');
   if (banner) {
     banner.remove();
@@ -4732,13 +5116,13 @@ function _removeExtInstallNudges() {
 // via postMessage before we render the "install it" message — we don't
 // want a flash on users who already have it.
 //
-// v1.19.17: the primary empty-state card moved to a top-row banner,
+// v1.20.0: the primary empty-state card moved to a top-row banner,
 // matching the stale-ext banner's visual language. One genre of signal
 // ("ambient awareness about extension state") deserves one presentation.
 function _renderExtInstallNudgeBanner() {
   if (!token || !currentUser) return;                // signed-in only
   if (_extensionAvailable) return;                   // already installed
-  if (!_browserSupportsExtension()) return;          // v1.19.17: Firefox / mobile — no build for them
+  if (!_browserSupportsExtension()) return;          // v1.20.0: Firefox / mobile — no build for them
   if (_extInstallNudgeDismissed()) return;           // user said no before
   if (document.getElementById('stale-ext-banner')) return;  // stale banner takes precedence
   if (document.getElementById('ext-install-banner')) return; // already rendered
@@ -4777,7 +5161,7 @@ function _renderExtInstallNudgeModal() {
   // the same re-check pattern. If the user dismissed on the empty state,
   // respect that here too.
   if (_extensionAvailable) { slot.innerHTML = ''; return; }
-  if (!_browserSupportsExtension()) { slot.innerHTML = ''; return; }  // v1.19.17: no build for this browser
+  if (!_browserSupportsExtension()) { slot.innerHTML = ''; return; }  // v1.20.0: no build for this browser
   if (_extInstallNudgeDismissed()) { slot.innerHTML = ''; return; }
 
   slot.innerHTML = `
@@ -4819,7 +5203,7 @@ function _bridgeCall(action, payload = {}, timeoutMs = 30_000) {
   });
 }
 
-// v1.19.17: re-ping the extension to refresh our cached version, and
+// v1.20.0: re-ping the extension to refresh our cached version, and
 // reconcile the stale-ext banner state against whatever the extension
 // currently reports. Called on tab focus / visibility change — the
 // natural pattern when a user has just installed an update in another
@@ -4832,7 +5216,7 @@ async function _refreshExtensionVersion() {
   if (!token || !currentUser) return;  // not signed in — nothing to reconcile
   const resp = await _bridgeCall('ping', {}, 2000);
   if (!resp || !resp.ok) {
-    // v1.19.17: ping timed out. Two common causes:
+    // v1.20.0: ping timed out. Two common causes:
     //   1. Extension was uninstalled (nothing to ping)
     //   2. Extension was UPDATED but the new content.js hasn't been injected
     //      into this already-open tab yet (Chrome doesn't retro-inject on
@@ -9108,7 +9492,7 @@ function openSettings(section) {
   renderEncryptionStatus();
   loadRecoveryStatus();
   loadUsageCard();
-  _renderExtUnsupportedNotice();  // v1.19.17: Firefox / mobile advisory
+  _renderExtUnsupportedNotice();  // v1.20.0: Firefox / mobile advisory
   const s = getTailorSettings();
   const autosaveEl = document.getElementById('st-autosave');
   const cleanupEl  = document.getElementById('st-cleanup');
@@ -9766,7 +10150,7 @@ setInterval(() => {
         <div class="settings-section" id="spane-extension">
           <div class="settings-section-title">Browser extension</div>
           <div class="settings-section-body">
-            <!-- v1.19.17: populated on render with an advisory for Firefox /
+            <!-- v1.20.0: populated on render with an advisory for Firefox /
                  mobile users. Empty on supported browsers. -->
             <div id="ext-unsupported-notice"></div>
             <div style="font-size:13px;color:var(--text2);line-height:1.6">

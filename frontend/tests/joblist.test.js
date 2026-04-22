@@ -187,8 +187,13 @@ t('sidebar Library button present with data-section="library"', () => {
 });
 
 t('landing page feature says "Library" not "Document library"', () => {
-  // Find the landing page feature section (editorial layout)
-  const section = src.slice(src.indexOf('<!-- Feature list (editorial)'), src.indexOf('<!-- Footer CTA'));
+  // v1.19.18: landing was reworked — the "Feature list (editorial)" comment
+  // is gone. The feature grid lives between "Dense feature grid below" and
+  // the "Bottom CTA" section now.
+  const start = src.indexOf('<!-- Dense feature grid below');
+  const end   = src.indexOf('<!-- Bottom CTA');
+  if (start < 0 || end < 0) throw new Error('cannot locate feature grid delimiters');
+  const section = src.slice(start, end);
   if (section.includes('Document library') || section.includes('Document Library')) {
     throw new Error('landing page still says "Document library"');
   }

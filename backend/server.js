@@ -10,6 +10,7 @@ const pdfParse   = require('pdf-parse');
 const mammoth    = require('mammoth');
 const archiver   = require('archiver');
 const crypto     = require('crypto');
+const zlib       = require('zlib');  // v1.20.0: decompress gzipped html from extension
 
 const app = express();
 
@@ -1117,9 +1118,18 @@ function _loadInboxForUser(userId) {
   return entries;
 }
 
-// Extension POSTs a new pending job. Body must include title + company,
-// everything else optional. We don't validate URLs etc. — the webapp
-// sanitizes on merge.
+// v1.20.0: the extension does a two-stage flow —
+//   1. POST reader payload (url + html/text/jsonLd) to /api/extract-job-fields
+//      Server runs the unified extractor, returns fields. Stores nothing.
+//   2. User reviews and optionally edits fields in the popup.
+//   3. POST finalized fields (title + company + ...) to /api/jobs/inbox.
+//      Server stores verbatim.
+// This separation keeps inbox = finalized queue. A cancelled extraction
+// leaves nothing behind.
+//
+// The legacy path (2.5.x extensions that POST title+company directly to
+// /api/jobs/inbox) keeps working unchanged — the endpoint's shape is
+// identical to what it was before v1.20.0.
 app.post('/api/jobs/inbox', authMiddleware, (req, res) => {
   const b = req.body || {};
   if (!b.title || typeof b.title !== 'string') return res.status(400).json({ error: 'title required' });
@@ -1136,10 +1146,6 @@ app.post('/api/jobs/inbox', authMiddleware, (req, res) => {
     salary:   b.salary ? String(b.salary).slice(0, 80) : '',
     source:   'extension',
   };
-  // v1.19.3: requisition / job ID carried through from the content script.
-  // Shape-validate here too — the extension SHOULD have already filtered,
-  // but the POST endpoint is authenticated and user-controllable so we
-  // re-check rather than trust. URL-shaped values get dropped.
   if (b.reqId && typeof b.reqId === 'string') {
     const v = b.reqId.trim();
     if (v.length <= 50 && /^[A-Za-z0-9][A-Za-z0-9._\-]{2,40}$/.test(v) && !/^https?:\/\//i.test(v)) {
@@ -1152,6 +1158,56 @@ app.post('/api/jobs/inbox', authMiddleware, (req, res) => {
   const dir = _inboxDirFor(req.user.id);
   fs.writeFileSync(path.join(dir, `${id}.json`), JSON.stringify(entry));
   res.json({ ok: true, id, receivedAt: entry.receivedAt });
+});
+
+// v1.20.0: extraction-only endpoint. Accepts the extension's reader payload
+// (url + html/text/jsonLd + title + meta), runs the unified extractor, and
+// returns fields. Does NOT store anything — the extension commits to inbox
+// in a separate POST after the user reviews/edits the fields.
+//
+// tokenCapMiddleware because the AI path may run during extraction.
+app.post('/api/extract-job-fields', authMiddleware, tokenCapMiddleware, async (req, res) => {
+  const b = req.body || {};
+  if (!b.url || typeof b.url !== 'string') {
+    return res.status(400).json({ error: 'url required' });
+  }
+  // Decompress html if it arrived gzipped+base64-encoded. Raw HTML is 500KB-
+  // 1.5MB per page; gzipped+base64 is ~50-200KB. Extensions default to
+  // compressed; uncompressed is accepted for debugging / non-browser callers.
+  let html = null;
+  if (b.compressed === 'gzip' && typeof b.html === 'string') {
+    html = decodeGzippedBase64(b.html);
+  } else if (typeof b.html === 'string') {
+    html = b.html;
+  }
+  const text   = typeof b.text === 'string' ? b.text : null;
+  const jsonLd = Array.isArray(b.jsonLd) ? b.jsonLd : null;
+
+  let fields;
+  try {
+    fields = await extractJobFields({ url: b.url, html, text, jsonLd, req });
+  } catch (e) {
+    return res.status(500).json({ error: 'extraction failed: ' + (e.message || 'unknown') });
+  }
+  // Floor: ensure SOMETHING usable. Popup still shows the form; user edits if wrong.
+  if (!fields) fields = {};
+  if (!fields.title || !fields.company) {
+    const u = (() => { try { return new URL(b.url); } catch { return null; } })();
+    if (!fields.title)   fields.title   = '';
+    if (!fields.company) fields.company = u ? u.hostname.replace(/^www\./, '').split('.')[0] : '';
+  }
+  res.json({
+    ok: true,
+    fields: {
+      title:      fields.title    || '',
+      company:    fields.company  || '',
+      location:   fields.location || '',
+      workType:   fields.workType || '',
+      salary:     fields.salary   || '',
+      reqId:      fields.reqId    || '',
+      reqIdLabel: fields.reqIdLabel || '',
+    },
+  });
 });
 
 // Webapp polls this to learn about pending entries. Returns a list; webapp
@@ -1663,6 +1719,112 @@ function extractSalaryFromHtml(html) {
   if (!m) return null;
   const fmt = s => { const n = parseFloat(s.replace(/,/g,'')); return n>=1000?'$'+Math.round(n/1000)+'k':'$'+Math.round(n).toLocaleString(); };
   return fmt(m[1]) + '\u2013' + fmt(m[2]);
+}
+
+// ── v1.20.0: unified field extraction ────────────────────────────────────────
+// Both the extension (sends html+text+jsonLd) and the webapp paste flow
+// (sends URL only) converge on this single function. The extraction logic
+// is identical regardless of source — JSON-LD probe → regex salary → AI
+// gap-fill. Upstream callers only differ in where the raw inputs come from
+// (extension pre-reads the rendered DOM; paste flow fetches the URL here).
+
+async function _aiExtract(text, salaryHint, req) {
+  // Extracted from /api/extract-fields so both inbox-post and the legacy
+  // endpoint can share the exact same prompt + validation.
+  if (!text || text.length < 20) return null;
+  const sys = `Extract job posting details. Return ONLY valid JSON, no markdown.
+Fields: title(string), company(string), location(city+state only, null if remote-only), workType("Remote"|"Hybrid"|"On-site"|null), remote(boolean), salary(ONLY real dollar amounts like "$120k–$150k" or null — never invent, never use "Competitive" or "DOE"), reqId(string or null — the job requisition number printed on the page, typically labeled "Job ID", "Requisition Number", "Req #", "Posting ID" etc. Short alphanumeric like "R-12345" or "5012345". DO NOT invent. DO NOT return URLs. Return null if not visibly printed on the page). ${salaryHint ? `The salary is already confirmed as ${salaryHint} — use this exactly.` : ''}`;
+  const payload = text.slice(0, 4000);
+  const usr = `Extract from this job posting:\n\n${payload}`;
+  let parsed;
+  try {
+    parsed = parseJson(await callAI(['groq','openrouter','google'], sys, usr, 400, req, 'extract-fields'));
+  } catch { return null; }
+  // Validate reqId shape — AI hallucinates, especially on URL-like values
+  if (parsed && parsed.reqId && typeof parsed.reqId === 'string') {
+    const v = parsed.reqId.trim();
+    if (v.length > 50 || !/^[A-Za-z0-9][A-Za-z0-9._\-]{2,40}$/.test(v) || /^https?:\/\//i.test(v)) {
+      parsed.reqId = null;
+    } else {
+      parsed.reqId = v;
+    }
+  }
+  return parsed || null;
+}
+
+// Parse extension-provided JSON-LD blobs (raw string contents of <script
+// type="application/ld+json"> tags). Uses the same merge logic as
+// parseJobPostingLD so output is identical.
+function _parseJsonLdArray(jsonLdStrings) {
+  if (!Array.isArray(jsonLdStrings) || jsonLdStrings.length === 0) return null;
+  // Reconstruct minimal HTML so we can reuse parseJobPostingLD. The parser
+  // only looks for <script type="application/ld+json"> blocks; anything
+  // else in the synthetic HTML is ignored.
+  const synthetic = jsonLdStrings
+    .map(raw => `<script type="application/ld+json">${raw}</script>`)
+    .join('\n');
+  return parseJobPostingLD(synthetic);
+}
+
+async function extractJobFields({ url, html, text, jsonLd, req }) {
+  // If no content, fetch from URL — same path the paste flow uses. This keeps
+  // the webapp-paste-URL case identical behavior.
+  if (!html && !text && !jsonLd) {
+    if (!url) return null;
+    try {
+      const fetched = await fetchATS(url);
+      return fetched?.fields || null;
+    } catch { return null; }
+  }
+
+  // JSON-LD probe: prefer extension-sent blobs (cleaner, post-render), fall
+  // back to parsing the html string.
+  let ldFields = _parseJsonLdArray(jsonLd) || (html ? parseJobPostingLD(html) : null);
+
+  // Derive a text representation for AI + regex. Extension sends text directly;
+  // if only html was sent, reduce it ourselves.
+  const derivedText = text || (html ? htmlToText(html) : '');
+
+  // Salary: LD-reported → text regex → html <bdi>. Each step cheap, each
+  // covers cases the others miss. This mirrors fetchATS's salary logic
+  // byte-for-byte (intentional — consistency across entry paths).
+  const salary = (ldFields && ldFields.salary)
+    || extractSalaryFromText(derivedText)
+    || (html ? extractSalaryFromHtml(html) : null)
+    || null;
+
+  // If LD got both title and company, we don't need AI at all — LD is higher-
+  // quality than AI extraction and costs no tokens.
+  if (ldFields && ldFields.title && ldFields.company) {
+    return { ...ldFields, salary };
+  }
+
+  // Gap-fill via AI. If AI can't be reached or returns nothing useful, we
+  // still return whatever LD caught (often partial title+company).
+  const aiFields = await _aiExtract(derivedText, salary, req);
+
+  return {
+    title:      ldFields?.title    || aiFields?.title    || null,
+    company:    ldFields?.company  || aiFields?.company  || null,
+    location:   ldFields?.location || aiFields?.location || null,
+    workType:   ldFields?.workType || aiFields?.workType || null,
+    remote:     ldFields?.remote ?? aiFields?.remote ?? false,
+    salary:     salary,
+    reqId:      ldFields?.reqId    || aiFields?.reqId    || null,
+    reqIdLabel: ldFields?.reqIdLabel || null,
+  };
+}
+
+// Decompress a gzip-then-base64 string (extension sends html this way to
+// keep the JSON body small — raw HTML can be 500KB-1.5MB per page; gzipped
+// + base64 drops this to 50-200KB). Returns decompressed string or null on
+// failure. Never throws — bad input just yields null and caller falls back.
+function decodeGzippedBase64(s) {
+  if (!s || typeof s !== 'string') return null;
+  try {
+    const buf = Buffer.from(s, 'base64');
+    return zlib.gunzipSync(buf).toString('utf8');
+  } catch { return null; }
 }
 
 // parse-job is pure network I/O (direct-fetch + Jina + slug). It never
